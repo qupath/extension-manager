@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.Scene?>
+<?import javafx.scene.control.Button?>
+<?import javafx.scene.control.TableColumn?>
+<?import javafx.scene.control.TableView?>
+<?import javafx.scene.control.TextField?>
+<?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.VBox?>
+<?import javafx.stage.Stage?>
+
+<fx:root height="300.0" title="Extension Index Manager" type="Stage" width="800.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
+    <scene>
+        <Scene>
+            <VBox>
+                <TableView fx:id="indexTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="nameColumn" editable="false" maxWidth="1.7976931348623157E308" prefWidth="100.0" text="Name" />
+                        <TableColumn fx:id="urlColumn" editable="false" maxWidth="1.7976931348623157E308" prefWidth="300.0" text="URL" />
+                        <TableColumn fx:id="descriptionColumn" editable="false" maxWidth="1.7976931348623157E308" prefWidth="${indexTable.width-nameColumn.Width-urlColumn.width-2}" text="Description" />
+                    </columns>
+                </TableView>
+                <HBox spacing="5.0">
+                    <children>
+                        <TextField fx:id="indexURL" promptText="Index URL" />
+                        <Button mnemonicParsing="false" onAction="#onAddClicked" text="Add" />
+                    </children>
+                    <padding>
+                        <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
+                    </padding>
+                </HBox>
+            </VBox>
+        </Scene>
+    </scene>
+</fx:root>
