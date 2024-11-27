@@ -7,4 +7,4 @@
  * classes of this package use the camel case naming convention while the Pydantic
  * model uses the snake case naming convention.
  */
-package qupath.ext.extensionmanager.core.indexmodel;
+package qupath.ext.extensionmanager.core.index.model;

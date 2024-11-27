@@ -1,6 +1,6 @@
-package qupath.ext.extensionmanager.core.indexmodel;
+package qupath.ext.extensionmanager.core.index.model;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.List;
 
 /**
@@ -18,10 +18,10 @@ import java.util.List;
  */
 public record Release(
         String name,
-        URL mainUrl,
-        List<URL> requiredDependencyUrls,
-        List<URL> optionalDependencyUrls,
-        List<URL> javadocsUrls,
+        URI mainUrl,
+        List<URI> requiredDependencyUrls,
+        List<URI> optionalDependencyUrls,
+        List<URI> javadocsUrls,
         QuPathVersionRange qupathVersions
 ) {
     private static final List<String> VALID_HOSTS = List.of("github.com", "maven.scijava.org", "repo1.maven.org");
@@ -40,10 +40,10 @@ public record Release(
      */
     public Release(
             String name,
-            URL mainUrl,
-            List<URL> requiredDependencyUrls,
-            List<URL> optionalDependencyUrls,
-            List<URL> javadocsUrls,
+            URI mainUrl,
+            List<URI> requiredDependencyUrls,
+            List<URI> optionalDependencyUrls,
+            List<URI> javadocsUrls,
             QuPathVersionRange qupathVersions
     ) {
         this.name = name;
@@ -57,17 +57,17 @@ public record Release(
     }
 
     @Override
-    public List<URL> requiredDependencyUrls() {
+    public List<URI> requiredDependencyUrls() {
         return requiredDependencyUrls == null ? List.of() : requiredDependencyUrls;
     }
 
     @Override
-    public List<URL> optionalDependencyUrls() {
+    public List<URI> optionalDependencyUrls() {
         return optionalDependencyUrls == null ? List.of() : optionalDependencyUrls;
     }
 
     @Override
-    public List<URL> javadocsUrls() {
+    public List<URI> javadocsUrls() {
         return javadocsUrls == null ? List.of() : javadocsUrls;
     }
 
@@ -87,19 +87,19 @@ public record Release(
 
         qupathVersions.checkValidity();
 
-        Utils.checkGithubURL(mainUrl);
+        Utils.checkGithubURI(mainUrl);
 
-        checkURLHostValidity(requiredDependencyUrls);
-        checkURLHostValidity(optionalDependencyUrls);
-        checkURLHostValidity(javadocsUrls);
+        checkURIHostValidity(requiredDependencyUrls);
+        checkURIHostValidity(optionalDependencyUrls);
+        checkURIHostValidity(javadocsUrls);
     }
 
-    private static void checkURLHostValidity(List<URL> urls) {
-        if (urls != null) {
-            for (URL url: urls) {
-                if (!VALID_HOSTS.contains(url.getHost())) {
+    private static void checkURIHostValidity(List<URI> uris) {
+        if (uris != null) {
+            for (URI uri: uris) {
+                if (!VALID_HOSTS.contains(uri.getHost())) {
                     throw new IllegalStateException(String.format(
-                            "The host part of %s is not among %s", url, VALID_HOSTS
+                            "The host part of %s is not among %s", uri, VALID_HOSTS
                     ));
                 }
             }

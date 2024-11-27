@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.indexmodel;
+package qupath.ext.extensionmanager.core.index.model;
 
 import java.util.List;
 

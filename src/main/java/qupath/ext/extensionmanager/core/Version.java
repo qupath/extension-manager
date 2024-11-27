@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.indexmodel;
+package qupath.ext.extensionmanager.core;
 
 import java.util.Objects;
 import java.util.regex.Matcher;
@@ -10,7 +10,7 @@ import java.util.regex.Pattern;
  * <p>
  * This class is thread-safe.
  */
-class Version implements Comparable<Version> {
+public class Version implements Comparable<Version> {
 
     private static final Pattern VERSION_PATTERN = Pattern.compile("^v(\\d+)\\.(\\d+)\\.(\\d+)(?:-rc(\\d+))?$");
     private final int major;
@@ -19,9 +19,9 @@ class Version implements Comparable<Version> {
     private final int releaseCandidate;
 
     /**
-     * Create a version from a text.
+     * Create a release from a text.
      *
-     * @param version the text containing the version to parse. It must correspond to the
+     * @param version the text containing the release to parse. It must correspond to the
      *                specifications of this class.
      * @throws IllegalArgumentException when the provided text doesn't correspond to the
      * specifications of this class
@@ -91,7 +91,7 @@ class Version implements Comparable<Version> {
     /**
      * Check if the provided text follows the specifications of this class.
      *
-     * @param version the text containing the version to parse
+     * @param version the text containing the release to parse
      * @throws IllegalArgumentException when the provided text doesn't correspond
      * to the specifications of this class
      */

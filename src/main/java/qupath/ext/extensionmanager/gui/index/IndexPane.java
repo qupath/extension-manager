@@ -6,8 +6,9 @@ import javafx.scene.control.TitledPane;
 import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import qupath.ext.extensionmanager.core.IndexFetcher;
-import qupath.ext.extensionmanager.core.IndexMetadata;
+import qupath.ext.extensionmanager.core.ExtensionIndexManager;
+import qupath.ext.extensionmanager.core.index.IndexFetcher;
+import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 import qupath.ext.extensionmanager.gui.ExtensionIndexModel;
 import qupath.ext.extensionmanager.gui.UiUtils;
 
@@ -26,20 +27,21 @@ public class IndexPane extends TitledPane {
     /**
      * Create the pane.
      *
-     * @param indexMetadata metadata related to the index to display
+     * @param extensionIndexManager the extension index manager this pane should use
+     * @param savedIndex the index to display
      * @throws IOException when an error occurs while loading a FXML file
      */
-    public IndexPane(IndexMetadata indexMetadata, ExtensionIndexModel model) throws IOException {
+    public IndexPane(ExtensionIndexManager extensionIndexManager, SavedIndex savedIndex, ExtensionIndexModel model) throws IOException {
         UiUtils.loadFXML(this, IndexPane.class.getResource("index_pane.fxml"));
 
-        setText(indexMetadata.name());
+        setText(savedIndex.name());
 
-        IndexFetcher.getIndex(indexMetadata.url().toString()).handle((index, error) -> {
+        IndexFetcher.getIndex(savedIndex.uri().toString()).handle((fetchedIndex, error) -> {
             if (error == null) {
-                Platform.runLater(() -> extensions.getChildren().addAll(index.extensions().stream()
+                Platform.runLater(() -> extensions.getChildren().addAll(fetchedIndex.extensions().stream()
                         .map(extension -> {
                             try {
-                                return new ExtensionLine(extension, model);
+                                return new ExtensionLine(extensionIndexManager, model, savedIndex, extension);
                             } catch (IOException e) {
                                 logger.error("Error while creating extension line", e);
                                 return null;
@@ -49,7 +51,7 @@ public class IndexPane extends TitledPane {
                         .toList()
                 ));
             } else {
-                logger.warn(String.format("Error when fetching index at %s", indexMetadata.url()), error);
+                logger.warn(String.format("Error when fetching fetchedIndex at %s", savedIndex.uri()), error);
             }
             return null;
         });

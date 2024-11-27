@@ -1,27 +1,31 @@
-package qupath.ext.extensionmanager.core;
+package qupath.ext.extensionmanager.core.index;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import qupath.ext.extensionmanager.core.indexmodel.Index;
+import qupath.ext.extensionmanager.core.index.model.Index;
 
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.time.Duration;
 import java.util.concurrent.CompletableFuture;
 
 /**
  * A class to fetch an index.
- * <p>
- * This class is thread-safe.
  */
 public class IndexFetcher {
 
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final Gson gson = new GsonBuilder()
             .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES) // convert snake case to camel case
             .create();
+
+    private IndexFetcher() {
+        throw new AssertionError("This class is not instantiable.");
+    }
 
     /**
      * Attempt to get an index from the provided URL.
@@ -44,10 +48,13 @@ public class IndexFetcher {
             ));
         }
 
-        HttpClient httpClient = HttpClient.newBuilder().build();
+        HttpClient httpClient = HttpClient.newBuilder()
+                .followRedirects(HttpClient.Redirect.ALWAYS)
+                .build();
         return httpClient.sendAsync(
                         HttpRequest.newBuilder()
                                 .uri(uri)
+                                .timeout(REQUEST_TIMEOUT)
                                 .GET()
                                 .build(),
                         HttpResponse.BodyHandlers.ofString()

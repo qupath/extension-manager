@@ -1,4 +1,6 @@
-package qupath.ext.extensionmanager.core.indexmodel;
+package qupath.ext.extensionmanager.core.index.model;
+
+import qupath.ext.extensionmanager.core.Version;
 
 import java.util.List;
 
@@ -9,8 +11,8 @@ import java.util.List;
  * <p>
  * Functions of this object may return null or throw exceptions if this object is not valid (see {@link #checkValidity()}).
  *
- * @param min the minimum/lowest QuPath version that this extension is known to be compatible with
- * @param max the maximum/highest QuPath version that this extension is known to be compatible with
+ * @param min the minimum/lowest QuPath release that this extension is known to be compatible with
+ * @param max the maximum/highest QuPath release that this extension is known to be compatible with
  * @param excludes any specific versions that are not compatible
  */
 public record QuPathVersionRange(String min, String max, List<String> excludes) {
@@ -18,8 +20,8 @@ public record QuPathVersionRange(String min, String max, List<String> excludes) 
     /**
      * Create a QuPathVersionRange.
      *
-     * @param min the minimum/lowest QuPath version that this extension is known to be compatible with
-     * @param max the maximum/highest QuPath version that this extension is known to be compatible with
+     * @param min the minimum/lowest QuPath release that this extension is known to be compatible with
+     * @param max the maximum/highest QuPath release that this extension is known to be compatible with
      * @param excludes any specific versions that are not compatible
      * @throws IllegalStateException when the created object is not valid (see {@link #checkValidity()})
      */
@@ -32,7 +34,7 @@ public record QuPathVersionRange(String min, String max, List<String> excludes) 
     }
 
     /**
-     * @return the maximum/highest QuPath version that this extension is known to be compatible with.
+     * @return the maximum/highest QuPath release that this extension is known to be compatible with.
      * Can be null
      */
     @Override
@@ -78,14 +80,14 @@ public record QuPathVersionRange(String min, String max, List<String> excludes) 
     }
 
     /**
-     * Indicate if this version range is compatible with the provided QuPath version.
+     * Indicate if this release range is compatible with the provided QuPath release.
      *
-     * @param qupathVersion the QuPath version to check if this version range is compatible with. It
+     * @param qupathVersion the QuPath release to check if this release range is compatible with. It
      *                      must be specified in the form "v[MAJOR].[MINOR].[PATCH]" or
      *                      "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
-     * @return a boolean indicating if the provided QuPath version is compatible with this version range
-     * @throws IllegalArgumentException when the provided qupath version doesn't match the required form
-     * or when this version range is not valid
+     * @return a boolean indicating if the provided QuPath release is compatible with this release range
+     * @throws IllegalArgumentException when the provided qupath release doesn't match the required form
+     * or when this release range is not valid
      */
     public boolean isCompatible(String qupathVersion) {
         Version qupath = new Version(qupathVersion);

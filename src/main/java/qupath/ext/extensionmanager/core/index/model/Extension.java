@@ -1,6 +1,6 @@
-package qupath.ext.extensionmanager.core.indexmodel;
+package qupath.ext.extensionmanager.core.index.model;
 
-import java.net.URL;
+import java.net.URI;
 import java.util.List;
 
 /**
@@ -13,7 +13,7 @@ import java.util.List;
  * @param homepage a link to the GitHub repository associated with the extension
  * @param versions a list of available versions of the extension
  */
-public record Extension(String name, String description, URL homepage, List<Release> versions) {
+public record Extension(String name, String description, URI homepage, List<Release> versions) {
 
     /**
      * Create an Extension.
@@ -24,7 +24,7 @@ public record Extension(String name, String description, URL homepage, List<Rele
      * @param versions a list of available versions of the extension
      * @throws IllegalStateException when the created object is not valid (see {@link #checkValidity()})
      */
-    public Extension(String name, String description, URL homepage, List<Release> versions) {
+    public Extension(String name, String description, URI homepage, List<Release> versions) {
         this.name = name;
         this.description = description;
         this.homepage = homepage;
@@ -48,7 +48,7 @@ public record Extension(String name, String description, URL homepage, List<Rele
             version.checkValidity();
         }
 
-        Utils.checkGithubURL(homepage);
+        Utils.checkGithubURI(homepage);
     }
 }
 

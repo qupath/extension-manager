@@ -14,10 +14,10 @@ import javafx.util.StringConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionIndexManager;
-import qupath.ext.extensionmanager.core.ExtensionInstallationInformation;
-import qupath.ext.extensionmanager.core.QuPath;
-import qupath.ext.extensionmanager.core.indexmodel.Extension;
-import qupath.ext.extensionmanager.core.indexmodel.Release;
+import qupath.ext.extensionmanager.core.index.model.Extension;
+import qupath.ext.extensionmanager.core.index.model.Release;
+import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
+import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 import qupath.ext.extensionmanager.gui.ProgressWindow;
 import qupath.ext.extensionmanager.gui.UiUtils;
 
@@ -31,8 +31,10 @@ import java.util.concurrent.Executors;
 class ExtensionModificationWindow extends Stage {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionModificationWindow.class);
+    private final ExtensionIndexManager extensionIndexManager;
+    private final SavedIndex savedIndex;
     private final Extension extension;
-    private final ExtensionInstallationInformation installedExtension;
+    private final InstalledExtension installedExtension;
     @FXML
     private Label name;
     @FXML
@@ -45,20 +47,29 @@ class ExtensionModificationWindow extends Stage {
     /**
      * Create the window.
      *
+     * @param extensionIndexManager the extension index manager this window should use
+     * @param savedIndex the index owning the extension to modify
      * @param extension the extension to modify
-     * @param installationInformation information on the already installed extension if this window should allow modifying it,
-     *                                or null if the extension is to be installed by this window
+     * @param installedExtension information on the already installed extension if this window should allow modifying it,
+     *                           or null if the extension is to be installed by this window
      * @throws IOException when an error occurs while creating the window
      */
-    public ExtensionModificationWindow(Extension extension, ExtensionInstallationInformation installationInformation) throws IOException {
+    public ExtensionModificationWindow(
+            ExtensionIndexManager extensionIndexManager,
+            SavedIndex savedIndex,
+            Extension extension,
+            InstalledExtension installedExtension
+    ) throws IOException {
+        this.extensionIndexManager = extensionIndexManager;
+        this.savedIndex = savedIndex;
         this.extension = extension;
-        this.installedExtension = installationInformation;
+        this.installedExtension = installedExtension;
 
         UiUtils.loadFXML(this, ExtensionModificationWindow.class.getResource("extension_modification_window.fxml"));
 
         initModality(Modality.APPLICATION_MODAL);
 
-        setTitle(installationInformation == null ?
+        setTitle(installedExtension == null ?
                 String.format("Install %s", extension.name()) :
                 String.format("Edit %s", extension.name())
         );
@@ -67,7 +78,7 @@ class ExtensionModificationWindow extends Stage {
 
         version.getItems().addAll(
                 extension.versions().stream()
-                        .filter(release -> release.qupathVersions().isCompatible(QuPath.getQuPathVersion()))
+                        .filter(release -> release.qupathVersions().isCompatible(extensionIndexManager.getQuPathVersion()))
                         .toList()
         );
         version.setConverter(new StringConverter<>() {
@@ -81,10 +92,10 @@ class ExtensionModificationWindow extends Stage {
                 return null;
             }
         });
-        version.getSelectionModel().select(installationInformation == null ?
+        version.getSelectionModel().select(installedExtension == null ?
                 version.getItems().isEmpty() ? null : version.getItems().getFirst() :
                 version.getItems().stream()
-                        .filter(release -> release.name().equals(installationInformation.version()))
+                        .filter(release -> release.name().equals(installedExtension.releaseName()))
                         .findAny()
                         .orElse(version.getItems().isEmpty() ? null : version.getItems().getFirst())
         );
@@ -94,35 +105,45 @@ class ExtensionModificationWindow extends Stage {
                 .map(release -> !release.optionalDependencyUrls().isEmpty())
         );
         optionalDependencies.managedProperty().bind(optionalDependencies.visibleProperty());
-        optionalDependencies.setSelected(installationInformation != null && installationInformation.optionalDependenciesInstalled());
+        optionalDependencies.setSelected(installedExtension != null && installedExtension.optionalDependenciesInstalled());
 
-        submit.setText(installationInformation == null ? "Install" : "Update");
+        submit.setText(installedExtension == null ? "Install" : "Update");
     }
 
     @FXML
     private void onSubmitClicked(ActionEvent ignored) {
-        if (!version.getSelectionModel().isEmpty()) {
-            try {
-                ExecutorService executor = Executors.newSingleThreadExecutor();
-                ProgressWindow progressWindow = new ProgressWindow(
-                        installedExtension == null ?
-                                String.format("Installing %s %s...", extension.name(), version.getSelectionModel().getSelectedItem().name()) :
-                                String.format("Updating %s to %s...", extension.name(), version.getSelectionModel().getSelectedItem().name()),
-                        executor::shutdownNow
-                );
-                progressWindow.show();
+        if (version.getSelectionModel().isEmpty()) {
+            return;
+        }
 
-                executor.execute(() -> ExtensionIndexManager.installOrUpdateExtension(
-                        extension,
-                        new ExtensionInstallationInformation(
-                                version.getSelectionModel().getSelectedItem().name(),
-                                optionalDependencies.isSelected()
-                        ),
-                        progress -> Platform.runLater(() -> progressWindow.setProgress(progress)),
-                        () -> {
-                            Platform.runLater(() -> {
-                                progressWindow.close();
+        try {
+            ExecutorService executor = Executors.newSingleThreadExecutor();
+            ProgressWindow progressWindow = new ProgressWindow(
+                    installedExtension == null ?
+                            String.format("Installing %s %s...", extension.name(), version.getSelectionModel().getSelectedItem().name()) :
+                            String.format("Updating %s to %s...", extension.name(), version.getSelectionModel().getSelectedItem().name()),
+                    executor::shutdownNow
+            );
+            progressWindow.show();
 
+            executor.execute(() -> extensionIndexManager.installOrUpdateExtension(
+                    savedIndex,
+                    extension,
+                    new InstalledExtension(
+                            version.getSelectionModel().getSelectedItem().name(),
+                            optionalDependencies.isSelected()
+                    ),
+                    progress -> Platform.runLater(() -> progressWindow.setProgress(progress)),
+                    status -> Platform.runLater(() -> progressWindow.setStatus(status)),
+                    error -> {
+                        if (error != null) {
+                            logger.error("Error while installing extension", error);
+                        }
+
+                        Platform.runLater(() -> {
+                            progressWindow.close();
+
+                            if (error == null) {
                                 new Alert(
                                         Alert.AlertType.INFORMATION,
                                         String.format(
@@ -131,16 +152,26 @@ class ExtensionModificationWindow extends Stage {
                                                 version.getSelectionModel().getSelectedItem().name()
                                         )
                                 ).show();
+                            } else {
+                                new Alert(
+                                        Alert.AlertType.ERROR,
+                                        String.format(
+                                                "%s %s not installed: %s.",
+                                                extension.name(),
+                                                version.getSelectionModel().getSelectedItem().name(),
+                                                error.getLocalizedMessage()
+                                        )
+                                ).show();
+                            }
 
-                                close();
-                            });
+                            close();
+                        });
 
-                            executor.shutdown();
-                        }
-                ));
-            } catch (IOException e) {
-                logger.error("Error while creating progress window", e);
-            }
+                        executor.shutdown();
+                    }
+            ));
+        } catch (IOException e) {
+            logger.error("Error while creating progress window", e);
         }
     }
 }

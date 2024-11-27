@@ -10,20 +10,21 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
-import org.controlsfx.control.PopOver;
 import org.controlsfx.glyphfont.FontAwesome;
 import org.controlsfx.glyphfont.GlyphFont;
 import org.controlsfx.glyphfont.GlyphFontRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionIndexManager;
-import qupath.ext.extensionmanager.core.ExtensionInstallationInformation;
-import qupath.ext.extensionmanager.core.indexmodel.Extension;
+import qupath.ext.extensionmanager.core.index.model.Extension;
+import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
+import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 import qupath.ext.extensionmanager.gui.ExtensionIndexModel;
 import qupath.ext.extensionmanager.gui.UiUtils;
 
 import java.io.IOException;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * A container that displays information and controls of an extension.
@@ -32,8 +33,10 @@ class ExtensionLine extends HBox {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionLine.class);
     private static final GlyphFont fontAwesome = GlyphFontRegistry.font("FontAwesome");
-    private final Extension extension;
+    private final ExtensionIndexManager extensionIndexManager;
     private final ExtensionIndexModel model;
+    private final SavedIndex savedIndex;
+    private final Extension extension;
     @FXML
     private Label name;
     @FXML
@@ -48,25 +51,37 @@ class ExtensionLine extends HBox {
     /**
      * Create the container.
      *
-     * @param extension the extension to display
+     * @param extensionIndexManager the extension index manager this window should use
      * @param model the model to use when accessing data
+     * @param savedIndex the index owning the extension to display
+     * @param extension the extension to display
      * @throws IOException when an error occurs while creating the container
      */
-    public ExtensionLine(Extension extension, ExtensionIndexModel model) throws IOException {
-        this.extension = extension;
+    public ExtensionLine(
+            ExtensionIndexManager extensionIndexManager,
+            ExtensionIndexModel model,
+            SavedIndex savedIndex,
+            Extension extension
+    ) throws IOException {
+        this.extensionIndexManager = extensionIndexManager;
         this.model = model;
+        this.savedIndex = savedIndex;
+        this.extension = extension;
 
         UiUtils.loadFXML(this, ExtensionLine.class.getResource("extension_line.fxml"));
 
-        ReadOnlyObjectProperty<Optional<ExtensionInstallationInformation>> installedExtension = model.getInstalledExtension(extension);
+        ReadOnlyObjectProperty<Optional<InstalledExtension>> installedExtension = model.getInstalledExtension(
+                savedIndex,
+                extension
+        );
         if (installedExtension.get().isPresent()) {
-            name.setText(String.format("%s %s", extension.name(), installedExtension.get().get().version()));
+            name.setText(String.format("%s %s", extension.name(), installedExtension.get().get().releaseName()));
         } else {
             name.setText(extension.name());
         }
         installedExtension.addListener((p, o, n) -> Platform.runLater(() -> {
             if (n.isPresent()) {
-                name.setText(String.format("%s %s", extension.name(), n.get().version()));
+                name.setText(String.format("%s %s", extension.name(), n.get().releaseName()));
             } else {
                 name.setText(extension.name());
             }
@@ -98,7 +113,12 @@ class ExtensionLine extends HBox {
     @FXML
     private void onAddClicked(ActionEvent ignored) {
         try {
-            new ExtensionModificationWindow(extension, model.getInstalledExtension(extension).get().orElse(null)).show();
+            new ExtensionModificationWindow(
+                    extensionIndexManager,
+                    savedIndex,
+                    extension,
+                    model.getInstalledExtension(savedIndex, extension).get().orElse(null)
+            ).show();
         } catch (IOException e) {
             logger.error("Error when creating extension modification window", e);
         }
@@ -107,7 +127,12 @@ class ExtensionLine extends HBox {
     @FXML
     private void onSettingsClicked(ActionEvent ignored) {
         try {
-            new ExtensionModificationWindow(extension, model.getInstalledExtension(extension).get().orElse(null)).show();
+            new ExtensionModificationWindow(
+                    extensionIndexManager,
+                    savedIndex,
+                    extension,
+                    model.getInstalledExtension(savedIndex, extension).get().orElse(null)
+            ).show();
         } catch (IOException e) {
             logger.error("Error when creating extension modification window", e);
         }
@@ -124,24 +149,42 @@ class ExtensionLine extends HBox {
         ).showAndWait();
 
         if (confirmation.isPresent() && confirmation.get().equals(ButtonType.OK)) {
-            ExtensionIndexManager.removeExtension(extension);
+            CompletableFuture.runAsync(() -> {
+                try {
+                    extensionIndexManager.removeExtension(savedIndex, extension);
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }).handle((v, error) -> {
+                if (error == null) {
+                    Platform.runLater(() -> new Alert(
+                            Alert.AlertType.INFORMATION,
+                            String.format(
+                                    "%s removed.",
+                                    extension.name()
+                            )
+                    ).show());
+                } else {
+                    logger.error("Error while deleting extension", error);
 
-            new Alert(
-                    Alert.AlertType.INFORMATION,
-                    String.format(
-                            "%s removed.",
-                            extension.name()
-                    )
-            ).show();
+                    Platform.runLater(() -> new Alert(
+                            Alert.AlertType.ERROR,
+                            String.format(
+                                    "Cannot delete extension:\n%s",
+                                    error.getLocalizedMessage()
+                            )
+                    ));
+                }
+
+                return null;
+            });
         }
     }
 
     @FXML
     private void onInfoClicked(ActionEvent ignored) {
         try {
-            PopOver popOver = new PopOver(new ExtensionDetails(extension));
-            popOver.setArrowLocation(PopOver.ArrowLocation.BOTTOM_CENTER);
-            popOver.show(info);
+            new ExtensionDetails(extension).show();
         } catch (IOException e) {
             logger.error("Error when creating extension detail pane", e);
         }

@@ -36,7 +36,6 @@ public class ProgressWindow extends Stage {
         initModality(Modality.APPLICATION_MODAL);
 
         setTitle(label);
-        this.label.setText(label);
     }
 
     @FXML
@@ -53,5 +52,14 @@ public class ProgressWindow extends Stage {
      */
     public void setProgress(float progress) {
         progressBar.setProgress(progress);
+    }
+
+    /**
+     * Set a text describing the current step.
+     *
+     * @param status the current step of the operation
+     */
+    public void setStatus(String status) {
+        this.label.setText(status);
     }
 }

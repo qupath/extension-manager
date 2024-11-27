@@ -23,7 +23,7 @@
                 </TableView>
                 <HBox spacing="5.0">
                     <children>
-                        <TextField fx:id="indexURL" promptText="Index URL" />
+                        <TextField fx:id="indexURL" prefWidth="500.0" promptText="Index URL" />
                         <Button mnemonicParsing="false" onAction="#onAddClicked" text="Add" />
                     </children>
                     <padding>

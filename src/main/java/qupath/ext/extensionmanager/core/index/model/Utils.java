@@ -1,6 +1,6 @@
-package qupath.ext.extensionmanager.core.indexmodel;
+package qupath.ext.extensionmanager.core.index.model;
 
-import java.net.URL;
+import java.net.URI;
 
 /**
  * Utility functions used for model validation.
@@ -27,15 +27,15 @@ class Utils {
     }
 
     /**
-     * Check that a URL comes from github.com.
+     * Check that a URI comes from github.com.
      *
-     * @param url the URL to check
+     * @param uri the URI to check
      * @throws IllegalStateException when the provided URL is not coming from github.com
      */
-    public static void checkGithubURL(URL url) {
-        if (!GITHUB_HOST.equals(url.getHost())) {
+    public static void checkGithubURI(URI uri) {
+        if (!GITHUB_HOST.equals(uri.getHost())) {
             throw new IllegalStateException(String.format(
-                    "The %s URL is not a %s URL", url, GITHUB_HOST
+                    "The %s URL is not a %s URL", uri, GITHUB_HOST
             ));
         }
     }

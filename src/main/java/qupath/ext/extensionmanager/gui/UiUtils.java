@@ -8,11 +8,13 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXMLLoader;
 
 import java.awt.Desktop;
+import java.io.File;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.ResourceBundle;
+import java.util.concurrent.CompletableFuture;
 
 /**
  * Utility methods related to the user interface.
@@ -44,16 +46,43 @@ public class UiUtils {
      * browsing is not supported by the computer.
      *
      * @param url the link to open
-     * @throws URISyntaxException when the provided link is not a valid URI
-     * @throws IOException if the user default browser is not found, or it fails
-     * to be launched, or the default handler application failed to be launched
+     * @return a CompletableFuture that will complete exceptionally if an error occurs while
+     * browsing the provided link
      */
-    public static void openInBrowser(String url) throws URISyntaxException, IOException {
-        Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
+    public static CompletableFuture<Void> openLinkInWebBrowser(String url) {
+        return CompletableFuture.runAsync(() -> {
+            Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
 
-        if (desktop != null && desktop.isSupported(Desktop.Action.BROWSE)) {
-            desktop.browse(new URI(url));
-        }
+            if (desktop != null && desktop.isSupported(Desktop.Action.BROWSE)) {
+                try {
+                    desktop.browse(new URI(url));
+                } catch (IOException | URISyntaxException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
+    }
+
+    /**
+     * Open the provided folder with the platform's file explorer. This won't do anything if
+     * browsing files is not supported by the computer.
+     *
+     * @param folder the path to the folder to browse
+     * @return a CompletableFuture that will complete exceptionally if an error occurs while
+     * browsing the provided folder
+     */
+    public static CompletableFuture<Void> openFolderInFileExplorer(String folder) {
+        return CompletableFuture.runAsync(() -> {
+            Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
+
+            if (desktop != null && desktop.isSupported(Desktop.Action.OPEN)) {
+                try {
+                    desktop.open(new File(folder));
+                } catch (IOException e) {
+                    throw new RuntimeException(e);
+                }
+            }
+        });
     }
 
     /**
