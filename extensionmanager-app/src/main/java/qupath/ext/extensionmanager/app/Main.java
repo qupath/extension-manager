@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager;
+package qupath.ext.extensionmanager.app;
 
 import javafx.application.Application;
 import javafx.beans.property.SimpleStringProperty;
