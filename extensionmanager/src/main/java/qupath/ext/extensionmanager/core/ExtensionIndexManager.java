@@ -36,8 +36,10 @@ import java.util.function.Consumer;
  * in a registry JSON file located in the extension directory (see {@link Registry}).
  * <p>
  * This class is thread-safe.
+ * <p>
+ * This manager must be {@link #close() closed} once no longer used.
  */
-public class ExtensionIndexManager {
+public class ExtensionIndexManager implements AutoCloseable{
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionIndexManager.class);
     private final ObservableList<SavedIndex> savedIndexes = FXCollections.observableArrayList();
@@ -69,6 +71,11 @@ public class ExtensionIndexManager {
             logger.debug("Error while retrieving saved registry. Using default one.", e);
             this.savedIndexes.addAll(defaultRegistry.getIndexes());
         }
+    }
+
+    @Override
+    public void close() throws Exception {
+        this.extensionFolderManager.close();
     }
 
     /**

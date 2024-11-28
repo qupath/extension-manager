@@ -5,10 +5,13 @@ import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
 import javafx.beans.property.StringProperty;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.index.model.Extension;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
 import qupath.ext.extensionmanager.core.savedentities.Registry;
 import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
+import qupath.ext.extensionmanager.core.tools.DirectoryWatcher;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -16,6 +19,7 @@ import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
@@ -27,13 +31,16 @@ import java.util.stream.Stream;
  * files).
  * <p>
  * This class is thread-safe.
+ * <p>
+ * This manager must be {@link #close() closed} once no longer used.
  */
-class ExtensionFolderManager {
+class ExtensionFolderManager implements AutoCloseable {
 
+    private static final Logger logger = LoggerFactory.getLogger(ExtensionFolderManager.class);
     private static final String REGISTRY_NAME = "registry.json";
     private static final Gson gson = new Gson();
     private final StringProperty extensionFolderPath;
-
+    private DirectoryWatcher extensionDirectoryWatcher;
     /**
      * A type of files to retrieve.
      */
@@ -73,6 +80,18 @@ class ExtensionFolderManager {
      */
     public ExtensionFolderManager(StringProperty extensionFolderPath) {
         this.extensionFolderPath = extensionFolderPath;
+
+        setExtensionDirectoryWatcher();
+        extensionFolderPath.addListener((p, o, n) ->
+                setExtensionDirectoryWatcher()
+        );
+    }
+
+    @Override
+    public void close() throws Exception {
+        if (extensionDirectoryWatcher != null) {
+            extensionDirectoryWatcher.close();
+        }
     }
 
     /**
@@ -233,6 +252,33 @@ class ExtensionFolderManager {
      */
     public synchronized void deleteExtension(SavedIndex savedIndex, Extension extension) throws IOException {
         deleteDirectory(getExtensionFolder(savedIndex, extension).toFile());
+    }
+
+    private void setExtensionDirectoryWatcher() {
+        synchronized (this) {
+            if (extensionDirectoryWatcher != null) {
+                try {
+                    extensionDirectoryWatcher.close();
+                } catch (Exception e) {
+                    logger.debug("Error when closing extension directory watcher", e);
+                }
+            }
+        }
+
+        try {
+            synchronized (this) {
+                extensionDirectoryWatcher = new DirectoryWatcher(
+                        Paths.get(extensionFolderPath.get()),
+                        addedFile -> {},
+                        removedFile -> {}
+                );
+            }
+        } catch (IOException | InvalidPathException | UnsupportedOperationException | SecurityException e) {
+            logger.warn(String.format(
+                    "Error when creating extension directory watcher for %s. Extensions manually installed won't be detected."
+                    , extensionFolderPath.get()
+            ), e);
+        }
     }
 
     private Path getExtensionFolder(SavedIndex savedIndex, Extension extension) {
