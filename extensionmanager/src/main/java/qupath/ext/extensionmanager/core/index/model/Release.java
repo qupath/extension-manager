@@ -14,7 +14,7 @@ import java.util.List;
  * @param optionalDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be downloaded
  * @param javadocsUrls SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension
  *                     jar and for dependencies can be downloaded
- * @param qupathVersions a specification of minimum and maximum compatible QuPath versions
+ * @param versions a specification of minimum and maximum compatible versions
  */
 public record Release(
         String name,
@@ -22,7 +22,7 @@ public record Release(
         List<URI> requiredDependencyUrls,
         List<URI> optionalDependencyUrls,
         List<URI> javadocsUrls,
-        QuPathVersionRange qupathVersions
+        VersionRange versions
 ) {
     private static final List<String> VALID_HOSTS = List.of("github.com", "maven.scijava.org", "repo1.maven.org");
 
@@ -35,7 +35,7 @@ public record Release(
      * @param optionalDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be downloaded
      * @param javadocsUrls SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension
      *                     jar and for dependencies can be downloaded
-     * @param qupathVersions a specification of minimum and maximum compatible QuPath versions
+     * @param versions a specification of minimum and maximum compatible versions
      * @throws IllegalStateException when the created object is not valid (see {@link #checkValidity()})
      */
     public Release(
@@ -44,14 +44,14 @@ public record Release(
             List<URI> requiredDependencyUrls,
             List<URI> optionalDependencyUrls,
             List<URI> javadocsUrls,
-            QuPathVersionRange qupathVersions
+            VersionRange versions
     ) {
         this.name = name;
         this.mainUrl = mainUrl;
         this.requiredDependencyUrls = requiredDependencyUrls;
         this.optionalDependencyUrls = optionalDependencyUrls;
         this.javadocsUrls = javadocsUrls;
-        this.qupathVersions = qupathVersions;
+        this.versions = versions;
 
         checkValidity();
     }
@@ -72,9 +72,10 @@ public record Release(
     }
 
     /**
-     * Check that this object is valid
+     * Check that this object is valid:
      * <ul>
-     *     <li>The 'min', 'mainUrl', and 'qupathVersions' fields must be defined.</li>
+     *     <li>The 'min', 'mainUrl', and 'versions' fields must be defined.</li>
+     *     <li>The 'version' object must be valid (see {@link VersionRange#checkValidity()}).</li>
      *     <li>The 'mainURL' field must be a GitHub URL. All other URLs must be SciJava Maven, Maven Central, or GitHub URLs.</li>
      * </ul>
      *
@@ -83,9 +84,9 @@ public record Release(
     public void checkValidity() {
         Utils.checkField(name, "name", "Release");
         Utils.checkField(mainUrl, "mainUrl", "Release");
-        Utils.checkField(qupathVersions, "qupathVersions", "Release");
+        Utils.checkField(versions, "versions", "Release");
 
-        qupathVersions.checkValidity();
+        versions.checkValidity();
 
         Utils.checkGithubURI(mainUrl);
 

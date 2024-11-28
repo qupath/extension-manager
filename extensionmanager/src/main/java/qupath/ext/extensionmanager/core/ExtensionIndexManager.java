@@ -44,23 +44,24 @@ public class ExtensionIndexManager {
     private final ObservableList<SavedIndex> savedIndexesImmutable = FXCollections.unmodifiableObservableList(savedIndexes);
     private final Map<IndexExtension, ObjectProperty<Optional<InstalledExtension>>> installedExtensions = new ConcurrentHashMap<>();
     private final ExtensionFolderManager extensionFolderManager;
-    private final String quPathVersion;
+    private final String version;
     private record IndexExtension(SavedIndex savedIndex, Extension extension) {}
 
     /**
      * Create the extension index manager.
      *
      * @param extensionFolderPath a string property pointing to the path the extension folder should have
-     * @param quPathVersion a text describing the QuPath release with the form "v[MAJOR].[MINOR].[PATCH]"
-     *                      or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
+     * @param version a text describing the release of the current software with the form "v[MAJOR].[MINOR].[PATCH]"
+     *                or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]". It will determine which extensions are
+     *                compatible
      * @param defaultRegistry the default registry to use when the saved one cannot be used
-     * @throws IllegalArgumentException if the provided QuPath version doesn't meet the specified requirements
+     * @throws IllegalArgumentException if the provided version doesn't meet the specified requirements
      */
-    public ExtensionIndexManager(StringProperty extensionFolderPath, String quPathVersion, Registry defaultRegistry) {
-        Version.isValid(quPathVersion);
+    public ExtensionIndexManager(StringProperty extensionFolderPath, String version, Registry defaultRegistry) {
+        Version.isValid(version);
 
         this.extensionFolderManager = new ExtensionFolderManager(extensionFolderPath);
-        this.quPathVersion = quPathVersion;
+        this.version = version;
 
         try {
             this.savedIndexes.addAll(extensionFolderManager.getSavedRegistry().getIndexes());
@@ -78,11 +79,11 @@ public class ExtensionIndexManager {
     }
 
     /**
-     * @return a text describing the QuPath release with the form "v[MAJOR].[MINOR].[PATCH]"
+     * @return a text describing the release of the current software with the form "v[MAJOR].[MINOR].[PATCH]"
      * or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
      */
-    public String getQuPathVersion() {
-        return quPathVersion;
+    public String getVersion() {
+        return version;
     }
 
     /**

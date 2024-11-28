@@ -34,7 +34,12 @@ public record Extension(String name, String description, URI homepage, List<Rele
     }
 
     /**
-     * Check that this object is valid.
+     * Check that this object is valid:
+     * <ul>
+     *     <li>The 'name', 'description', 'homepage', and 'versions' fields must be defined.</li>
+     *     <li>Each release of the 'version' list must be a valid object (see {@link Release#checkValidity()}).</li>
+     *     <li>The 'homepage' field must be a GitHub URL.</li>
+     * </ul>
      *
      * @throws IllegalStateException when this object is not valid
      */
