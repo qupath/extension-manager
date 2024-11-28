@@ -20,12 +20,12 @@
               </ScrollPane>
 
 
-            <HBox>
-               <children>
-                  <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#onOpenExtensionDirectory" text="Open extension directory" HBox.hgrow="ALWAYS" />
-                  <Button layoutX="10.0" layoutY="10.0" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#onManageIndexesClicked" text="Manage extension indexes" HBox.hgrow="ALWAYS" />
-               </children>
-            </HBox>
+                <HBox>
+                    <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false"
+                            onAction="#onOpenExtensionDirectory" text="Open extension directory" HBox.hgrow="ALWAYS"/>
+                    <Button layoutX="10.0" layoutY="10.0" maxWidth="1.7976931348623157E308" mnemonicParsing="false"
+                            onAction="#onManageIndexesClicked" text="Manage extension indexes" HBox.hgrow="ALWAYS"/>
+                </HBox>
             </VBox>
         </Scene>
     </scene>

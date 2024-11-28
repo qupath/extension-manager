@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.filetools;
+package qupath.ext.extensionmanager.core.tools;
 
 import java.io.File;
 import java.io.IOException;
@@ -101,10 +101,10 @@ public class ZipExtractor {
     private static File createFile(File destinationDirectory, ZipEntry zipEntry) throws IOException {
         File destFile = new File(destinationDirectory, zipEntry.getName());
 
-        String destDirPath = destinationDirectory.getCanonicalPath();
-        String destFilePath = destFile.getCanonicalPath();
+        String destinationDirPath = destinationDirectory.getCanonicalPath();
+        String destinationFilePath = destFile.getCanonicalPath();
 
-        if (!destFilePath.startsWith(destDirPath + File.separator)) {
+        if (!destinationFilePath.startsWith(destinationDirPath + File.separator)) {
             throw new IOException(String.format(
                     "The ZIP entry %s is outside of the target directory %s",
                     zipEntry.getName(),

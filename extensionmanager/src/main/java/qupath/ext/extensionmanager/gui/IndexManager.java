@@ -22,7 +22,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionIndexManager;
 import qupath.ext.extensionmanager.core.index.IndexFetcher;
+import qupath.ext.extensionmanager.core.index.model.Index;
 import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
+import qupath.ext.extensionmanager.core.tools.GitHubRawLinkFinder;
 
 import java.io.IOException;
 import java.net.URI;
@@ -35,6 +37,7 @@ import java.util.List;
 public class IndexManager extends Stage {
 
     private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
+    private static final String INDEX_FILE_NAME = "index.json";
     private final ExtensionIndexManager extensionIndexManager;
     @FXML
     private TableView<SavedIndex> indexTable;
@@ -68,40 +71,49 @@ public class IndexManager extends Stage {
 
     @FXML
     private void onAddClicked(ActionEvent ignored) {
-        IndexFetcher.getIndex(indexURL.getText()).handle((index, error) -> {
-            if (error == null) {
-                if (extensionIndexManager.getIndexes().stream().anyMatch(savedIndex -> savedIndex.name().equals(index.name()))) {
+        GitHubRawLinkFinder.getRawLinkOfFileInRepository(indexURL.getText(), INDEX_FILE_NAME::equals)
+                .exceptionally(error -> {
+                    logger.debug("Attempt to get raw link of {} failed. Considering it to be a raw link.", indexURL.getText(), error);
+
+                    return URI.create(indexURL.getText());
+                })
+                .thenAcceptAsync(uri -> {
+                    Index index = IndexFetcher.getIndex(uri).join();
+
+                    if (extensionIndexManager.getIndexes().stream().anyMatch(savedIndex -> savedIndex.name().equals(index.name()))) {
+                        Platform.runLater(() -> new Alert(
+                                Alert.AlertType.ERROR,
+                                String.format("An index with the same name (%s) already exists.", index.name())
+                        ).show());
+                        return;
+                    }
+
+                    try {
+                        extensionIndexManager.addIndex(List.of(new SavedIndex(
+                                index.name(),
+                                index.description(),
+                                new URI(indexURL.getText()),
+                                uri
+                        )));
+                    } catch (URISyntaxException | IOException e) {
+                        logger.error(String.format("Error when saving index %s", index.name()), e);
+
+                        Platform.runLater(() -> new Alert(
+                                Alert.AlertType.ERROR,
+                                String.format("Cannot save index:\n%s", e.getLocalizedMessage())
+                        ).show());
+                    }
+                })
+                .exceptionally(error -> {
+                    logger.debug("Error when fetching index at {}", indexURL.getText(), error);
+
                     Platform.runLater(() -> new Alert(
                             Alert.AlertType.ERROR,
-                            String.format("An index with the same name (%s) already exists.", index.name())
+                            String.format("Cannot add index:\n%s", error.getLocalizedMessage())
                     ).show());
+
                     return null;
-                }
-
-                try {
-                    extensionIndexManager.addIndex(List.of(new SavedIndex(
-                            index.name(),
-                            index.description(),
-                            new URI(indexURL.getText())
-                    )));
-                } catch (URISyntaxException | IOException e) {
-                    logger.error(String.format("Error when saving index %s", index.name()), e);
-
-                    Platform.runLater(() -> new Alert(
-                            Alert.AlertType.ERROR,
-                            String.format("Cannot save index:\n%s", e.getLocalizedMessage())
-                    ).show());
-                }
-            } else {
-                logger.debug(String.format("Error when fetching index at %s", indexURL.getText()), error);
-
-                Platform.runLater(() -> new Alert(
-                        Alert.AlertType.ERROR,
-                        String.format("Cannot add index:\n%s", error.getLocalizedMessage())
-                ).show());
-            }
-            return null;
-        });
+                });
     }
 
     private void setColumns() {
@@ -129,12 +141,14 @@ public class IndexManager extends Stage {
             TableRow<SavedIndex> row = new TableRow<>();
             row.setOnMouseClicked(event -> {
                 if (event.getClickCount() == 2 && (!row.isEmpty())) {
-                    UiUtils.openLinkInWebBrowser(row.getItem().uri().toString()).exceptionally(error -> {
-                        logger.error(String.format("Error when opening %s in browser", row.getItem().uri()), error);
+                    String url = row.getItem().uri().toString();
+
+                    UiUtils.openLinkInWebBrowser(url).exceptionally(error -> {
+                        logger.error("Error when opening {} in browser", url, error);
 
                         Platform.runLater(() -> new Alert(
                                 Alert.AlertType.ERROR,
-                                String.format("Cannot open '%s':\n%s", row.getItem().uri(), error.getLocalizedMessage())
+                                String.format("Cannot open '%s':\n%s", url, error.getLocalizedMessage())
                         ).show());
 
                         return null;
@@ -164,7 +178,7 @@ public class IndexManager extends Stage {
             try {
                 extensionIndexManager.removeIndexes(indexTable.getSelectionModel().getSelectedItems());
             } catch (IOException e) {
-                logger.error(String.format("Error when removing %s", indexTable.getSelectionModel().getSelectedItems()), e);
+                logger.error("Error when removing {}", indexTable.getSelectionModel().getSelectedItems(), e);
 
                 new Alert(
                         Alert.AlertType.ERROR,

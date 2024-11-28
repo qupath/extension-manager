@@ -25,7 +25,7 @@ import java.util.stream.Stream;
 /**
  * A class to manage the extension folder (containing extension installation
  * files).
- *
+ * <p>
  * This class is thread-safe.
  */
 class ExtensionFolderManager {

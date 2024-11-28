@@ -36,7 +36,7 @@ public class IndexPane extends TitledPane {
 
         setText(savedIndex.name());
 
-        IndexFetcher.getIndex(savedIndex.uri().toString()).handle((fetchedIndex, error) -> {
+        IndexFetcher.getIndex(savedIndex.rawUri()).handle((fetchedIndex, error) -> {
             if (error == null) {
                 Platform.runLater(() -> extensions.getChildren().addAll(fetchedIndex.extensions().stream()
                         .map(extension -> {
@@ -51,7 +51,7 @@ public class IndexPane extends TitledPane {
                         .toList()
                 ));
             } else {
-                logger.warn(String.format("Error when fetching fetchedIndex at %s", savedIndex.uri()), error);
+                logger.warn("Error when fetching fetchedIndex at {}", savedIndex.rawUri(), error);
             }
             return null;
         });

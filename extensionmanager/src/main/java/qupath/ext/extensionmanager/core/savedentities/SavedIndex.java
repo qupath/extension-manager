@@ -7,6 +7,8 @@ import java.net.URI;
  *
  * @param name see {@link qupath.ext.extensionmanager.core.index.model.Index#name()}
  * @param description see {@link qupath.ext.extensionmanager.core.index.model.Index#description()}
- * @param uri the URI pointing to the raw content of the index
+ * @param uri a URI pointing to the raw content of the index, or to a GitHub repository where the
+ *            index can be found
+ * @param rawUri the URI pointing to the raw content of the index (can be same as {@link #uri})
  */
-public record SavedIndex(String name, String description, URI uri) {}
+public record SavedIndex(String name, String description, URI uri, URI rawUri) {}

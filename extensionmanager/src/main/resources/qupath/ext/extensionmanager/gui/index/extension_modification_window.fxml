@@ -15,28 +15,23 @@
     <scene>
         <Scene>
             <VBox alignment="CENTER_LEFT" spacing="15.0">
-            <children>
-               <Label fx:id="name">
-                  <font>
-                     <Font name="System Bold" size="13.0" />
-                  </font>
-               </Label>
-               <HBox alignment="CENTER_LEFT" spacing="10.0">
-                  <children>
-                     <Label text="Version:" />
-                     <ChoiceBox fx:id="version" prefWidth="150.0" />
-                  </children>
-               </HBox>
-               <CheckBox fx:id="optionalDependencies" mnemonicParsing="false" text="Install optional dependencies" />
-               <HBox alignment="CENTER">
-                  <children>
-                     <Button fx:id="submit" mnemonicParsing="false" onAction="#onSubmitClicked" />
-                  </children>
-               </HBox>
-            </children>
-            <padding>
-               <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
-            </padding></VBox>
+                <padding>
+                    <Insets bottom="10.0" left="10.0" right="10.0" top="10.0"/>
+                </padding>
+                <Label fx:id="name">
+                    <font>
+                        <Font name="System Bold" size="13.0"/>
+                    </font>
+                </Label>
+                <HBox alignment="CENTER_LEFT" spacing="10.0">
+                    <Label text="Version:"/>
+                    <ChoiceBox fx:id="version" prefWidth="150.0"/>
+                </HBox>
+                <CheckBox fx:id="optionalDependencies" mnemonicParsing="false" text="Install optional dependencies"/>
+                <HBox alignment="CENTER">
+                    <Button fx:id="submit" mnemonicParsing="false" onAction="#onSubmitClicked"/>
+                </HBox>
+            </VBox>
         </Scene>
     </scene>
 </fx:root>

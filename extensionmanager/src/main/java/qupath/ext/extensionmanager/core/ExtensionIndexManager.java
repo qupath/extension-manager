@@ -8,8 +8,8 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import qupath.ext.extensionmanager.core.filetools.FileDownloader;
-import qupath.ext.extensionmanager.core.filetools.ZipExtractor;
+import qupath.ext.extensionmanager.core.tools.FileDownloader;
+import qupath.ext.extensionmanager.core.tools.ZipExtractor;
 import qupath.ext.extensionmanager.core.index.model.Extension;
 import qupath.ext.extensionmanager.core.index.model.Release;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
@@ -95,6 +95,8 @@ public class ExtensionIndexManager {
     /**
      * Add indexes to the available list. This will save them to the registry.
      * Indexes with the same name as an already existing index will not be added.
+     * No check will be performed concerning whether the provided indexes point to
+     * valid indexes.
      *
      * @param savedIndexes the indexes to add
      * @throws IOException if an I/O error occurs while saving the registry file. In that case,
@@ -104,7 +106,7 @@ public class ExtensionIndexManager {
         synchronized (this) {
             for (SavedIndex savedIndex: savedIndexes) {
                 if (this.savedIndexes.stream().anyMatch(index -> index.name().equals(savedIndex.name()))) {
-                    logger.warn(String.format("Index %s has the same name as an existing index and will not be added", savedIndex));
+                    logger.warn("Index {} has the same name as an existing index and will not be added", savedIndex);
                 } else {
                     this.savedIndexes.add(savedIndex);
                 }

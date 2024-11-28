@@ -27,10 +27,10 @@ class Utils {
     }
 
     /**
-     * Check that a URI comes from github.com.
+     * Check that a URI comes from GitHub.com.
      *
      * @param uri the URI to check
-     * @throws IllegalStateException when the provided URL is not coming from github.com
+     * @throws IllegalStateException when the provided URL is not coming from GitHub.com
      */
     public static void checkGithubURI(URI uri) {
         if (!GITHUB_HOST.equals(uri.getHost())) {

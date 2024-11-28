@@ -23,6 +23,7 @@ public class Main extends Application {
                 new Registry(List.of(new SavedIndex(
                         "QuPath index",
                         "Extensions maintained by the QuPath team",
+                        URI.create("https://github.com/Rylern/test-index"),
                         URI.create("https://raw.githubusercontent.com/Rylern/test-index/refs/heads/main/index.json")
                 )))
         )).show();

@@ -1,5 +1,6 @@
 module qupath.ext.extensionmanager {
     exports qupath.ext.extensionmanager.core;
+    exports qupath.ext.extensionmanager.core.index.model;
     exports qupath.ext.extensionmanager.core.savedentities;
     exports qupath.ext.extensionmanager.gui;
 
@@ -14,6 +15,8 @@ module qupath.ext.extensionmanager {
     requires java.net.http;
 
     opens qupath.ext.extensionmanager.core.index.model to com.google.gson;
+    opens qupath.ext.extensionmanager.core.tools to com.google.gson;
+    opens qupath.ext.extensionmanager.core.savedentities to com.google.gson;
     opens qupath.ext.extensionmanager.gui to javafx.fxml;
     opens qupath.ext.extensionmanager.gui.index to javafx.fxml;
 }

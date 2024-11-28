@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.filetools;
+package qupath.ext.extensionmanager.core.tools;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -98,36 +98,35 @@ public class FileDownloader {
 
     private static OptionalInt getContentLength(HttpResponse<?> response) {
         if (!response.headers().map().containsKey(CONTENT_LENGTH_ATTRIBUTE)) {
-            logger.debug(String.format(
-                    "%s not found in %s. Cannot indicate progress of %s download",
+            logger.debug(
+                    "{} not found in {}. Cannot indicate progress of {} download",
                     CONTENT_LENGTH_ATTRIBUTE,
                     response.headers().map(),
                     response.uri()
-            ));
+            );
             return OptionalInt.empty();
         }
         List<String> contentLengthEntry = response.headers().map().get(CONTENT_LENGTH_ATTRIBUTE);
 
         if (contentLengthEntry.isEmpty()) {
-            logger.debug(String.format(
-                    "%s empty in %s. Cannot indicate progress of %s download",
+            logger.debug(
+                    "{} empty in {}. Cannot indicate progress of {} download",
                     CONTENT_LENGTH_ATTRIBUTE,
-                    response.headers().map(),
-                    response.uri()
-            ));
+                    response.headers().map(), response.uri()
+            );
             return OptionalInt.empty();
         }
-        String contentLength = contentLengthEntry.get(0);
+        String contentLength = contentLengthEntry.getFirst();
 
         try {
             return OptionalInt.of(Integer.parseInt(contentLength));
         } catch (NumberFormatException e) {
-            logger.debug(String.format(
-                    "The %s header %s cannot be converted to a number. Cannot indicate progress of %s download",
+            logger.debug(
+                    "The {} header {} cannot be converted to a number. Cannot indicate progress of {} download",
                     CONTENT_LENGTH_ATTRIBUTE,
                     contentLength,
                     response.uri()
-            ));
+            );
             return OptionalInt.empty();
         }
     }

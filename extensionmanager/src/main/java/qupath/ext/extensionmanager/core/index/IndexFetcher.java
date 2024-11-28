@@ -6,7 +6,6 @@ import com.google.gson.GsonBuilder;
 import qupath.ext.extensionmanager.core.index.model.Index;
 
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -30,18 +29,11 @@ public class IndexFetcher {
     /**
      * Attempt to get an index from the provided URL.
      *
-     * @param url the URL pointing to the index. The content of the HTTP page must only contain the index in raw format
+     * @param uri the URI pointing to the raw content of the index
      * @return a CompletableFuture with the index or a failed CompletableFuture if the provided URL doesn't point to
      * a valid index
      */
-    public static CompletableFuture<Index> getIndex(String url) {
-        URI uri;
-        try {
-            uri = new URI(url);
-        } catch (URISyntaxException e) {
-            return CompletableFuture.failedFuture(e);
-        }
-
+    public static CompletableFuture<Index> getIndex(URI uri) {
         if (!"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme())) {
             return CompletableFuture.failedFuture(new IllegalArgumentException(
                     String.format("Unknown scheme %s in %s", uri.getScheme(), uri)

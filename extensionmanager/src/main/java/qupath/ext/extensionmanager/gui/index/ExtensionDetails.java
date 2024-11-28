@@ -45,7 +45,7 @@ class ExtensionDetails extends Stage {
     @FXML
     private void onHomepageClicked(ActionEvent ignored) {
         UiUtils.openLinkInWebBrowser(homepage.getText()).exceptionally(error -> {
-            logger.error(String.format("Error when opening %s in browser", homepage.getText()), error);
+            logger.error("Error when opening {} in browser", homepage.getText(), error);
 
             Platform.runLater(() -> new Alert(
                     Alert.AlertType.ERROR,
