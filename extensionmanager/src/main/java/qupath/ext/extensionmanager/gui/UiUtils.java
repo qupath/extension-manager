@@ -6,6 +6,11 @@ import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXMLLoader;
+import javafx.scene.Node;
+import org.controlsfx.glyphfont.FontAwesome;
+import org.controlsfx.glyphfont.Glyph;
+import org.controlsfx.glyphfont.GlyphFont;
+import org.controlsfx.glyphfont.GlyphFontRegistry;
 
 import java.awt.Desktop;
 import java.io.File;
@@ -22,6 +27,7 @@ import java.util.concurrent.CompletableFuture;
 public class UiUtils {
 
     private static final ResourceBundle resources = ResourceBundle.getBundle("qupath.ext.extensionmanager.strings");
+    private static final GlyphFont fontAwesome = GlyphFontRegistry.font("FontAwesome");
 
     private UiUtils() {
         throw new AssertionError("This class is not instantiable.");
@@ -83,6 +89,16 @@ public class UiUtils {
                 }
             }
         });
+    }
+
+    /**
+     * Return a JavaFX Node that displays the provided Glyph.
+     *
+     * @param glyph the glyph to display
+     * @return a JavaFX Node that displays the provided Glyph
+     */
+    public static Glyph getFontAwesomeIcon(FontAwesome.Glyph glyph) {
+        return fontAwesome.create(glyph);
     }
 
     /**

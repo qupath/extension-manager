@@ -10,6 +10,7 @@ import qupath.ext.extensionmanager.core.index.model.Extension;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
 import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
@@ -23,6 +24,8 @@ public class ExtensionIndexModel {
     private final ObservableList<SavedIndex> savedIndices = FXCollections.observableArrayList();
     private final ObservableList<SavedIndex> indexesImmutable = FXCollections.unmodifiableObservableList(savedIndices);
     private static final Map<IndexExtension, ObjectProperty<Optional<InstalledExtension>>> installedExtensions = new HashMap<>();
+    private final ObservableList<Path> manuallyInstalledJars = FXCollections.observableArrayList();
+    private final ObservableList<Path> manuallyInstalledJarsImmutable = FXCollections.unmodifiableObservableList(manuallyInstalledJars);
     private final ExtensionIndexManager extensionIndexManager;
     private record IndexExtension(SavedIndex savedIndex, Extension extension) {}
 
@@ -35,6 +38,7 @@ public class ExtensionIndexModel {
         this.extensionIndexManager = extensionIndexManager;
 
         UiUtils.bindListInUIThread(savedIndices, extensionIndexManager.getIndexes());
+        UiUtils.bindListInUIThread(manuallyInstalledJars, extensionIndexManager.getManuallyInstalledJars());
     }
 
     /**
@@ -65,5 +69,14 @@ public class ExtensionIndexModel {
                     return installedExtension;
                 }
         );
+    }
+
+    /**
+     * @return a read-only observable list of paths pointing to JAR files that were manually added
+     * (i.e. not with an index) to the extension directory. This list will always be updated from the
+     * JavaFX Application Thread
+     */
+    public ObservableList<Path> getManuallyInstalledJars() {
+        return manuallyInstalledJarsImmutable;
     }
 }

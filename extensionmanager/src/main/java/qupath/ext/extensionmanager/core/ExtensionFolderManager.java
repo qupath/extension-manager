@@ -5,16 +5,18 @@ import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
 import javafx.beans.property.StringProperty;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.index.model.Extension;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
 import qupath.ext.extensionmanager.core.savedentities.Registry;
 import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
-import qupath.ext.extensionmanager.core.tools.DirectoryWatcher;
+import qupath.ext.extensionmanager.core.tools.RecursiveDirectoryWatcher;
+import qupath.ext.extensionmanager.core.tools.FileTools;
 
 import java.io.BufferedWriter;
-import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -24,6 +26,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -33,14 +36,55 @@ import java.util.stream.Stream;
  * This class is thread-safe.
  * <p>
  * This manager must be {@link #close() closed} once no longer used.
+ * <p>
+ * The extension folder is organized this way:
+ * <ul>
+ *     <li>indexes
+ *         <ul>
+ *             <li><em>Index name</em>
+ *                 <ul>
+ *                     <li><em>Extension name</em>
+ *                         <ul>
+ *                             <li><em>Extension version</em>
+ *                                 <ul>
+ *                                     <li>main-jar
+ *                                         <ul>
+ *                                             <li><em>Extensions main jar file</em></li>
+ *                                         </ul>
+ *                                     </li>
+ *                                     <li>javadocs-dependencies
+ *                                         <ul>
+ *                                             <li><em>Extension javadocs</em></li>
+ *                                         </ul>
+ *                                     </li>
+ *                                     <li>required-dependencies
+ *                                         <ul>
+ *                                             <li><em>Required dependencies</em></li>
+ *                                         </ul>
+ *                                     </li>
+ *                                     <li>optional-dependencies
+ *                                         <ul>
+ *                                             <li><em>Optional dependencies</em></li>
+ *                                         </ul>
+ *                                     </li></ul></li></ul></li></ul></li>
+ *             <li>registry.json</li>
+ *         </ul>
+ *     </li>
+ *     <li><em>Extension JARs manually installed</em></li>
+ * </ul>
  */
 class ExtensionFolderManager implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionFolderManager.class);
+    private static final String INDEXES_FOLDER = "indexes";
     private static final String REGISTRY_NAME = "registry.json";
+    private static final int MAX_JAR_SEARCH_DEPTH = 5;
+    private static final Predicate<Path> isJar = path -> path.toString().toLowerCase().endsWith(".jar");
     private static final Gson gson = new Gson();
+    private final ObservableList<Path> manuallyInstalledJars = FXCollections.observableArrayList();
+    private final ObservableList<Path> manuallyInstalledJarsImmutable = FXCollections.unmodifiableObservableList(manuallyInstalledJars);
     private final StringProperty extensionFolderPath;
-    private DirectoryWatcher extensionDirectoryWatcher;
+    private RecursiveDirectoryWatcher extensionDirectoryWatcher;
     /**
      * A type of files to retrieve.
      */
@@ -81,10 +125,13 @@ class ExtensionFolderManager implements AutoCloseable {
     public ExtensionFolderManager(StringProperty extensionFolderPath) {
         this.extensionFolderPath = extensionFolderPath;
 
+        setManuallyInstalledJars();
         setExtensionDirectoryWatcher();
-        extensionFolderPath.addListener((p, o, n) ->
-                setExtensionDirectoryWatcher()
-        );
+
+        extensionFolderPath.addListener((p, o, n) -> {
+            setManuallyInstalledJars();
+            setExtensionDirectoryWatcher();
+        });
     }
 
     @Override
@@ -106,10 +153,7 @@ class ExtensionFolderManager implements AutoCloseable {
      */
     public synchronized Registry getSavedRegistry() throws IOException {
         try(
-                FileReader fileReader = new FileReader(Paths.get(
-                        extensionFolderPath.get(),
-                        REGISTRY_NAME
-                ).toFile());
+                FileReader fileReader = new FileReader(getRegistryPath().toFile());
                 JsonReader jsonReader = new JsonReader(fileReader)
         ) {
             return Objects.requireNonNull(gson.fromJson(jsonReader, Registry.class));
@@ -122,13 +166,11 @@ class ExtensionFolderManager implements AutoCloseable {
      *
      * @param registry the registry to save
      * @throws IOException if an I/O error occurs while writing the registry file
+     * @throws SecurityException if the user doesn't have sufficient rights to save the file
      */
     public synchronized void saveRegistry(Registry registry) throws IOException {
         try (
-                FileWriter fileWriter = new FileWriter(Paths.get(
-                        extensionFolderPath.get(),
-                        REGISTRY_NAME
-                ).toFile());
+                FileWriter fileWriter = new FileWriter(getRegistryPath().toFile());
                 BufferedWriter writer = new BufferedWriter(fileWriter)
         ) {
             writer.write(gson.toJson(registry));
@@ -153,10 +195,18 @@ class ExtensionFolderManager implements AutoCloseable {
      * path, for example because the extensions folder path contain invalid characters
      */
     public synchronized void deleteIndex(SavedIndex savedIndex) throws IOException {
-        deleteDirectory(Paths.get(
-                extensionFolderPath.get(),
+        FileTools.deleteDirectoryRecursively(Paths.get(
+                getAndCreateIndexesFolder().toString(),
                 savedIndex.name()
         ).toFile());
+    }
+
+    /**
+     * @return a read-only observable list of paths pointing to JAR files that were
+     * manually added (i.e. not with an index) to the extension directory
+     */
+    public ObservableList<Path> getManuallyInstalledJars() {
+        return manuallyInstalledJarsImmutable;
     }
 
     /**
@@ -192,7 +242,7 @@ class ExtensionFolderManager implements AutoCloseable {
                 versionPath.toString(),
                 FileType.MAIN_JAR.name
         );
-        if (!isDirectoryNotEmpty(mainJarFolderPath)) {
+        if (!FileTools.isDirectoryNotEmpty(mainJarFolderPath)) {
             return Optional.empty();
         }
 
@@ -200,7 +250,7 @@ class ExtensionFolderManager implements AutoCloseable {
                 versionPath.toString(),
                 FileType.OPTIONAL_DEPENDENCIES.name
         );
-        boolean optionalDependenciesInstalled = isDirectoryNotEmpty(optionalDependenciesFolderPath);
+        boolean optionalDependenciesInstalled = FileTools.isDirectoryNotEmpty(optionalDependenciesFolderPath);
 
         return Optional.of(new InstalledExtension(versionPath.toFile().getName(), optionalDependenciesInstalled));
     }
@@ -251,28 +301,54 @@ class ExtensionFolderManager implements AutoCloseable {
      * @throws SecurityException if the user doesn't have sufficient rights to delete the folder
      */
     public synchronized void deleteExtension(SavedIndex savedIndex, Extension extension) throws IOException {
-        deleteDirectory(getExtensionFolder(savedIndex, extension).toFile());
+        FileTools.deleteDirectoryRecursively(getExtensionFolder(savedIndex, extension).toFile());
     }
 
-    private void setExtensionDirectoryWatcher() {
-        synchronized (this) {
-            if (extensionDirectoryWatcher != null) {
-                try {
-                    extensionDirectoryWatcher.close();
-                } catch (Exception e) {
-                    logger.debug("Error when closing extension directory watcher", e);
-                }
+    private synchronized void setManuallyInstalledJars() {
+        this.manuallyInstalledJars.clear();
+
+        try {
+            Path indexFolder = getAndCreateIndexesFolder();
+
+            this.manuallyInstalledJars.addAll(FileTools.findFilesRecursively(
+                    Paths.get(extensionFolderPath.get()),
+                    isJar,
+                    path -> path.equals(indexFolder),
+                    MAX_JAR_SEARCH_DEPTH
+            ));
+        } catch (IOException | InvalidPathException | SecurityException e) {
+            logger.debug(String.format("Error when searching JAR files in %s", extensionFolderPath.get()), e);
+        }
+    }
+
+    private synchronized void setExtensionDirectoryWatcher() {
+        if (extensionDirectoryWatcher != null) {
+            try {
+                extensionDirectoryWatcher.close();
+            } catch (Exception e) {
+                logger.debug("Error when closing extension directory watcher", e);
             }
         }
 
         try {
-            synchronized (this) {
-                extensionDirectoryWatcher = new DirectoryWatcher(
-                        Paths.get(extensionFolderPath.get()),
-                        addedFile -> {},
-                        removedFile -> {}
-                );
-            }
+            Path indexFolder = getAndCreateIndexesFolder();
+
+            extensionDirectoryWatcher = new RecursiveDirectoryWatcher(
+                    Paths.get(extensionFolderPath.get()),
+                    MAX_JAR_SEARCH_DEPTH,
+                    isJar,
+                    path -> path.equals(indexFolder),
+                    addedFile -> {
+                        synchronized (this) {
+                            manuallyInstalledJars.add(addedFile);
+                        }
+                    },
+                    removedFile -> {
+                        synchronized (this) {
+                            manuallyInstalledJars.remove(removedFile);
+                        }
+                    }
+            );
         } catch (IOException | InvalidPathException | UnsupportedOperationException | SecurityException e) {
             logger.warn(String.format(
                     "Error when creating extension directory watcher for %s. Extensions manually installed won't be detected."
@@ -281,36 +357,29 @@ class ExtensionFolderManager implements AutoCloseable {
         }
     }
 
-    private Path getExtensionFolder(SavedIndex savedIndex, Extension extension) {
-        return Paths.get(
+    private Path getRegistryPath() throws IOException {
+        return getAndCreateIndexesFolder().resolve(REGISTRY_NAME);
+    }
+
+    private Path getAndCreateIndexesFolder() throws IOException {
+        Path indexesFolder = Paths.get(
                 extensionFolderPath.get(),
-                stripInvalidFilenameChars(savedIndex.name()),
-                stripInvalidFilenameChars(extension.name())
+                INDEXES_FOLDER
         );
-    }
 
-    private static boolean isDirectoryNotEmpty(Path path) throws IOException {
-        if (Files.isDirectory(path)) {
-            try (Stream<Path> entries = Files.list(path)) {
-                return entries.findAny().isPresent();
-            }
-        } else {
-            return false;
+        if (Files.isRegularFile(indexesFolder)) {
+            Files.deleteIfExists(indexesFolder);
         }
+        Files.createDirectories(indexesFolder);
+
+        return indexesFolder;
     }
 
-    private static void deleteDirectory(File directoryToBeDeleted) throws IOException {
-        File[] childFiles = directoryToBeDeleted.listFiles();
-        if (childFiles != null) {
-            for (File file : childFiles) {
-                deleteDirectory(file);
-            }
-        }
-
-        Files.deleteIfExists(directoryToBeDeleted.toPath());
-    }
-
-    private static String stripInvalidFilenameChars(String name) {
-        return name.replaceAll("[\\\\/:\"*?<>|\\n\\r]+", "");
+    private Path getExtensionFolder(SavedIndex savedIndex, Extension extension) throws IOException {
+        return Paths.get(
+                getAndCreateIndexesFolder().toString(),
+                FileTools.stripInvalidFilenameCharacters(savedIndex.name()),
+                FileTools.stripInvalidFilenameCharacters(extension.name())
+        );
     }
 }

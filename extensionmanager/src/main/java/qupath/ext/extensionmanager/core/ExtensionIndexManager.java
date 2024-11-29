@@ -123,7 +123,7 @@ public class ExtensionIndexManager implements AutoCloseable{
 
         try {
             extensionFolderManager.saveRegistry(new Registry(this.savedIndexes));
-        } catch (IOException e) {
+        } catch (IOException | SecurityException e) {
             synchronized (this) {
                 this.savedIndexes.removeAll(savedIndexes);
             }
@@ -147,7 +147,7 @@ public class ExtensionIndexManager implements AutoCloseable{
 
         try {
             extensionFolderManager.saveRegistry(new Registry(this.savedIndexes));
-        } catch (IOException e) {
+        } catch (IOException | SecurityException e) {
             synchronized (this) {
                 this.savedIndexes.addAll(savedIndexes);
             }
@@ -170,6 +170,14 @@ public class ExtensionIndexManager implements AutoCloseable{
                 }
             }
         }
+    }
+
+    /**
+     * @return a read-only observable list of paths pointing to JAR files that were
+     * manually added (i.e. not with an index) to the extension directory
+     */
+    public ObservableList<Path> getManuallyInstalledJars() {
+        return extensionFolderManager.getManuallyInstalledJars();
     }
 
     /**
