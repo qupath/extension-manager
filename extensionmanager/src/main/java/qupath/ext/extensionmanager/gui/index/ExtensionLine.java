@@ -11,8 +11,6 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import org.controlsfx.glyphfont.FontAwesome;
-import org.controlsfx.glyphfont.GlyphFont;
-import org.controlsfx.glyphfont.GlyphFontRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionIndexManager;
@@ -32,7 +30,6 @@ import java.util.concurrent.CompletableFuture;
 class ExtensionLine extends HBox {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionLine.class);
-    private static final GlyphFont fontAwesome = GlyphFontRegistry.font("FontAwesome");
     private final ExtensionIndexManager extensionIndexManager;
     private final ExtensionIndexModel model;
     private final SavedIndex savedIndex;
@@ -87,10 +84,10 @@ class ExtensionLine extends HBox {
             }
         }));
 
-        add.setGraphic(fontAwesome.create(FontAwesome.Glyph.PLUS_CIRCLE));
-        settings.setGraphic(fontAwesome.create(FontAwesome.Glyph.GEAR));
-        delete.setGraphic(fontAwesome.create(FontAwesome.Glyph.MINUS_CIRCLE));
-        info.setGraphic(fontAwesome.create(FontAwesome.Glyph.INFO_CIRCLE));
+        add.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.PLUS_CIRCLE));
+        settings.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.GEAR));
+        delete.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.MINUS_CIRCLE));
+        info.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.INFO_CIRCLE));
 
         add.visibleProperty().bind(Bindings.createBooleanBinding(
                 () -> installedExtension.get().isEmpty(),
@@ -173,7 +170,7 @@ class ExtensionLine extends HBox {
                                     "Cannot delete extension:\n%s",
                                     error.getLocalizedMessage()
                             )
-                    ));
+                    ).show());
                 }
 
                 return null;

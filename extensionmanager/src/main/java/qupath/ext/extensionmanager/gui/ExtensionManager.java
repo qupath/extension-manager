@@ -1,10 +1,12 @@
 package qupath.ext.extensionmanager.gui;
 
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.TitledPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
@@ -14,6 +16,7 @@ import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 import qupath.ext.extensionmanager.gui.index.IndexPane;
 
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.Objects;
 
 /**
@@ -27,6 +30,10 @@ public class ExtensionManager extends Stage {
     private IndexManager indexManager;
     @FXML
     private VBox indexes;
+    @FXML
+    private TitledPane manuallyInstalledExtensionsPane;
+    @FXML
+    private VBox manuallyInstalledExtensions;
 
     /**
      * Create the window.
@@ -43,6 +50,14 @@ public class ExtensionManager extends Stage {
         setIndexes();
         model.getIndexes().addListener((ListChangeListener<? super SavedIndex>) change ->
                 setIndexes()
+        );
+
+        manuallyInstalledExtensionsPane.visibleProperty().bind(Bindings.isNotEmpty(manuallyInstalledExtensions.getChildren()));
+        manuallyInstalledExtensionsPane.managedProperty().bind(manuallyInstalledExtensionsPane.visibleProperty());
+
+        setManuallyInstalledExtensions();
+        model.getManuallyInstalledJars().addListener((ListChangeListener<? super Path>) change ->
+                setManuallyInstalledExtensions()
         );
     }
 
@@ -86,6 +101,21 @@ public class ExtensionManager extends Stage {
                         return new IndexPane(extensionIndexManager, index, model);
                     } catch (IOException e) {
                         logger.error("Error while creating index pane", e);
+                        return null;
+                    }
+                })
+                .filter(Objects::nonNull)
+                .toList()
+        );
+    }
+
+    private void setManuallyInstalledExtensions() {
+        manuallyInstalledExtensions.getChildren().setAll(model.getManuallyInstalledJars().stream()
+                .map(jarPath -> {
+                    try {
+                        return new ManuallyInstalledExtensionLine(jarPath);
+                    } catch (IOException e) {
+                        logger.error("Error while manually installed extensionLine", e);
                         return null;
                     }
                 })

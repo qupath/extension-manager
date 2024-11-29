@@ -15,9 +15,11 @@ import java.util.List;
 
 public class Main extends Application {
 
+    private ExtensionIndexManager extensionIndexManager;
+
     @Override
     public void start(Stage stage) throws IOException {
-        new ExtensionManager(new ExtensionIndexManager(
+        extensionIndexManager = new ExtensionIndexManager(
                 new SimpleStringProperty(Files.createTempDirectory("").toFile().getAbsolutePath()),
                 "v0.6.0-rc3",
                 new Registry(List.of(new SavedIndex(
@@ -26,7 +28,16 @@ public class Main extends Application {
                         URI.create("https://github.com/Rylern/test-index"),
                         URI.create("https://raw.githubusercontent.com/Rylern/test-index/refs/heads/main/index.json")
                 )))
-        )).show();
+        );
+
+        new ExtensionManager(extensionIndexManager).show();
+    }
+
+    @Override
+    public void stop() throws Exception {
+        if (extensionIndexManager != null) {
+            extensionIndexManager.close();
+        }
     }
 
     public static void main(String[] args) {
