@@ -40,33 +40,30 @@ import java.util.stream.Stream;
  * The extension folder is organized this way:
  * <ul>
  *     <li>indexes
- *         <ul>
- *             <li><em>Index name</em>
- *                 <ul>
- *                     <li><em>Extension name</em>
+ *         <ul><li><em>Index name</em>
+ *             <ul><li><em>Extension name</em>
+ *                 <ul><li><em>Extension version</em>
+ *                     <ul>
+ *                         <li>main-jar
  *                         <ul>
- *                             <li><em>Extension version</em>
- *                                 <ul>
- *                                     <li>main-jar
- *                                         <ul>
- *                                             <li><em>Extensions main jar file</em></li>
- *                                         </ul>
- *                                     </li>
- *                                     <li>javadocs-dependencies
- *                                         <ul>
- *                                             <li><em>Extension javadocs</em></li>
- *                                         </ul>
- *                                     </li>
- *                                     <li>required-dependencies
- *                                         <ul>
- *                                             <li><em>Required dependencies</em></li>
- *                                         </ul>
- *                                     </li>
- *                                     <li>optional-dependencies
- *                                         <ul>
- *                                             <li><em>Optional dependencies</em></li>
- *                                         </ul>
- *                                     </li></ul></li></ul></li></ul></li>
+ *                             <li><em>Extensions main jar file</em></li>
+ *                         </ul>
+ *                         </li>
+ *                         <li>javadocs-dependencies
+ *                         <ul>
+ *                             <li><em>Extension javadocs</em></li>
+ *                         </ul>
+ *                         </li>
+ *                         <li>required-dependencies
+ *                         <ul>
+ *                             <li><em>Required dependencies</em></li>
+ *                         </ul>
+ *                         </li>
+ *                         <li>optional-dependencies
+ *                         <ul>
+ *                             <li><em>Optional dependencies</em></li>
+ *                         </ul>
+ *                         </li></ul></li></ul></li></ul></li>
  *             <li>registry.json</li>
  *         </ul>
  *     </li>
