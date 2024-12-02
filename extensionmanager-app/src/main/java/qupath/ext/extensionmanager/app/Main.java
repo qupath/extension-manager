@@ -21,6 +21,7 @@ public class Main extends Application {
     public void start(Stage stage) throws IOException {
         extensionIndexManager = new ExtensionIndexManager(
                 new SimpleStringProperty(Files.createTempDirectory("").toFile().getAbsolutePath()),
+                Main.class.getClassLoader(),
                 "v0.6.0-rc3",
                 new Registry(List.of(new SavedIndex(
                         "QuPath index",

@@ -65,6 +65,14 @@ public class ExtensionManager extends Stage {
     private void onOpenExtensionDirectory(ActionEvent ignored) {
         String folder = extensionIndexManager.getExtensionFolderPath().get();
 
+        if (folder == null) {
+            new Alert(
+                    Alert.AlertType.ERROR,
+                    "Cannot open the extension folder: its path was not set"
+            ).show();
+            return;
+        }
+
         UiUtils.openFolderInFileExplorer(folder).exceptionally(error -> {
             logger.error("Error while opening QuPath extension directory {}", folder, error);
 

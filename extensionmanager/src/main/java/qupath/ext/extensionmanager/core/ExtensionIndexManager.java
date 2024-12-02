@@ -2,9 +2,11 @@ package qupath.ext.extensionmanager.core;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,7 +18,9 @@ import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
 import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 import qupath.ext.extensionmanager.core.savedentities.Registry;
 
+import java.io.IOError;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
@@ -31,6 +35,9 @@ import java.util.function.Consumer;
 /**
  * A manager for indexes and extensions. It can be used to get access to all saved indexes,
  * add or remove an index, get access to all installed extensions, and install or delete an extension.
+ * Manually installed extensions are automatically detected.
+ * <p>
+ * It also automatically loads extension classes with a custom ClassLoader (see {@link #getClassLoader()}).
  * <p>
  * The list of active indexes and installed extensions is determined by this class. It is internally saved
  * in a registry JSON file located in the extension directory (see {@link Registry}).
@@ -46,42 +53,74 @@ public class ExtensionIndexManager implements AutoCloseable{
     private final ObservableList<SavedIndex> savedIndexesImmutable = FXCollections.unmodifiableObservableList(savedIndexes);
     private final Map<IndexExtension, ObjectProperty<Optional<InstalledExtension>>> installedExtensions = new ConcurrentHashMap<>();
     private final ExtensionFolderManager extensionFolderManager;
+    private final ExtensionClassLoader extensionClassLoader;
     private final String version;
+    private final Registry defaultRegistry;
     private record IndexExtension(SavedIndex savedIndex, Extension extension) {}
 
     /**
      * Create the extension index manager.
      *
-     * @param extensionFolderPath a string property pointing to the path the extension folder should have
+     * @param extensionFolderPath a string property pointing to the path the extension folder should have. The
+     *                            path can be null (but not the property). If this property is changed, indexes
+     *                            and extensions will be set to the content of the new value of the property (so
+     *                            will be reset if the new path is empty)
+     * @param parentClassLoader the class loader that should be the parent of the extension class loader
      * @param version a text describing the release of the current software with the form "v[MAJOR].[MINOR].[PATCH]"
      *                or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]". It will determine which extensions are
      *                compatible
-     * @param defaultRegistry the default registry to use when the saved one cannot be used
+     * @param defaultRegistry the default registry to use when the saved one cannot be used. Can be null
      * @throws IllegalArgumentException if the provided version doesn't meet the specified requirements
+     * @throws SecurityException if the user doesn't have enough rights to create the extension class loader
      */
-    public ExtensionIndexManager(StringProperty extensionFolderPath, String version, Registry defaultRegistry) {
+    public ExtensionIndexManager(
+            StringProperty extensionFolderPath,
+            ClassLoader parentClassLoader,
+            String version,
+            Registry defaultRegistry
+    ) {
         Version.isValid(version);
 
         this.extensionFolderManager = new ExtensionFolderManager(extensionFolderPath);
+        this.extensionClassLoader = new ExtensionClassLoader(parentClassLoader);
         this.version = version;
+        this.defaultRegistry = defaultRegistry;
 
-        try {
-            this.savedIndexes.addAll(extensionFolderManager.getSavedRegistry().getIndexes());
-        } catch (Exception e) {
-            logger.debug("Error while retrieving saved registry. Using default one.", e);
-            this.savedIndexes.addAll(defaultRegistry.getIndexes());
-        }
+        setIndexesFromRegistry();
+        extensionFolderPath.addListener((p, o, n) -> {
+            setIndexesFromRegistry();
+
+            synchronized (this) {
+                for (IndexExtension indexExtension: installedExtensions.keySet()) {
+                    installedExtensions.replace(indexExtension, getInstalledExtension(indexExtension));
+                }
+            }
+        });
+
+        loadJars();
     }
 
     @Override
     public void close() throws Exception {
         this.extensionFolderManager.close();
+        this.extensionClassLoader.close();
     }
 
     /**
-     * @return the path to the extension folder. It may be updated from any thread
+     * Extension classes are automatically loaded with a custom class loader.
+     * This function returns it.
+     *
+     * @return the class loader user to load extensions
      */
-    public StringProperty getExtensionFolderPath() {
+    public ClassLoader getClassLoader() {
+        return extensionClassLoader;
+    }
+
+    /**
+     * @return a read only property containing the path to the extension folder.
+     * It may be updated from any thread and the path (but not the property) can be null
+     */
+    public ReadOnlyStringProperty getExtensionFolderPath() {
         return extensionFolderManager.getExtensionFolderPath();
     }
 
@@ -105,10 +144,14 @@ public class ExtensionIndexManager implements AutoCloseable{
      * Indexes with the same name as an already existing index will not be added.
      * No check will be performed concerning whether the provided indexes point to
      * valid indexes.
+     * <p>
+     * If an exception occurs (see below), the provided indexes are not added.
      *
      * @param savedIndexes the indexes to add
      * @throws IOException if an I/O error occurs while saving the registry file. In that case,
      * the provided indexes are not added
+     * @throws SecurityException if the user doesn't have sufficient rights to save the registry file
+     * @throws NullPointerException if the path contained in {@link #getExtensionFolderPath()} is null
      */
     public void addIndex(List<SavedIndex> savedIndexes) throws IOException {
         synchronized (this) {
@@ -123,7 +166,7 @@ public class ExtensionIndexManager implements AutoCloseable{
 
         try {
             extensionFolderManager.saveRegistry(new Registry(this.savedIndexes));
-        } catch (IOException | SecurityException e) {
+        } catch (IOException | SecurityException | NullPointerException e) {
             synchronized (this) {
                 this.savedIndexes.removeAll(savedIndexes);
             }
@@ -135,10 +178,14 @@ public class ExtensionIndexManager implements AutoCloseable{
     /**
      * Remove indexes from the available list. This will remove them from the
      * saved registry and delete any installed extension belonging to these indexes.
+     * <p>
+     * If an exception occurs (see below), the provided indexes are not added.
      *
      * @param savedIndexes the indexes to remove
      * @throws IOException if an I/O error occurs while saving the registry file. In that case,
-     * the provided indexes are not removed
+     * the provided indexes are not added
+     * @throws SecurityException if the user doesn't have sufficient rights to save the registry file
+     * @throws NullPointerException if the path contained in {@link #getExtensionFolderPath()} is null
      */
     public void removeIndexes(List<SavedIndex> savedIndexes) throws IOException {
         synchronized (this) {
@@ -147,7 +194,7 @@ public class ExtensionIndexManager implements AutoCloseable{
 
         try {
             extensionFolderManager.saveRegistry(new Registry(this.savedIndexes));
-        } catch (IOException | SecurityException e) {
+        } catch (IOException | SecurityException | NullPointerException e) {
             synchronized (this) {
                 this.savedIndexes.addAll(savedIndexes);
             }
@@ -158,7 +205,7 @@ public class ExtensionIndexManager implements AutoCloseable{
         for (SavedIndex savedIndex: savedIndexes) {
             try {
                 extensionFolderManager.deleteIndex(savedIndex);
-            } catch (IOException | SecurityException | InvalidPathException e) {
+            } catch (IOException | SecurityException | InvalidPathException | NullPointerException e) {
                 logger.debug(String.format("Could not delete index %s", savedIndex), e);
             }
         }
@@ -191,20 +238,7 @@ public class ExtensionIndexManager implements AutoCloseable{
     public ReadOnlyObjectProperty<Optional<InstalledExtension>> getInstalledExtension(SavedIndex savedIndex, Extension extension) {
         return installedExtensions.computeIfAbsent(
                 new IndexExtension(savedIndex, extension),
-                indexExtension -> {
-                    try {
-                        return new SimpleObjectProperty<>(extensionFolderManager.getInstalledExtension(
-                                indexExtension.savedIndex,
-                                indexExtension.extension
-                        ));
-                    } catch (IOException | InvalidPathException | SecurityException e) {
-                        logger.debug(
-                                String.format("Error while retrieving extension %s installation information", extension),
-                                e
-                        );
-                        return new SimpleObjectProperty<>(Optional.empty());
-                    }
-                }
+                this::getInstalledExtension
         );
     }
 
@@ -280,7 +314,7 @@ public class ExtensionIndexManager implements AutoCloseable{
             }
 
             onComplete.accept(null);
-        } catch (IOException | InterruptedException | IllegalArgumentException | SecurityException e) {
+        } catch (IOException | InterruptedException | IllegalArgumentException | SecurityException | NullPointerException e) {
             synchronized (this) {
                 extensionProperty.set(Optional.empty());
             }
@@ -303,6 +337,7 @@ public class ExtensionIndexManager implements AutoCloseable{
      * @throws java.nio.file.InvalidPathException if the path of the extension folder cannot be created,
      * for example because the extension name contain invalid characters
      * @throws SecurityException if the user doesn't have sufficient rights to delete the extension files
+     * @throws NullPointerException if the path contained in {@link #getExtensionFolderPath()} is null
      */
     public void removeExtension(SavedIndex savedIndex, Extension extension) throws IOException {
         var extensionProperty = installedExtensions.computeIfAbsent(
@@ -313,6 +348,51 @@ public class ExtensionIndexManager implements AutoCloseable{
         extensionFolderManager.deleteExtension(savedIndex, extension);
         synchronized (this) {
             extensionProperty.set(Optional.empty());
+        }
+    }
+
+    private synchronized void setIndexesFromRegistry() {
+        try {
+            this.savedIndexes.addAll(extensionFolderManager.getSavedRegistry().getIndexes());
+        } catch (Exception e) {
+            logger.debug("Error while retrieving saved registry. Using default one.", e);
+
+            if (defaultRegistry != null) {
+                this.savedIndexes.addAll(defaultRegistry.getIndexes());
+            }
+        }
+    }
+
+    private void loadJars() {
+        addJars(extensionFolderManager.getManuallyInstalledJars());
+        extensionFolderManager.getManuallyInstalledJars().addListener((ListChangeListener<? super Path>) change -> {
+            while (change.next()) {
+                addJars(change.getAddedSubList());
+            }
+            change.reset();
+        });
+
+        addJars(extensionFolderManager.getIndexedManagedInstalledJars());
+        extensionFolderManager.getIndexedManagedInstalledJars().addListener((ListChangeListener<? super Path>) change -> {
+            while (change.next()) {
+                addJars(change.getAddedSubList());
+            }
+            change.reset();
+        });
+    }
+
+    private ObjectProperty<Optional<InstalledExtension>> getInstalledExtension(IndexExtension indexExtension) {
+        try {
+            return new SimpleObjectProperty<>(extensionFolderManager.getInstalledExtension(
+                    indexExtension.savedIndex,
+                    indexExtension.extension
+            ));
+        } catch (IOException | InvalidPathException | SecurityException | NullPointerException e) {
+            logger.debug(
+                    String.format("Error while retrieving extension %s installation information", indexExtension.extension),
+                    e
+            );
+            return new SimpleObjectProperty<>(Optional.empty());
         }
     }
 
@@ -396,6 +476,16 @@ public class ExtensionIndexManager implements AutoCloseable{
         }
 
         return downloadUrlToFileName;
+    }
+
+    private void addJars(List<? extends Path> jarPaths) {
+        for (Path path: jarPaths) {
+            try {
+                extensionClassLoader.addJar(path);
+            } catch (IOError | SecurityException | MalformedURLException e) {
+                logger.error(String.format("Cannot load extension %s", path), e);
+            }
+        }
     }
 
     private static String getFileNameFromURI(URI uri) {

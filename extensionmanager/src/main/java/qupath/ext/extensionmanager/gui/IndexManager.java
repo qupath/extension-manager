@@ -95,7 +95,7 @@ public class IndexManager extends Stage {
                                 new URI(indexURL.getText()),
                                 uri
                         )));
-                    } catch (URISyntaxException | IOException e) {
+                    } catch (URISyntaxException | SecurityException | NullPointerException | IOException e) {
                         logger.error(String.format("Error when saving index %s", index.name()), e);
 
                         Platform.runLater(() -> new Alert(
@@ -177,7 +177,7 @@ public class IndexManager extends Stage {
         removeItem.setOnAction(ignored -> {
             try {
                 extensionIndexManager.removeIndexes(indexTable.getSelectionModel().getSelectedItems());
-            } catch (IOException e) {
+            } catch (IOException | SecurityException | NullPointerException e) {
                 logger.error("Error when removing {}", indexTable.getSelectionModel().getSelectedItems(), e);
 
                 new Alert(
