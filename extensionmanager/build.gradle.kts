@@ -18,3 +18,7 @@ javafx {
     version = "23.0.1"
     modules = listOf("javafx.controls", "javafx.fxml")
 }
+
+base {
+    group = "io.github.qupath"
+}
