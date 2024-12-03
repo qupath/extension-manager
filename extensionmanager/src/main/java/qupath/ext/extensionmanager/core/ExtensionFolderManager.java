@@ -4,8 +4,7 @@ import com.google.gson.Gson;
 import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
-import javafx.beans.property.ReadOnlyStringProperty;
-import javafx.beans.property.StringProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.ObservableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -77,7 +76,7 @@ class ExtensionFolderManager implements AutoCloseable {
     private static final String REGISTRY_NAME = "registry.json";
     private static final Predicate<Path> isJar = path -> path.toString().toLowerCase().endsWith(".jar");
     private static final Gson gson = new Gson();
-    private final StringProperty extensionDirectoryPath;
+    private final ReadOnlyObjectProperty<Path> extensionDirectoryPath;
     private final FilesWatcher manuallyInstalledExtensionsWatcher;
     private final FilesWatcher indexManagedInstalledExtensionsWatcher;
     /**
@@ -113,12 +112,12 @@ class ExtensionFolderManager implements AutoCloseable {
     /**
      * Create the extension folder manager.
      *
-     * @param extensionDirectoryPath a string property pointing to the path the extension folder
-     *                               should have. If it changes, the content of the old path will
-     *                               NOT be copied to the new path. The path (but not the property)
-     *                               can be null or invalid
+     * @param extensionDirectoryPath a read-only property pointing to the path the extension directory should have. The
+     *                               path can be null or invalid (but not the property). If this property is changed,
+     *                               indexes and extensions will be set to the content of the new value of the property
+     *                               (so will be reset if the new path is empty)
      */
-    public ExtensionFolderManager(StringProperty extensionDirectoryPath) {
+    public ExtensionFolderManager(ReadOnlyObjectProperty<Path> extensionDirectoryPath) {
         this.extensionDirectoryPath = extensionDirectoryPath;
 
         this.manuallyInstalledExtensionsWatcher = new FilesWatcher(
@@ -126,10 +125,7 @@ class ExtensionFolderManager implements AutoCloseable {
                 isJar,
                 path -> {
                     try {
-                        return path.equals(Paths.get(
-                                extensionDirectoryPath.get(),
-                                INDEXES_FOLDER
-                        ));
+                        return path.equals(extensionDirectoryPath.get().resolve(INDEXES_FOLDER));
                     } catch (InvalidPathException | NullPointerException e) {
                         logger.debug(String.format("Error when trying to assess if %s should be watched", path), e);
                         return true;
@@ -143,8 +139,8 @@ class ExtensionFolderManager implements AutoCloseable {
                         return null;
                     } else {
                         try {
-                            return getAndCreateIndexesFolder().toString();
-                        } catch (IOException | InvalidPathException | SecurityException e) {
+                            return getAndCreateIndexesFolder();
+                        } catch (IOException | InvalidPathException | SecurityException | NullPointerException e) {
                             logger.debug(String.format("Error when getting index path from %s", path), e);
                             return null;
                         }
@@ -204,7 +200,7 @@ class ExtensionFolderManager implements AutoCloseable {
      * It may be updated from any thread and the path (but not the property) can be null
      * or invalid
      */
-    public ReadOnlyStringProperty getExtensionDirectoryPath() {
+    public ReadOnlyObjectProperty<Path> getExtensionDirectoryPath() {
         return extensionDirectoryPath;
     }
 
@@ -217,13 +213,11 @@ class ExtensionFolderManager implements AutoCloseable {
      * the index
      * @throws java.nio.file.InvalidPathException if a Path object cannot be constructed from the index
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
-     * path, for example because the extensions folder path contain invalid characters
      */
     public synchronized void deleteIndex(SavedIndex savedIndex) throws IOException {
-        FileTools.deleteDirectoryRecursively(Paths.get(
-                getAndCreateIndexesFolder().toString(),
-                savedIndex.name()
-        ).toFile());
+        FileTools.deleteDirectoryRecursively(
+                getAndCreateIndexesFolder().resolve(savedIndex.name()).toFile()
+        );
     }
 
     /**
@@ -345,10 +339,7 @@ class ExtensionFolderManager implements AutoCloseable {
     }
 
     private Path getAndCreateIndexesFolder() throws IOException {
-        Path indexesFolder = Paths.get(
-                extensionDirectoryPath.get(),
-                INDEXES_FOLDER
-        );
+        Path indexesFolder = extensionDirectoryPath.get().resolve(INDEXES_FOLDER);
 
         if (Files.isRegularFile(indexesFolder)) {
             Files.deleteIfExists(indexesFolder);

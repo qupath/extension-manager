@@ -2,9 +2,7 @@ package qupath.ext.extensionmanager.core;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.ReadOnlyObjectProperty;
-import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.property.SimpleObjectProperty;
-import javafx.beans.property.StringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
@@ -68,7 +66,7 @@ public class ExtensionIndexManager implements AutoCloseable{
     /**
      * Create the extension index manager.
      *
-     * @param extensionDirectoryPath a string property pointing to the path the extension directory should have. The
+     * @param extensionDirectoryPath a read-only property pointing to the path the extension directory should have. The
      *                               path can be null or invalid (but not the property). If this property is changed,
      *                               indexes and extensions will be set to the content of the new value of the property
      *                               (so will be reset if the new path is empty)
@@ -81,7 +79,7 @@ public class ExtensionIndexManager implements AutoCloseable{
      * @throws SecurityException if the user doesn't have enough rights to create the extension class loader
      */
     public ExtensionIndexManager(
-            StringProperty extensionDirectoryPath,
+            ReadOnlyObjectProperty<Path> extensionDirectoryPath,
             ClassLoader parentClassLoader,
             String version,
             Registry defaultRegistry
@@ -128,7 +126,7 @@ public class ExtensionIndexManager implements AutoCloseable{
      * It may be updated from any thread and the path (but not the property) can
      * be null or invalid
      */
-    public ReadOnlyStringProperty getExtensionDirectoryPath() {
+    public ReadOnlyObjectProperty<Path> getExtensionDirectoryPath() {
         return extensionFolderManager.getExtensionDirectoryPath();
     }
 

@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -96,7 +95,7 @@ public class ExtensionManager extends Stage {
     public void promptToCopyFilesToExtensionDirectory(List<File> filesToCopy) {
         UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
 
-        String extensionFolder = extensionIndexManager.getExtensionDirectoryPath().get();
+        Path extensionFolder = extensionIndexManager.getExtensionDirectoryPath().get();
         if (extensionFolder == null) {
             new Alert(
                     Alert.AlertType.ERROR,
@@ -110,7 +109,7 @@ public class ExtensionManager extends Stage {
             try {
                 sourceToDestinationFiles.put(
                         file,
-                        Paths.get(extensionFolder).resolve(file.toPath().getFileName()).toFile()
+                        extensionFolder.resolve(file.toPath().getFileName()).toFile()
                 );
             } catch (InvalidPathException | NullPointerException e) {
                 logger.debug(String.format(
@@ -172,22 +171,21 @@ public class ExtensionManager extends Stage {
     private void onOpenExtensionDirectory(ActionEvent ignored) {
         UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
 
-        String folder = extensionIndexManager.getExtensionDirectoryPath().get();
-
-        if (folder == null) {
+        Path extensionDirectory = extensionIndexManager.getExtensionDirectoryPath().get();
+        if (extensionDirectory == null) {
             new Alert(
                     Alert.AlertType.ERROR,
-                    "Cannot open the extension folder: its path was not set"
+                    "Cannot open the extension extensionDirectory: its path was not set"
             ).show();
             return;
         }
 
-        UiUtils.openFolderInFileExplorer(folder).exceptionally(error -> {
-            logger.error("Error while opening QuPath extension directory {}", folder, error);
+        UiUtils.openFolderInFileExplorer(extensionDirectory).exceptionally(error -> {
+            logger.error("Error while opening QuPath extension directory {}", extensionDirectory, error);
 
             Platform.runLater(() -> new Alert(
                     Alert.AlertType.ERROR,
-                    String.format("Cannot open '%s':\n%s", folder, error.getLocalizedMessage())
+                    String.format("Cannot open '%s':\n%s", extensionDirectory, error.getLocalizedMessage())
             ).show());
 
             return null;

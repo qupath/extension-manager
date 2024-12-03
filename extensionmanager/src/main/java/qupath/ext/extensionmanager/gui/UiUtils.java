@@ -1,7 +1,7 @@
 package qupath.ext.extensionmanager.gui;
 
 import javafx.application.Platform;
-import javafx.beans.property.ReadOnlyStringProperty;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
@@ -21,8 +21,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
@@ -76,20 +75,20 @@ public class UiUtils {
     }
 
     /**
-     * Open the provided folder with the platform's file explorer. This won't do anything if
+     * Open the provided directory with the platform's file explorer. This won't do anything if
      * browsing files is not supported by the computer.
      *
-     * @param folder the path to the folder to browse
+     * @param directory the path to the directory to browse
      * @return a CompletableFuture that will complete exceptionally if an error occurs while
-     * browsing the provided folder
+     * browsing the provided directory
      */
-    public static CompletableFuture<Void> openFolderInFileExplorer(String folder) {
+    public static CompletableFuture<Void> openFolderInFileExplorer(Path directory) {
         return CompletableFuture.runAsync(() -> {
             Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
 
             if (desktop != null && desktop.isSupported(Desktop.Action.OPEN)) {
                 try {
-                    desktop.open(new File(folder));
+                    desktop.open(directory.toFile());
                 } catch (IOException e) {
                     throw new RuntimeException(e);
                 }
@@ -104,14 +103,17 @@ public class UiUtils {
      * @param extensionDirectoryProperty the property to check
      * @param onInvalidExtensionDirectory the Runnable to call if the provided path is not a valid directory
      */
-    public static void promptExtensionDirectory(ReadOnlyStringProperty extensionDirectoryProperty, Runnable onInvalidExtensionDirectory) {
-        String extensionDirectory = extensionDirectoryProperty.get();
+    public static void promptExtensionDirectory(
+            ReadOnlyObjectProperty<Path> extensionDirectoryProperty,
+            Runnable onInvalidExtensionDirectory
+    ) {
+        Path extensionDirectory = extensionDirectoryProperty.get();
 
         try {
-            if (extensionDirectory == null || !Files.isDirectory(Paths.get(extensionDirectory))) {
+            if (extensionDirectory == null || !Files.isDirectory(extensionDirectory)) {
                 onInvalidExtensionDirectory.run();
             }
-        } catch (SecurityException | InvalidPathException e) {
+        } catch (SecurityException e) {
             logger.debug("Cannot check if {} is invalid", extensionDirectory, e);
         }
     }

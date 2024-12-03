@@ -7,9 +7,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.function.Predicate;
 
 /**
@@ -23,10 +21,10 @@ import java.util.function.Predicate;
 public class FilesWatcher implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(FilesWatcher.class);
-    private static final int MAX_JAR_SEARCH_DEPTH = 8;
+    private static final int MAX_SEARCH_DEPTH = 8;
     private final ObservableList<Path> files = FXCollections.observableArrayList();
     private final ObservableList<Path> filesImmutable = FXCollections.unmodifiableObservableList(files);
-    private final ObservableValue<String> directoryToWatch;
+    private final ObservableValue<Path> directoryToWatch;
     private final Predicate<Path> filesToFind;
     private final Predicate<Path> directoriesToSkip;
     private RecursiveDirectoryWatcher directoryWatcher;
@@ -34,12 +32,16 @@ public class FilesWatcher implements AutoCloseable {
     /**
      * Create the watcher.
      *
-     * @param directoryToWatch the root directory to watch. Its
+     * @param directoryToWatch the root directory to watch
      * @param filesToFind a predicate indicating if a Path corresponds to a file that should be considered
      * @param directoriesToSkip a predicate indicating if a Path corresponding to a directory must be ignored
      *                          (including its children)
      */
-    public FilesWatcher(ObservableValue<String> directoryToWatch, Predicate<Path> filesToFind, Predicate<Path> directoriesToSkip) {
+    public FilesWatcher(
+            ObservableValue<Path> directoryToWatch,
+            Predicate<Path> filesToFind,
+            Predicate<Path> directoriesToSkip
+    ) {
         this.directoryToWatch = directoryToWatch;
         this.filesToFind = filesToFind;
         this.directoriesToSkip = directoriesToSkip;
@@ -71,19 +73,19 @@ public class FilesWatcher implements AutoCloseable {
     private synchronized void setFiles() {
         files.clear();
 
-        String directory = directoryToWatch.getValue();
+        Path directory = directoryToWatch.getValue();
         if (directory == null) {
             return;
         }
 
         try {
             files.addAll(FileTools.findFilesRecursively(
-                    Paths.get(directory),
+                    directory,
                     filesToFind,
                     directoriesToSkip,
-                    MAX_JAR_SEARCH_DEPTH
+                    MAX_SEARCH_DEPTH
             ));
-        } catch (IOException | InvalidPathException | SecurityException e) {
+        } catch (IOException | SecurityException e) {
             logger.debug(String.format("Error when searching files in %s", directory), e);
         }
     }
@@ -97,15 +99,15 @@ public class FilesWatcher implements AutoCloseable {
             }
         }
 
-        String directory = directoryToWatch.getValue();
+        Path directory = directoryToWatch.getValue();
         if (directory == null) {
             return;
         }
 
         try {
             directoryWatcher = new RecursiveDirectoryWatcher(
-                    Paths.get(directory),
-                    MAX_JAR_SEARCH_DEPTH,
+                    directory,
+                    MAX_SEARCH_DEPTH,
                     filesToFind,
                     directoriesToSkip,
                     addedFile -> {
@@ -119,7 +121,7 @@ public class FilesWatcher implements AutoCloseable {
                         }
                     }
             );
-        } catch (IOException | InvalidPathException | UnsupportedOperationException | SecurityException e) {
+        } catch (IOException | UnsupportedOperationException | SecurityException e) {
             logger.debug(String.format(
                     "Error when creating extension directory watcher for %s. Extensions manually installed won't be detected.",
                     directory

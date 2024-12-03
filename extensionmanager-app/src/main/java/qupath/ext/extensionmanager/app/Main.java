@@ -1,7 +1,7 @@
 package qupath.ext.extensionmanager.app;
 
 import javafx.application.Application;
-import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.SimpleObjectProperty;
 import javafx.stage.Stage;
 import qupath.ext.extensionmanager.core.ExtensionIndexManager;
 import qupath.ext.extensionmanager.core.savedentities.Registry;
@@ -20,7 +20,7 @@ public class Main extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         extensionIndexManager = new ExtensionIndexManager(
-                new SimpleStringProperty(Files.createTempDirectory("").toFile().getAbsolutePath()),
+                new SimpleObjectProperty<>(Files.createTempDirectory("").toFile().toPath()),
                 Main.class.getClassLoader(),
                 "v0.6.0-rc3",
                 new Registry(List.of(new SavedIndex(
