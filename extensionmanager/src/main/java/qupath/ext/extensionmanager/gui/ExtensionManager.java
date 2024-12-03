@@ -6,6 +6,7 @@ import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -15,9 +16,19 @@ import qupath.ext.extensionmanager.core.ExtensionIndexManager;
 import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 import qupath.ext.extensionmanager.gui.index.IndexPane;
 
+import java.io.File;
 import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * A window that displays information and controls regarding indexes and their extensions
@@ -59,6 +70,87 @@ public class ExtensionManager extends Stage {
         model.getManuallyInstalledJars().addListener((ListChangeListener<? super Path>) change ->
                 setManuallyInstalledExtensions()
         );
+    }
+
+    /**
+     * Copy the provided files to the extension directory. Some error dialogs will be shown to
+     * the user if errors occurs.
+     * If at least a destination file already exists, the user is prompted for confirmation.
+     * No confirmation dialog is prompted on success.
+     *
+     * @param filesToCopy the files to copy. No check is performed on those files
+     */
+    public void promptToCopyFilesToExtensionDirectory(List<File> filesToCopy) {
+        String extensionFolder = extensionIndexManager.getExtensionFolderPath().get();
+        if (extensionFolder == null) {
+            new Alert(
+                    Alert.AlertType.ERROR,
+                    "Cannot copy files: extension folder not set."
+            ).show();
+            return;
+        }
+
+        Map<File, File> sourceToDestinationFiles = new HashMap<>();
+        for (File file : filesToCopy) {
+            try {
+                sourceToDestinationFiles.put(
+                        file,
+                        Paths.get(extensionFolder).resolve(file.toPath().getFileName()).toFile()
+                );
+            } catch (InvalidPathException | NullPointerException e) {
+                logger.debug(String.format(
+                        "Error while resolving path of %s in extension folder %s ",
+                        file,
+                        extensionFolder
+                ), e);
+            }
+        }
+
+        List<File> destinationFilesAlreadyExisting = sourceToDestinationFiles.values().stream()
+                .filter(file -> {
+                    try {
+                        return file.exists();
+                    } catch (SecurityException e) {
+                        logger.debug("Cannot check if {} exists", file, e);
+                        return false;
+                    }
+                })
+                .toList();
+        if (!destinationFilesAlreadyExisting.isEmpty()) {
+            var confirmation = new Alert(
+                    Alert.AlertType.CONFIRMATION,
+                    String.format(
+                            "%s already exist. Continue?",
+                            destinationFilesAlreadyExisting
+                    )
+            ).showAndWait();
+
+            if (confirmation.isEmpty() || !confirmation.get().equals(ButtonType.OK)) {
+                return;
+            }
+        }
+
+        List<Throwable> errors = new ArrayList<>();
+        for (var entry : sourceToDestinationFiles.entrySet()) {
+            try {
+                Files.copy(entry.getKey().toPath(), entry.getValue().toPath(), StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException | InvalidPathException | SecurityException e) {
+                logger.error("Cannot copy {} to {}", entry.getKey(), entry.getValue(), e);
+                errors.add(e);
+            }
+        }
+
+        if (!errors.isEmpty()) {
+            new Alert(
+                    Alert.AlertType.ERROR,
+                    String.format(
+                            "Some error occurred while copying files:\n%s",
+                            errors.stream()
+                                    .map(Throwable::getLocalizedMessage)
+                                    .collect(Collectors.joining("\n"))
+                    )
+            ).show();
+        }
     }
 
     @FXML
