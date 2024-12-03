@@ -10,6 +10,9 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import qupath.ext.extensionmanager.core.index.IndexFetcher;
+import qupath.ext.extensionmanager.core.index.model.Index;
+import qupath.ext.extensionmanager.core.savedentities.UpdateAvailable;
 import qupath.ext.extensionmanager.core.tools.FileDownloader;
 import qupath.ext.extensionmanager.core.tools.ZipExtractor;
 import qupath.ext.extensionmanager.core.index.model.Extension;
@@ -25,10 +28,13 @@ import java.net.URI;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
 
@@ -38,6 +44,7 @@ import java.util.function.Consumer;
  * Manually installed extensions are automatically detected.
  * <p>
  * It also automatically loads extension classes with a custom ClassLoader (see {@link #getClassLoader()}).
+ * Note that removed extensions are not unloaded from the class loader.
  * <p>
  * The list of active indexes and installed extensions is determined by this class. It is internally saved
  * in a registry JSON file located in the extension directory (see {@link Registry}).
@@ -225,6 +232,64 @@ public class ExtensionIndexManager implements AutoCloseable{
      */
     public ObservableList<Path> getManuallyInstalledJars() {
         return extensionFolderManager.getManuallyInstalledJars();
+    }
+
+    /**
+     * @return a read-only observable list of paths pointing to JAR files that were
+     * added with indexes to the extension directory
+     */
+    public ObservableList<Path> getIndexedManagedInstalledJars() {
+        return extensionFolderManager.getIndexedManagedInstalledJars();
+    }
+
+
+    /**
+     * Get a list of updates available on the currently installed extensions (with indexes, extensions
+     * manually installed are not considered).
+     *
+     * @return a CompletableFuture with a list of available updates, or a failed CompletableFuture
+     * if the update query failed
+     */
+    public CompletableFuture<List<UpdateAvailable>> getAvailableUpdates() {
+        return CompletableFuture.supplyAsync(() -> {
+            List<UpdateAvailable> updateAvailable = new ArrayList<>();
+
+            List<SavedIndex> savedIndexes;
+            synchronized (this) {
+                // Prevent modifications to savedIndexes while iterating
+                savedIndexes = new ArrayList<>(this.savedIndexes);
+            }
+
+            for (SavedIndex savedIndex: savedIndexes) {
+                Index index = IndexFetcher.getIndex(savedIndex.rawUri()).join();
+
+                updateAvailable.addAll(index.extensions().stream()
+                        .map(extension -> {
+                            Optional<InstalledExtension> installedExtension = getInstalledExtension(new IndexExtension(savedIndex, extension)).get();
+
+                            if (installedExtension.isPresent()) {
+                                String installedRelease = installedExtension.get().releaseName();
+                                Optional<Release> maxCompatibleRelease = extension.getMaxCompatibleRelease(version);
+
+                                if (maxCompatibleRelease.isPresent() &&
+                                        new Version(maxCompatibleRelease.get().name()).compareTo(new Version(installedRelease)) > 0
+                                ) {
+                                    return new UpdateAvailable(
+                                            extension.name(),
+                                            installedExtension.get().releaseName(),
+                                            maxCompatibleRelease.get().name()
+                                    );
+                                }
+                            }
+                            return null;
+                        })
+                        .filter(Objects::nonNull)
+                        .toList()
+                );
+            }
+
+            return updateAvailable;
+        });
     }
 
     /**

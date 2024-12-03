@@ -18,12 +18,12 @@ import java.util.List;
 public record VersionRange(String min, String max, List<String> excludes) {
 
     /**
-     * Create a QuPathVersionRange.
+     * Create a version range.
      *
      * @param min the minimum/lowest version that this extension is known to be compatible with
      * @param max the maximum/highest version that this extension is known to be compatible with
      * @param excludes any specific versions that are not compatible
-     * @throws IllegalStateException when the created object is not valid (see {@link #checkValidity()})
+     * @throws IllegalStateException if the created object is not valid (see {@link #checkValidity()})
      */
     public VersionRange(String min, String max, List<String> excludes) {
         this.min = min;
@@ -34,7 +34,7 @@ public record VersionRange(String min, String max, List<String> excludes) {
     }
 
     /**
-     * @return the maximum/highest QuPath release that this extension is known to be compatible with.
+     * @return the maximum/highest release that this extension is known to be compatible with.
      * Can be null
      */
     @Override
@@ -53,11 +53,11 @@ public record VersionRange(String min, String max, List<String> excludes) {
      *     <li>The 'min' field must be defined.</li>
      *     <li>
      *         All versions must be specified in the form "v[MAJOR].[MINOR].[PATCH]" or
-     *         "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]" corresponding to QuPath semantic versions.
+     *         "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]" corresponding to semantic versions.
      *     </li>
      * </ul>
      *
-     * @throws IllegalStateException when this object is not valid
+     * @throws IllegalStateException if this object is not valid
      */
     public void checkValidity() {
         Utils.checkField(min, "min", "VersionRange");
@@ -86,8 +86,8 @@ public record VersionRange(String min, String max, List<String> excludes) {
      *                must be specified in the form "v[MAJOR].[MINOR].[PATCH]" or
      *                "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
      * @return a boolean indicating if the provided version is compatible with this release range
-     * @throws IllegalArgumentException when the provided version doesn't match the required form
-     * or when this release range is not valid
+     * @throws IllegalArgumentException if the provided version doesn't match the required form
+     * or if this release range is not valid
      */
     public boolean isCompatible(String version) {
         Version versionObject = new Version(version);

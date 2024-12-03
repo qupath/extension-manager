@@ -1,5 +1,7 @@
 package qupath.ext.extensionmanager.core.index.model;
 
+import qupath.ext.extensionmanager.core.Version;
+
 import java.net.URI;
 import java.util.List;
 
@@ -8,7 +10,7 @@ import java.util.List;
  * <p>
  * Functions of this object may return null only if this object is not valid (see {@link #checkValidity()}).
  *
- * @param name the name of this release
+ * @param name the name of this release in the form "v[MAJOR].[MINOR].[PATCH]" or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
  * @param mainUrl the GitHub URL where the main extension jar can be downloaded
  * @param requiredDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where required dependency jars can be downloaded
  * @param optionalDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be downloaded
@@ -29,7 +31,7 @@ public record Release(
     /**
      * Create a Release.
      *
-     * @param name the name of this release
+     * @param name the name of this release in the form "v[MAJOR].[MINOR].[PATCH]" or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
      * @param mainUrl the GitHub URL where the main extension jar can be downloaded
      * @param requiredDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where required dependency jars can be downloaded
      * @param optionalDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be downloaded
@@ -74,8 +76,12 @@ public record Release(
     /**
      * Check that this object is valid:
      * <ul>
-     *     <li>The 'min', 'mainUrl', and 'versions' fields must be defined.</li>
-     *     <li>The 'version' object must be valid (see {@link VersionRange#checkValidity()}).</li>
+     *     <li>The 'name', 'mainUrl', and 'versions' fields must be defined.</li>
+     *     <li>
+     *         'name' must be specified in the form "v[MAJOR].[MINOR].[PATCH]" or
+     *         "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]" corresponding to semantic versions.
+     *     </li>
+     *     <li>The 'versions' object must be valid (see {@link VersionRange#checkValidity()}).</li>
      *     <li>The 'mainURL' field must be a GitHub URL. All other URLs must be SciJava Maven, Maven Central, or GitHub URLs.</li>
      * </ul>
      *
@@ -85,6 +91,12 @@ public record Release(
         Utils.checkField(name, "name", "Release");
         Utils.checkField(mainUrl, "mainUrl", "Release");
         Utils.checkField(versions, "versions", "Release");
+
+        try {
+            Version.isValid(name);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException(e);
+        }
 
         versions.checkValidity();
 

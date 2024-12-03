@@ -1,12 +1,16 @@
 package qupath.ext.extensionmanager.core.index.model;
 
+import qupath.ext.extensionmanager.core.Version;
+
 import java.net.URI;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * A description of an extension.
  * <p>
- * Functions of this object may return null only if this object is not valid (see {@link #checkValidity()}).
+ * Functions of this object may return null or throw undocumented exceptions if this object is not
+ * valid (see {@link #checkValidity()}).
  *
  * @param name the extension's name
  * @param description a short (one sentence or so) description of what the extension is and what it does
@@ -54,6 +58,30 @@ public record Extension(String name, String description, URI homepage, List<Rele
         }
 
         Utils.checkGithubURI(homepage);
+    }
+
+    /**
+     * Provide the most up-to-date release compatible with the provided version.
+     *
+     * @param version the version that the release should be compatible with. It
+     *                must be specified in the form "v[MAJOR].[MINOR].[PATCH]" or
+     *                "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
+     * @return the most up-to-date release compatible with the provided version, or
+     * an empty Optional if no release is compatible with the provided version
+     * @throws IllegalArgumentException if the provided version doesn't match the required form
+     */
+    public Optional<Release> getMaxCompatibleRelease(String version) {
+        Release maxCompatibleRelease = null;
+
+        for (Release release: versions) {
+            if (release.versions().isCompatible(version) &&
+                    (maxCompatibleRelease == null || new Version(release.name()).compareTo(new Version(maxCompatibleRelease.name())) > 0)
+            ) {
+                maxCompatibleRelease = release;
+            }
+        }
+
+        return Optional.ofNullable(maxCompatibleRelease);
     }
 }
 
