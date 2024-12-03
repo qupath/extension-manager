@@ -77,7 +77,7 @@ class ExtensionFolderManager implements AutoCloseable {
     private static final String REGISTRY_NAME = "registry.json";
     private static final Predicate<Path> isJar = path -> path.toString().toLowerCase().endsWith(".jar");
     private static final Gson gson = new Gson();
-    private final StringProperty extensionFolderPath;
+    private final StringProperty extensionDirectoryPath;
     private final FilesWatcher manuallyInstalledExtensionsWatcher;
     private final FilesWatcher indexManagedInstalledExtensionsWatcher;
     /**
@@ -113,21 +113,21 @@ class ExtensionFolderManager implements AutoCloseable {
     /**
      * Create the extension folder manager.
      *
-     * @param extensionFolderPath a string property pointing to the path the extension folder
-     *                            should have. If it changes, the content of the old path will
-     *                            NOT be copied to the new path. The path (but not the property)
-     *                            can be null
+     * @param extensionDirectoryPath a string property pointing to the path the extension folder
+     *                               should have. If it changes, the content of the old path will
+     *                               NOT be copied to the new path. The path (but not the property)
+     *                               can be null or invalid
      */
-    public ExtensionFolderManager(StringProperty extensionFolderPath) {
-        this.extensionFolderPath = extensionFolderPath;
+    public ExtensionFolderManager(StringProperty extensionDirectoryPath) {
+        this.extensionDirectoryPath = extensionDirectoryPath;
 
         this.manuallyInstalledExtensionsWatcher = new FilesWatcher(
-                extensionFolderPath,
+                extensionDirectoryPath,
                 isJar,
                 path -> {
                     try {
                         return path.equals(Paths.get(
-                                extensionFolderPath.get(),
+                                extensionDirectoryPath.get(),
                                 INDEXES_FOLDER
                         ));
                     } catch (InvalidPathException | NullPointerException e) {
@@ -138,7 +138,7 @@ class ExtensionFolderManager implements AutoCloseable {
         );
 
         this.indexManagedInstalledExtensionsWatcher = new FilesWatcher(
-                extensionFolderPath.map(path -> {
+                extensionDirectoryPath.map(path -> {
                     if (path == null) {
                         return null;
                     } else {
@@ -168,7 +168,7 @@ class ExtensionFolderManager implements AutoCloseable {
      * @throws java.nio.file.InvalidPathException if the path to the registry cannot be created
      * @throws SecurityException if the user doesn't have enough rights to read the registry
      * @throws NullPointerException if the registry file exists but is empty or if the path contained
-     * in {@link #getExtensionFolderPath()} is null
+     * in {@link #getExtensionDirectoryPath()} is null
      * @throws JsonSyntaxException if the registry file exists but contain a malformed JSON element
      * @throws JsonIOException if there was a problem reading from the registry file
      */
@@ -188,7 +188,7 @@ class ExtensionFolderManager implements AutoCloseable {
      * @param registry the registry to save
      * @throws IOException if an I/O error occurs while writing the registry file
      * @throws SecurityException if the user doesn't have sufficient rights to save the file
-     * @throws NullPointerException if the path contained in {@link #getExtensionFolderPath()} is null
+     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
     public synchronized void saveRegistry(Registry registry) throws IOException {
         try (
@@ -202,9 +202,10 @@ class ExtensionFolderManager implements AutoCloseable {
     /**
      * @return a read only property containing the path to the extension folder.
      * It may be updated from any thread and the path (but not the property) can be null
+     * or invalid
      */
-    public ReadOnlyStringProperty getExtensionFolderPath() {
-        return extensionFolderPath;
+    public ReadOnlyStringProperty getExtensionDirectoryPath() {
+        return extensionDirectoryPath;
     }
 
     /**
@@ -215,7 +216,7 @@ class ExtensionFolderManager implements AutoCloseable {
      * @throws SecurityException if the user doesn't have sufficient rights to delete
      * the index
      * @throws java.nio.file.InvalidPathException if a Path object cannot be constructed from the index
-     * @throws NullPointerException if the path contained in {@link #getExtensionFolderPath()} is null
+     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      * path, for example because the extensions folder path contain invalid characters
      */
     public synchronized void deleteIndex(SavedIndex savedIndex) throws IOException {
@@ -253,7 +254,7 @@ class ExtensionFolderManager implements AutoCloseable {
      * @throws java.nio.file.InvalidPathException if the Path object of the extension cannot be created, for example
      * because the extensions folder path contain invalid characters
      * @throws SecurityException if the user doesn't have sufficient rights to search for extension files
-     * @throws NullPointerException if the path contained in {@link #getExtensionFolderPath()} is null
+     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
     public synchronized Optional<InstalledExtension> getInstalledExtension(SavedIndex savedIndex, Extension extension) throws IOException {
         Path extensionPath = getExtensionFolder(savedIndex, extension);
@@ -302,7 +303,7 @@ class ExtensionFolderManager implements AutoCloseable {
      * @throws java.nio.file.InvalidPathException if the Path object cannot be created, for example
      * because the extensions folder path contain invalid characters
      * @throws SecurityException if the user doesn't have sufficient rights to create the folder
-     * @throws NullPointerException if the path contained in {@link #getExtensionFolderPath()} is null
+     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
     public synchronized Path createAndGetExtensionPath(
             SavedIndex savedIndex,
@@ -333,7 +334,7 @@ class ExtensionFolderManager implements AutoCloseable {
      * @throws java.nio.file.InvalidPathException if the Path object of the extension folder cannot be created, for example
      * because the extensions folder path contain invalid characters
      * @throws SecurityException if the user doesn't have sufficient rights to delete the folder
-     * @throws NullPointerException if the path contained in {@link #getExtensionFolderPath()} is null
+     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
     public synchronized void deleteExtension(SavedIndex savedIndex, Extension extension) throws IOException {
         FileTools.deleteDirectoryRecursively(getExtensionFolder(savedIndex, extension).toFile());
@@ -345,7 +346,7 @@ class ExtensionFolderManager implements AutoCloseable {
 
     private Path getAndCreateIndexesFolder() throws IOException {
         Path indexesFolder = Paths.get(
-                extensionFolderPath.get(),
+                extensionDirectoryPath.get(),
                 INDEXES_FOLDER
         );
 

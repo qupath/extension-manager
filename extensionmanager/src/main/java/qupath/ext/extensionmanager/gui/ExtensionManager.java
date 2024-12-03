@@ -38,6 +38,7 @@ public class ExtensionManager extends Stage {
     private static final Logger logger = LoggerFactory.getLogger(ExtensionManager.class);
     private final ExtensionIndexManager extensionIndexManager;
     private final ExtensionIndexModel model;
+    private final Runnable onInvalidExtensionDirectory;
     private IndexManager indexManager;
     @FXML
     private VBox indexes;
@@ -50,13 +51,25 @@ public class ExtensionManager extends Stage {
      * Create the window.
      *
      * @param extensionIndexManager the extension index manager this window should use
+     * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
+     *                                    directory (see {@link ExtensionIndexManager#getExtensionDirectoryPath()})
+     *                                    but this directory is currently invalid. It lets the possibility to the user to
+     *                                    define and create a valid directory before performing the operation (which would
+     *                                    fail if the directory is invalid). This function is guaranteed to be called from
+     *                                    the JavaFX Application Thread
      * @throws IOException when an error occurs while creating the container
      */
-    public ExtensionManager(ExtensionIndexManager extensionIndexManager) throws IOException {
+    public ExtensionManager(
+            ExtensionIndexManager extensionIndexManager,
+            Runnable onInvalidExtensionDirectory
+    ) throws IOException {
         this.extensionIndexManager = extensionIndexManager;
         this.model = new ExtensionIndexModel(extensionIndexManager);
+        this.onInvalidExtensionDirectory = onInvalidExtensionDirectory;
 
         UiUtils.loadFXML(this, ExtensionManager.class.getResource("extension_manager.fxml"));
+
+        UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
 
         setIndexes();
         model.getIndexes().addListener((ListChangeListener<? super SavedIndex>) change ->
@@ -81,7 +94,9 @@ public class ExtensionManager extends Stage {
      * @param filesToCopy the files to copy. No check is performed on those files
      */
     public void promptToCopyFilesToExtensionDirectory(List<File> filesToCopy) {
-        String extensionFolder = extensionIndexManager.getExtensionFolderPath().get();
+        UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+
+        String extensionFolder = extensionIndexManager.getExtensionDirectoryPath().get();
         if (extensionFolder == null) {
             new Alert(
                     Alert.AlertType.ERROR,
@@ -155,7 +170,9 @@ public class ExtensionManager extends Stage {
 
     @FXML
     private void onOpenExtensionDirectory(ActionEvent ignored) {
-        String folder = extensionIndexManager.getExtensionFolderPath().get();
+        UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+
+        String folder = extensionIndexManager.getExtensionDirectoryPath().get();
 
         if (folder == null) {
             new Alert(
@@ -179,9 +196,11 @@ public class ExtensionManager extends Stage {
 
     @FXML
     private void onManageIndexesClicked(ActionEvent ignored) {
+        UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+
         if (indexManager == null) {
             try {
-                indexManager = new IndexManager(extensionIndexManager, model);
+                indexManager = new IndexManager(extensionIndexManager, model, onInvalidExtensionDirectory);
                 indexManager.show();
             } catch (IOException e) {
                 logger.error("Error while creating index manager window", e);

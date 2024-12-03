@@ -31,7 +31,7 @@ public class Main extends Application {
                 )))
         );
 
-        new ExtensionManager(extensionIndexManager).show();
+        new ExtensionManager(extensionIndexManager, () -> {}).show();
     }
 
     @Override

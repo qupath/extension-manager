@@ -68,10 +68,10 @@ public class ExtensionIndexManager implements AutoCloseable{
     /**
      * Create the extension index manager.
      *
-     * @param extensionFolderPath a string property pointing to the path the extension folder should have. The
-     *                            path can be null (but not the property). If this property is changed, indexes
-     *                            and extensions will be set to the content of the new value of the property (so
-     *                            will be reset if the new path is empty)
+     * @param extensionDirectoryPath a string property pointing to the path the extension directory should have. The
+     *                               path can be null or invalid (but not the property). If this property is changed,
+     *                               indexes and extensions will be set to the content of the new value of the property
+     *                               (so will be reset if the new path is empty)
      * @param parentClassLoader the class loader that should be the parent of the extension class loader
      * @param version a text describing the release of the current software with the form "v[MAJOR].[MINOR].[PATCH]"
      *                or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]". It will determine which extensions are
@@ -81,20 +81,20 @@ public class ExtensionIndexManager implements AutoCloseable{
      * @throws SecurityException if the user doesn't have enough rights to create the extension class loader
      */
     public ExtensionIndexManager(
-            StringProperty extensionFolderPath,
+            StringProperty extensionDirectoryPath,
             ClassLoader parentClassLoader,
             String version,
             Registry defaultRegistry
     ) {
         Version.isValid(version);
 
-        this.extensionFolderManager = new ExtensionFolderManager(extensionFolderPath);
+        this.extensionFolderManager = new ExtensionFolderManager(extensionDirectoryPath);
         this.extensionClassLoader = new ExtensionClassLoader(parentClassLoader);
         this.version = version;
         this.defaultRegistry = defaultRegistry;
 
         setIndexesFromRegistry();
-        extensionFolderPath.addListener((p, o, n) -> {
+        extensionDirectoryPath.addListener((p, o, n) -> {
             setIndexesFromRegistry();
 
             synchronized (this) {
@@ -125,10 +125,11 @@ public class ExtensionIndexManager implements AutoCloseable{
 
     /**
      * @return a read only property containing the path to the extension folder.
-     * It may be updated from any thread and the path (but not the property) can be null
+     * It may be updated from any thread and the path (but not the property) can
+     * be null or invalid
      */
-    public ReadOnlyStringProperty getExtensionFolderPath() {
-        return extensionFolderManager.getExtensionFolderPath();
+    public ReadOnlyStringProperty getExtensionDirectoryPath() {
+        return extensionFolderManager.getExtensionDirectoryPath();
     }
 
     /**
@@ -158,7 +159,7 @@ public class ExtensionIndexManager implements AutoCloseable{
      * @throws IOException if an I/O error occurs while saving the registry file. In that case,
      * the provided indexes are not added
      * @throws SecurityException if the user doesn't have sufficient rights to save the registry file
-     * @throws NullPointerException if the path contained in {@link #getExtensionFolderPath()} is null
+     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
     public void addIndex(List<SavedIndex> savedIndexes) throws IOException {
         synchronized (this) {
@@ -192,7 +193,7 @@ public class ExtensionIndexManager implements AutoCloseable{
      * @throws IOException if an I/O error occurs while saving the registry file. In that case,
      * the provided indexes are not added
      * @throws SecurityException if the user doesn't have sufficient rights to save the registry file
-     * @throws NullPointerException if the path contained in {@link #getExtensionFolderPath()} is null
+     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
     public void removeIndexes(List<SavedIndex> savedIndexes) throws IOException {
         synchronized (this) {
@@ -402,7 +403,7 @@ public class ExtensionIndexManager implements AutoCloseable{
      * @throws java.nio.file.InvalidPathException if the path of the extension folder cannot be created,
      * for example because the extension name contain invalid characters
      * @throws SecurityException if the user doesn't have sufficient rights to delete the extension files
-     * @throws NullPointerException if the path contained in {@link #getExtensionFolderPath()} is null
+     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
     public void removeExtension(SavedIndex savedIndex, Extension extension) throws IOException {
         var extensionProperty = installedExtensions.computeIfAbsent(

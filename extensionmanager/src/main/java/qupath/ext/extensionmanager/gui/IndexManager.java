@@ -39,6 +39,7 @@ public class IndexManager extends Stage {
     private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
     private static final String INDEX_FILE_NAME = "index.json";
     private final ExtensionIndexManager extensionIndexManager;
+    private final Runnable onInvalidExtensionDirectory;
     @FXML
     private TableView<SavedIndex> indexTable;
     @FXML
@@ -55,10 +56,21 @@ public class IndexManager extends Stage {
      *
      * @param extensionIndexManager the extension index manager this window should use
      * @param model the model to use when accessing data
+     * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
+     *                                    directory (see {@link ExtensionIndexManager#getExtensionDirectoryPath()})
+     *                                    but this directory is currently invalid. It lets the possibility to the user to
+     *                                    define and create a valid directory before performing the operation (which would
+     *                                    fail if the directory is invalid). This function is guaranteed to be called from
+     *                                    the JavaFX Application Thread
      * @throws IOException when an error occurs while creating the window
      */
-    public IndexManager(ExtensionIndexManager extensionIndexManager, ExtensionIndexModel model) throws IOException {
+    public IndexManager(
+            ExtensionIndexManager extensionIndexManager,
+            ExtensionIndexModel model,
+            Runnable onInvalidExtensionDirectory
+    ) throws IOException {
         this.extensionIndexManager = extensionIndexManager;
+        this.onInvalidExtensionDirectory = onInvalidExtensionDirectory;
 
         UiUtils.loadFXML(this, IndexManager.class.getResource("index_manager.fxml"));
 
@@ -71,6 +83,8 @@ public class IndexManager extends Stage {
 
     @FXML
     private void onAddClicked(ActionEvent ignored) {
+        UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+
         GitHubRawLinkFinder.getRawLinkOfFileInRepository(indexURL.getText(), INDEX_FILE_NAME::equals)
                 .exceptionally(error -> {
                     logger.debug("Attempt to get raw link of {} failed. Considering it to be a raw link.", indexURL.getText(), error);

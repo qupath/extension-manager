@@ -1,6 +1,7 @@
 package qupath.ext.extensionmanager.gui;
 
 import javafx.application.Platform;
+import javafx.beans.property.ReadOnlyStringProperty;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
@@ -10,6 +11,8 @@ import org.controlsfx.glyphfont.FontAwesome;
 import org.controlsfx.glyphfont.Glyph;
 import org.controlsfx.glyphfont.GlyphFont;
 import org.controlsfx.glyphfont.GlyphFontRegistry;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.awt.Desktop;
 import java.io.File;
@@ -17,6 +20,9 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Paths;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
@@ -25,6 +31,7 @@ import java.util.concurrent.CompletableFuture;
  */
 public class UiUtils {
 
+    private static final Logger logger = LoggerFactory.getLogger(UiUtils.class);
     private static final ResourceBundle resources = ResourceBundle.getBundle("qupath.ext.extensionmanager.strings");
     private static final GlyphFont fontAwesome = GlyphFontRegistry.font("FontAwesome");
 
@@ -88,6 +95,25 @@ public class UiUtils {
                 }
             }
         });
+    }
+
+    /**
+     * Run the provided Runnable if the provided extension directory property doesn't point to a valid directory.
+     * The provided Runnable can be for example used to prompt the user for a new extension directory path.
+     *
+     * @param extensionDirectoryProperty the property to check
+     * @param onInvalidExtensionDirectory the Runnable to call if the provided path is not a valid directory
+     */
+    public static void promptExtensionDirectory(ReadOnlyStringProperty extensionDirectoryProperty, Runnable onInvalidExtensionDirectory) {
+        String extensionDirectory = extensionDirectoryProperty.get();
+
+        try {
+            if (extensionDirectory == null || !Files.isDirectory(Paths.get(extensionDirectory))) {
+                onInvalidExtensionDirectory.run();
+            }
+        } catch (SecurityException | InvalidPathException e) {
+            logger.debug("Cannot check if {} is invalid", extensionDirectory, e);
+        }
     }
 
     /**
