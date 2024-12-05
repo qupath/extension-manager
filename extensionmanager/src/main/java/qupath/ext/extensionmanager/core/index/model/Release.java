@@ -16,7 +16,7 @@ import java.util.List;
  * @param optionalDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be downloaded
  * @param javadocsUrls SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension
  *                     jar and for dependencies can be downloaded
- * @param versions a specification of minimum and maximum compatible versions
+ * @param versionRange a specification of minimum and maximum compatible versions
  */
 public record Release(
         String name,
@@ -24,9 +24,10 @@ public record Release(
         List<URI> requiredDependencyUrls,
         List<URI> optionalDependencyUrls,
         List<URI> javadocsUrls,
-        VersionRange versions
+        VersionRange versionRange
 ) {
     private static final List<String> VALID_HOSTS = List.of("github.com", "maven.scijava.org", "repo1.maven.org");
+    private static final String VALID_SCHEME = "https";
 
     /**
      * Create a Release.
@@ -37,7 +38,7 @@ public record Release(
      * @param optionalDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be downloaded
      * @param javadocsUrls SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension
      *                     jar and for dependencies can be downloaded
-     * @param versions a specification of minimum and maximum compatible versions
+     * @param versionRange a specification of minimum and maximum compatible versions
      * @throws IllegalStateException when the created object is not valid (see {@link #checkValidity()})
      */
     public Release(
@@ -46,14 +47,14 @@ public record Release(
             List<URI> requiredDependencyUrls,
             List<URI> optionalDependencyUrls,
             List<URI> javadocsUrls,
-            VersionRange versions
+            VersionRange versionRange
     ) {
         this.name = name;
         this.mainUrl = mainUrl;
         this.requiredDependencyUrls = requiredDependencyUrls;
         this.optionalDependencyUrls = optionalDependencyUrls;
         this.javadocsUrls = javadocsUrls;
-        this.versions = versions;
+        this.versionRange = versionRange;
 
         checkValidity();
     }
@@ -76,10 +77,10 @@ public record Release(
     /**
      * Check that this object is valid:
      * <ul>
-     *     <li>The 'name', 'mainUrl', and 'versions' fields must be defined.</li>
+     *     <li>The 'name', 'mainUrl', and 'versionRange' fields must be defined.</li>
      *     <li>
-     *         'name' must be specified in the form "v[MAJOR].[MINOR].[PATCH]" or
-     *         "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]" corresponding to semantic versions.
+     *         'name' must be specified in the form "v[MAJOR].[MINOR].[PATCH]" corresponding to semantic versions,
+     *         although trailing release candidate qualifiers (eg, "-rc1") are also allowed.
      *     </li>
      *     <li>The 'versions' object must be valid (see {@link VersionRange#checkValidity()}).</li>
      *     <li>The 'mainURL' field must be a GitHub URL. All other URLs must be SciJava Maven, Maven Central, or GitHub URLs.</li>
@@ -90,7 +91,7 @@ public record Release(
     public void checkValidity() {
         Utils.checkField(name, "name", "Release");
         Utils.checkField(mainUrl, "mainUrl", "Release");
-        Utils.checkField(versions, "versions", "Release");
+        Utils.checkField(versionRange, "versionRange", "Release");
 
         try {
             Version.isValid(name);
@@ -98,7 +99,7 @@ public record Release(
             throw new IllegalStateException(e);
         }
 
-        versions.checkValidity();
+        versionRange.checkValidity();
 
         Utils.checkGithubURI(mainUrl);
 
@@ -110,6 +111,14 @@ public record Release(
     private static void checkURIHostValidity(List<URI> uris) {
         if (uris != null) {
             for (URI uri: uris) {
+                if (!VALID_SCHEME.equalsIgnoreCase(uri.getScheme())) {
+                    throw new IllegalStateException(String.format(
+                            "The URL %s must use %s",
+                            uri,
+                            VALID_SCHEME
+                    ));
+                }
+
                 if (!VALID_HOSTS.contains(uri.getHost())) {
                     throw new IllegalStateException(String.format(
                             "The host part of %s is not among %s", uri, VALID_HOSTS

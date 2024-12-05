@@ -5,8 +5,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * A version that follows the specification "v[MAJOR].[MINOR].[PATCH]" or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
- * corresponding to QuPath semantic versions.
+ * A version that follows the semantic versions "v[MAJOR].[MINOR].[PATCH]", although trailing release candidate qualifiers
+ * (eg, "-rc1") are also allowed.
  * <p>
  * This class is thread-safe.
  */

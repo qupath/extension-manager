@@ -11,8 +11,14 @@ import qupath.ext.extensionmanager.gui.ExtensionManager;
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.List;
 
+/**
+ * An application that launches a {@link ExtensionManager}. A temporary directory (with
+ * an empty extension JAR file inside) is used as the extension directory.
+ * This <a href="https://github.com/Rylern/test-index">index</a> is used.
+ */
 public class Main extends Application {
 
     private ExtensionIndexManager extensionIndexManager;
@@ -20,7 +26,7 @@ public class Main extends Application {
     @Override
     public void start(Stage stage) throws IOException {
         extensionIndexManager = new ExtensionIndexManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory("").toFile().toPath()),
+                new SimpleObjectProperty<>(createExtensionDirectory()),
                 Main.class.getClassLoader(),
                 "v0.6.0-rc3",
                 new Registry(List.of(new SavedIndex(
@@ -43,5 +49,13 @@ public class Main extends Application {
 
     public static void main(String[] args) {
         launch();
+    }
+
+    private Path createExtensionDirectory() throws IOException {
+        Path extensionDirectoryPath = Files.createTempDirectory("").toFile().toPath();
+
+        Files.createFile(extensionDirectoryPath.resolve("qupath-extension-example.jar"));
+
+        return extensionDirectoryPath;
     }
 }

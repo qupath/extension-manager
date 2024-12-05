@@ -5,9 +5,9 @@ import qupath.ext.extensionmanager.core.Version;
 import java.util.List;
 
 /**
- * A specification of the minimum and maximum versions that an extension supports.
- * Versions should be specified in the form "v[MAJOR].[MINOR].[PATCH]" or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
- * corresponding to semantic versions.
+ * A specification of the minimum and maximum versions that an extension supports. Versions should be specified in the
+ * form "v[MAJOR].[MINOR].[PATCH]" corresponding to semantic versions, although trailing release candidate qualifiers
+ * (eg, "-rc1") are also allowed.
  * <p>
  * Functions of this object may return null or throw exceptions if this object is not valid (see {@link #checkValidity()}).
  *
@@ -51,9 +51,12 @@ public record VersionRange(String min, String max, List<String> excludes) {
      * Check that this object is valid:
      * <ul>
      *     <li>The 'min' field must be defined.</li>
+     *     <li>If 'max' is specified, it must correspond to a version higher than or equal to 'min'.</li>
+     *     <li>If 'excludes' is specified, each of its element must correspond to a version higher than or equal to
+     *     'min', and lower than or equal to 'max' if 'max' is defined.</li>
      *     <li>
-     *         All versions must be specified in the form "v[MAJOR].[MINOR].[PATCH]" or
-     *         "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]" corresponding to semantic versions.
+     *         All versions must be specified in the form "v[MAJOR].[MINOR].[PATCH]" corresponding to
+     *         semantic versions, although trailing release candidate qualifiers (eg, "-rc1") are also allowed.
      *     </li>
      * </ul>
      *
@@ -66,12 +69,36 @@ public record VersionRange(String min, String max, List<String> excludes) {
             Version.isValid(min);
 
             if (max != null) {
-                Version.isValid(max);
+                if (new Version(min).compareTo(new Version(max)) > 0) {
+                    throw new IllegalStateException(String.format(
+                            "The min version '%s' must be lower than or equal to the max version '%s'",
+                            min,
+                            max
+                    ));
+                }
             }
 
             if (excludes != null) {
                 for (String version: excludes) {
-                    Version.isValid(version);
+                    if (new Version(min).compareTo(new Version(version)) > 0) {
+                        throw new IllegalStateException(String.format(
+                                "The min version '%s' must be lower than or equal to the excluded version '%s'",
+                                min,
+                                version
+                        ));
+                    }
+                }
+            }
+
+            if (max != null && excludes != null) {
+                for (String version: excludes) {
+                    if (new Version(version).compareTo(new Version(max)) > 0) {
+                        throw new IllegalStateException(String.format(
+                                "The excluded version '%s' must be lower than or equal to the max version '%s'",
+                                version,
+                                max
+                        ));
+                    }
                 }
             }
         } catch (IllegalArgumentException e) {
@@ -83,8 +110,8 @@ public record VersionRange(String min, String max, List<String> excludes) {
      * Indicate if this release range is compatible with the provided version.
      *
      * @param version the version to check if this release range is compatible with. It
-     *                must be specified in the form "v[MAJOR].[MINOR].[PATCH]" or
-     *                "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
+     *                must be specified in the form "v[MAJOR].[MINOR].[PATCH]", although
+     *                trailing release candidate qualifiers (eg, "-rc1") are also allowed.
      * @return a boolean indicating if the provided version is compatible with this release range
      * @throws IllegalArgumentException if the provided version doesn't match the required form
      * or if this release range is not valid

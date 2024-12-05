@@ -77,8 +77,8 @@ class ExtensionModificationWindow extends Stage {
         name.setText(extension.name());
 
         version.getItems().addAll(
-                extension.versions().stream()
-                        .filter(release -> release.versions().isCompatible(extensionIndexManager.getVersion()))
+                extension.releases().stream()
+                        .filter(release -> release.versionRange().isCompatible(extensionIndexManager.getVersion()))
                         .toList()
         );
         version.setConverter(new StringConverter<>() {

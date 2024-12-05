@@ -469,7 +469,7 @@ public class ExtensionIndexManager implements AutoCloseable{
     ) throws IOException {
         Map<URI, Path> downloadUrlToFileName = new HashMap<>();
 
-        Optional<Release> release = extension.versions().stream()
+        Optional<Release> release = extension.releases().stream()
                 .filter(r -> r.name().equals(installationInformation.releaseName()))
                 .findAny();
 
@@ -477,7 +477,7 @@ public class ExtensionIndexManager implements AutoCloseable{
             throw new IllegalArgumentException(String.format(
                     "The provided release name %s is not present in the extension releases %s",
                     installationInformation.releaseName(),
-                    extension.versions()
+                    extension.releases()
             ));
         }
 
