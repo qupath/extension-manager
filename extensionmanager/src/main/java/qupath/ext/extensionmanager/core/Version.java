@@ -12,7 +12,7 @@ import java.util.regex.Pattern;
  */
 public class Version implements Comparable<Version> {
 
-    private static final Pattern VERSION_PATTERN = Pattern.compile("^v(\\d+)\\.(\\d+)\\.(\\d+)(?:-rc(\\d+))?$");
+    private static final Pattern VERSION_PATTERN = Pattern.compile("^v(\\d+)\\.(\\d+)\\.(\\d+)(?:-rc(\\d+))?");
     private final int major;
     private final int minor;
     private final int patch;

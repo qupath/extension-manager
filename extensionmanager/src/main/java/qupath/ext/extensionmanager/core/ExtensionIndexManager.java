@@ -227,7 +227,8 @@ public class ExtensionIndexManager implements AutoCloseable{
 
     /**
      * @return a read-only observable list of paths pointing to JAR files that were
-     * manually added (i.e. not with an index) to the extension directory
+     * manually added (i.e. not with an index) to the extension directory. This list
+     * can be updated from any thread
      */
     public ObservableList<Path> getManuallyInstalledJars() {
         return extensionFolderManager.getManuallyInstalledJars();
@@ -235,7 +236,8 @@ public class ExtensionIndexManager implements AutoCloseable{
 
     /**
      * @return a read-only observable list of paths pointing to JAR files that were
-     * added with indexes to the extension directory
+     * added with indexes to the extension directory. This list can be updated from
+     * any thread
      */
     public ObservableList<Path> getIndexedManagedInstalledJars() {
         return extensionFolderManager.getIndexedManagedInstalledJars();

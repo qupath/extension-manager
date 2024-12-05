@@ -2,6 +2,7 @@ package qupath.ext.extensionmanager.gui;
 
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
+import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -30,7 +31,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 /**
- * A window that displays information and controls regarding indexes and their extensions
+ * A window that displays information and controls regarding indexes and their extensions.
  */
 public class ExtensionManager extends Stage {
 
@@ -85,17 +86,25 @@ public class ExtensionManager extends Stage {
     }
 
     /**
-     * Copy the provided files to the extension directory. Some error dialogs will be shown to
-     * the user if errors occurs.
+     * Copy the provided files to the provided extension directory. Some error dialogs will be shown to
+     * the user if some errors occurs.
      * If at least a destination file already exists, the user is prompted for confirmation.
      * No confirmation dialog is prompted on success.
      *
      * @param filesToCopy the files to copy. No check is performed on those files
+     * @param extensionDirectoryPath the path to the extension directory
+     * @param onInvalidExtensionDirectory a function that will be called if the provided extension
+     *                                    directory is invalid. It lets the possibility to the user to
+     *                                    define and create a valid directory before copying the files
      */
-    public void promptToCopyFilesToExtensionDirectory(List<File> filesToCopy) {
-        UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+    public static void promptToCopyFilesToExtensionDirectory(
+            List<File> filesToCopy,
+            ReadOnlyObjectProperty<Path> extensionDirectoryPath,
+            Runnable onInvalidExtensionDirectory
+    ) {
+        UiUtils.promptExtensionDirectory(extensionDirectoryPath, onInvalidExtensionDirectory);
 
-        Path extensionFolder = extensionIndexManager.getExtensionDirectoryPath().get();
+        Path extensionFolder = extensionDirectoryPath.get();
         if (extensionFolder == null) {
             new Alert(
                     Alert.AlertType.ERROR,
