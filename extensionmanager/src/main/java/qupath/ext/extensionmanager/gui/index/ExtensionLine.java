@@ -21,7 +21,9 @@ import qupath.ext.extensionmanager.gui.ExtensionIndexModel;
 import qupath.ext.extensionmanager.gui.UiUtils;
 
 import java.io.IOException;
+import java.text.MessageFormat;
 import java.util.Optional;
+import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
 /**
@@ -30,6 +32,7 @@ import java.util.concurrent.CompletableFuture;
 class ExtensionLine extends HBox {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionLine.class);
+    private static final ResourceBundle resources = UiUtils.getResources();
     private final ExtensionIndexManager extensionIndexManager;
     private final ExtensionIndexModel model;
     private final SavedIndex savedIndex;
@@ -139,8 +142,8 @@ class ExtensionLine extends HBox {
     private void onDeleteClicked(ActionEvent ignored) {
         var confirmation = new Alert(
                 Alert.AlertType.CONFIRMATION,
-                String.format(
-                        "Remove %s?",
+                MessageFormat.format(
+                        resources.getString("Index.ExtensionLine.remove"),
                         extension.name()
                 )
         ).showAndWait();
@@ -156,8 +159,8 @@ class ExtensionLine extends HBox {
                 if (error == null) {
                     Platform.runLater(() -> new Alert(
                             Alert.AlertType.INFORMATION,
-                            String.format(
-                                    "%s removed.",
+                            MessageFormat.format(
+                                    resources.getString("Index.ExtensionLine.removed"),
                                     extension.name()
                             )
                     ).show());
@@ -166,8 +169,8 @@ class ExtensionLine extends HBox {
 
                     Platform.runLater(() -> new Alert(
                             Alert.AlertType.ERROR,
-                            String.format(
-                                    "Cannot delete extension:\n%s",
+                            MessageFormat.format(
+                                    resources.getString("Index.ExtensionLine.cannotDeleteExtension"),
                                     error.getLocalizedMessage()
                             )
                     ).show());

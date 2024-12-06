@@ -14,6 +14,8 @@ import qupath.ext.extensionmanager.core.index.model.Extension;
 import qupath.ext.extensionmanager.gui.UiUtils;
 
 import java.io.IOException;
+import java.text.MessageFormat;
+import java.util.ResourceBundle;
 
 /**
  * A window displaying the description and the clickable homepage of an extension.
@@ -21,6 +23,7 @@ import java.io.IOException;
 class ExtensionDetails extends Stage {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionDetails.class);
+    private static final ResourceBundle resources = UiUtils.getResources();
     @FXML
     private Label description;
     @FXML
@@ -49,7 +52,11 @@ class ExtensionDetails extends Stage {
 
             Platform.runLater(() -> new Alert(
                     Alert.AlertType.ERROR,
-                    String.format("Cannot open '%s':\n%s", homepage.getText(), error.getLocalizedMessage())
+                    MessageFormat.format(
+                            resources.getString("Index.ExtensionDetails.cannotOpen"),
+                            homepage.getText(),
+                            error.getLocalizedMessage()
+                    )
             ).show());
 
             return null;

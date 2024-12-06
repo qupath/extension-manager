@@ -22,6 +22,8 @@ import qupath.ext.extensionmanager.gui.ProgressWindow;
 import qupath.ext.extensionmanager.gui.UiUtils;
 
 import java.io.IOException;
+import java.text.MessageFormat;
+import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -31,6 +33,7 @@ import java.util.concurrent.Executors;
 class ExtensionModificationWindow extends Stage {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionModificationWindow.class);
+    private static final ResourceBundle resources = UiUtils.getResources();
     private final ExtensionIndexManager extensionIndexManager;
     private final SavedIndex savedIndex;
     private final Extension extension;
@@ -69,10 +72,13 @@ class ExtensionModificationWindow extends Stage {
 
         initModality(Modality.APPLICATION_MODAL);
 
-        setTitle(installedExtension == null ?
-                String.format("Install %s", extension.name()) :
-                String.format("Edit %s", extension.name())
-        );
+        setTitle(MessageFormat.format(
+                resources.getString(installedExtension == null ?
+                        "Index.ExtensionModificationWindow.installX" :
+                        "Index.ExtensionModificationWindow.editX"
+                ),
+                extension.name()
+        ));
 
         name.setText(extension.name());
 
@@ -107,7 +113,10 @@ class ExtensionModificationWindow extends Stage {
         optionalDependencies.managedProperty().bind(optionalDependencies.visibleProperty());
         optionalDependencies.setSelected(installedExtension != null && installedExtension.optionalDependenciesInstalled());
 
-        submit.setText(installedExtension == null ? "Install" : "Update");
+        submit.setText(resources.getString(installedExtension == null ?
+                "Index.ExtensionModificationWindow.install" :
+                "Index.ExtensionModificationWindow.update"
+        ));
     }
 
     @FXML
@@ -118,10 +127,16 @@ class ExtensionModificationWindow extends Stage {
 
         try {
             ExecutorService executor = Executors.newSingleThreadExecutor();
+
             ProgressWindow progressWindow = new ProgressWindow(
-                    installedExtension == null ?
-                            String.format("Installing %s %s...", extension.name(), version.getSelectionModel().getSelectedItem().name()) :
-                            String.format("Updating %s to %s...", extension.name(), version.getSelectionModel().getSelectedItem().name()),
+                    MessageFormat.format(
+                            resources.getString(installedExtension == null ?
+                                    "Index.ExtensionModificationWindow.installing" :
+                                    "Index.ExtensionModificationWindow.updating"
+                            ),
+                            extension.name(),
+                            version.getSelectionModel().getSelectedItem().name()
+                    ),
                     executor::shutdownNow
             );
             progressWindow.show();
@@ -146,8 +161,8 @@ class ExtensionModificationWindow extends Stage {
                             if (error == null) {
                                 new Alert(
                                         Alert.AlertType.INFORMATION,
-                                        String.format(
-                                                "%s %s installed.",
+                                        MessageFormat.format(
+                                                resources.getString("Index.ExtensionModificationWindow.installed"),
                                                 extension.name(),
                                                 version.getSelectionModel().getSelectedItem().name()
                                         )
@@ -155,8 +170,8 @@ class ExtensionModificationWindow extends Stage {
                             } else {
                                 new Alert(
                                         Alert.AlertType.ERROR,
-                                        String.format(
-                                                "%s %s not installed: %s.",
+                                        MessageFormat.format(
+                                                resources.getString("Index.ExtensionModificationWindow.notInstalled"),
                                                 extension.name(),
                                                 version.getSelectionModel().getSelectedItem().name(),
                                                 error.getLocalizedMessage()

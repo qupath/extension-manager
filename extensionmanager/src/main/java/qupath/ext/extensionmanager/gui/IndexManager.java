@@ -29,7 +29,9 @@ import qupath.ext.extensionmanager.core.tools.GitHubRawLinkFinder;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.text.MessageFormat;
 import java.util.List;
+import java.util.ResourceBundle;
 
 /**
  * A window that allows managing indexes.
@@ -37,6 +39,7 @@ import java.util.List;
 public class IndexManager extends Stage {
 
     private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
+    private static final ResourceBundle resources = UiUtils.getResources();
     private static final String INDEX_FILE_NAME = "index.json";
     private final ExtensionIndexManager extensionIndexManager;
     private final Runnable onInvalidExtensionDirectory;
@@ -97,7 +100,10 @@ public class IndexManager extends Stage {
                     if (extensionIndexManager.getIndexes().stream().anyMatch(savedIndex -> savedIndex.name().equals(index.name()))) {
                         Platform.runLater(() -> new Alert(
                                 Alert.AlertType.ERROR,
-                                String.format("An index with the same name (%s) already exists.", index.name())
+                                MessageFormat.format(
+                                        resources.getString("IndexManager.indexAlreadyExists"),
+                                        index.name()
+                                )
                         ).show());
                         return;
                     }
@@ -114,7 +120,10 @@ public class IndexManager extends Stage {
 
                         Platform.runLater(() -> new Alert(
                                 Alert.AlertType.ERROR,
-                                String.format("Cannot save index:\n%s", e.getLocalizedMessage())
+                                MessageFormat.format(
+                                        resources.getString("IndexManager.cannotSaveIndex"),
+                                        e.getLocalizedMessage()
+                                )
                         ).show());
                     }
                 })
@@ -123,7 +132,10 @@ public class IndexManager extends Stage {
 
                     Platform.runLater(() -> new Alert(
                             Alert.AlertType.ERROR,
-                            String.format("Cannot add index:\n%s", error.getLocalizedMessage())
+                            MessageFormat.format(
+                                    resources.getString("IndexManager.cannotAddIndex"),
+                                    error.getLocalizedMessage()
+                            )
                     ).show());
 
                     return null;
@@ -162,7 +174,11 @@ public class IndexManager extends Stage {
 
                         Platform.runLater(() -> new Alert(
                                 Alert.AlertType.ERROR,
-                                String.format("Cannot open '%s':\n%s", url, error.getLocalizedMessage())
+                                MessageFormat.format(
+                                        resources.getString("IndexManager.cannotOpen"),
+                                        url,
+                                        error.getLocalizedMessage()
+                                )
                         ).show());
 
                         return null;
@@ -179,7 +195,7 @@ public class IndexManager extends Stage {
         ContextMenu menu = new ContextMenu();
         indexTable.setContextMenu(menu);
 
-        MenuItem copyItem = new MenuItem("Copy URL");
+        MenuItem copyItem = new MenuItem(resources.getString("IndexManager.copyUrl"));
         copyItem.setOnAction(ignored -> {
             ClipboardContent content = new ClipboardContent();
             content.putString(indexTable.getSelectionModel().getSelectedItem().uri().toString());
@@ -187,7 +203,7 @@ public class IndexManager extends Stage {
         });
         menu.getItems().add(copyItem);
 
-        MenuItem removeItem = new MenuItem("Remove");
+        MenuItem removeItem = new MenuItem(resources.getString("IndexManager.remove"));
         removeItem.setOnAction(ignored -> {
             try {
                 extensionIndexManager.removeIndexes(indexTable.getSelectionModel().getSelectedItems());
@@ -196,7 +212,10 @@ public class IndexManager extends Stage {
 
                 new Alert(
                         Alert.AlertType.ERROR,
-                        String.format("Cannot remove selected indexes:\n%s", e.getLocalizedMessage())
+                        MessageFormat.format(
+                                resources.getString("IndexManager.cannotRemoveSelectedIndexes"),
+                                e.getLocalizedMessage()
+                        )
                 ).show();
             }
         });

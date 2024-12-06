@@ -14,6 +14,8 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.text.MessageFormat;
+import java.util.ResourceBundle;
 
 /**
  * A container displaying the name of a manually installed extension as well as a
@@ -22,6 +24,7 @@ import java.nio.file.Path;
 class ManuallyInstalledExtensionLine extends HBox {
 
     private static final Logger logger = LoggerFactory.getLogger(ManuallyInstalledExtensionLine.class);
+    private static final ResourceBundle resources = UiUtils.getResources();
     private final Path jarPath;
     @FXML
     private Label name;
@@ -50,8 +53,8 @@ class ManuallyInstalledExtensionLine extends HBox {
     private void onDeleteClicked(ActionEvent ignored) {
         var confirmation = new Alert(
                 Alert.AlertType.CONFIRMATION,
-                String.format(
-                        "Remove %s?",
+                MessageFormat.format(
+                        resources.getString("ManuallyInstalledExtensionLine.remove"),
                         jarPath.getFileName()
                 )
         ).showAndWait();
@@ -64,8 +67,8 @@ class ManuallyInstalledExtensionLine extends HBox {
 
                 new Alert(
                         Alert.AlertType.ERROR,
-                        String.format(
-                                "Cannot delete extension:\n%s",
+                        MessageFormat.format(
+                                resources.getString("ManuallyInstalledExtensionLine.cannotDeleteExtension"),
                                 e.getLocalizedMessage()
                         )
                 ).show();

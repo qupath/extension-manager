@@ -52,6 +52,13 @@ public class UiUtils {
     }
 
     /**
+     * @return the resources of this project
+     */
+    public static ResourceBundle getResources() {
+        return resources;
+    }
+
+    /**
      * Open the provided link in a web browser. This won't do anything if
      * browsing is not supported by the computer.
      *

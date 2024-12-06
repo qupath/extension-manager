@@ -11,6 +11,6 @@
    <Region HBox.hgrow="ALWAYS" />
    <Button fx:id="delete" contentDisplay="GRAPHIC_ONLY" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" onAction="#onDeleteClicked">
       <tooltip>
-         <Tooltip text="Delete extension" />
+         <Tooltip text="%ManuallyInstalledExtensionLine.deleteExtension" />
       </tooltip></Button>
 </fx:root>

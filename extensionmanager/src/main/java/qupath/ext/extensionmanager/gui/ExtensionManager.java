@@ -8,6 +8,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonType;
+import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
@@ -23,11 +24,13 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.ResourceBundle;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +39,7 @@ import java.util.stream.Collectors;
 public class ExtensionManager extends Stage {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionManager.class);
+    private static final ResourceBundle resources = UiUtils.getResources();
     private final ExtensionIndexManager extensionIndexManager;
     private final ExtensionIndexModel model;
     private final Runnable onInvalidExtensionDirectory;
@@ -46,6 +50,8 @@ public class ExtensionManager extends Stage {
     private TitledPane manuallyInstalledExtensionsPane;
     @FXML
     private VBox manuallyInstalledExtensions;
+    @FXML
+    private Label noIndexOrExtension;
 
     /**
      * Create the window.
@@ -83,6 +89,12 @@ public class ExtensionManager extends Stage {
         model.getManuallyInstalledJars().addListener((ListChangeListener<? super Path>) change ->
                 setManuallyInstalledExtensions()
         );
+
+        noIndexOrExtension.visibleProperty().bind(
+                manuallyInstalledExtensionsPane.visibleProperty().not().and(
+                Bindings.isEmpty(indexes.getChildren()))
+        );
+        noIndexOrExtension.managedProperty().bind(noIndexOrExtension.visibleProperty());
     }
 
     /**
@@ -108,7 +120,7 @@ public class ExtensionManager extends Stage {
         if (extensionFolder == null) {
             new Alert(
                     Alert.AlertType.ERROR,
-                    "Cannot copy files: extension folder not set."
+                    resources.getString("ExtensionManager.cannotCopyFiles")
             ).show();
             return;
         }
@@ -142,8 +154,8 @@ public class ExtensionManager extends Stage {
         if (!destinationFilesAlreadyExisting.isEmpty()) {
             var confirmation = new Alert(
                     Alert.AlertType.CONFIRMATION,
-                    String.format(
-                            "%s already exist. Continue?",
+                    MessageFormat.format(
+                            resources.getString("ExtensionManager.alreadyExist"),
                             destinationFilesAlreadyExisting
                     )
             ).showAndWait();
@@ -166,8 +178,8 @@ public class ExtensionManager extends Stage {
         if (!errors.isEmpty()) {
             new Alert(
                     Alert.AlertType.ERROR,
-                    String.format(
-                            "Some error occurred while copying files:\n%s",
+                    MessageFormat.format(
+                            resources.getString("ExtensionManager.errorWhileCopying"),
                             errors.stream()
                                     .map(Throwable::getLocalizedMessage)
                                     .collect(Collectors.joining("\n"))
@@ -184,7 +196,7 @@ public class ExtensionManager extends Stage {
         if (extensionDirectory == null) {
             new Alert(
                     Alert.AlertType.ERROR,
-                    "Cannot open the extension extensionDirectory: its path was not set"
+                    resources.getString("ExtensionManager.cannotOpenExtensionDirectory")
             ).show();
             return;
         }
@@ -194,7 +206,11 @@ public class ExtensionManager extends Stage {
 
             Platform.runLater(() -> new Alert(
                     Alert.AlertType.ERROR,
-                    String.format("Cannot open '%s':\n%s", extensionDirectory, error.getLocalizedMessage())
+                    MessageFormat.format(
+                            resources.getString("ExtensionManager.cannotOpen"),
+                            extensionDirectory,
+                            error.getLocalizedMessage()
+                    )
             ).show());
 
             return null;

@@ -11,18 +11,18 @@
    <Region HBox.hgrow="ALWAYS" />
    <Button fx:id="add" contentDisplay="GRAPHIC_ONLY" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" onAction="#onAddClicked">
       <tooltip>
-         <Tooltip text="Install extension" />
+         <Tooltip text="%Index.ExtensionLine.installExtension" />
       </tooltip></Button>
    <Button fx:id="settings" contentDisplay="GRAPHIC_ONLY" mnemonicParsing="false" onAction="#onSettingsClicked">
       <tooltip>
-         <Tooltip text="Update extension" />
+         <Tooltip text="%Index.ExtensionLine.updateExtension" />
       </tooltip></Button>
    <Button fx:id="delete" contentDisplay="GRAPHIC_ONLY" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" onAction="#onDeleteClicked">
       <tooltip>
-         <Tooltip text="Remove extension" />
+         <Tooltip text="%Index.ExtensionLine.removeExtension" />
       </tooltip></Button>
    <Button fx:id="info" contentDisplay="GRAPHIC_ONLY" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" onAction="#onInfoClicked">
       <tooltip>
-         <Tooltip text="Get information on the extension" />
+         <Tooltip text="%Index.ExtensionLine.getInformation" />
       </tooltip></Button>
 </fx:root>
