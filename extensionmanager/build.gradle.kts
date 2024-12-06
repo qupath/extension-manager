@@ -1,6 +1,7 @@
 plugins {
-    id("org.openjfx.javafxplugin") version "0.1.0"
-    id("java-library")
+    id("extensionmanager.java-conventions")
+    id("extensionmanager.publishing-conventions")
+    alias(libs.plugins.javafx)
 }
 
 repositories {
@@ -8,17 +9,18 @@ repositories {
 }
 
 dependencies {
-    implementation("org.slf4j:slf4j-api:2.0.16")
-    implementation("ch.qos.logback:logback-classic:1.5.12")
-    implementation("com.google.code.gson:gson:2.11.0")
-    implementation("org.controlsfx:controlsfx:11.2.1")
+    implementation(libs.slf4j)
+    implementation(libs.gson)
+    implementation(libs.controlsfx)
+}
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(libs.versions.java.get())
+    }
 }
 
 javafx {
-    version = "23.0.1"
+    version = libs.versions.javafx.get()
     modules = listOf("javafx.controls", "javafx.fxml")
-}
-
-base {
-    group = "io.github.qupath"
 }

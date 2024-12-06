@@ -1,0 +1,19 @@
+[versions]
+java = "21"
+slf4j = "2.0.16"
+logback = "1.5.12"
+javafx = "23.0.1"
+javafxPlugin = "0.1.0"
+gson = "2.11.0"
+controlsfx = "11.2.1"
+
+[libraries]
+slf4j = { module = "org.slf4j:slf4j-api", version.ref = "slf4j" }
+logback = { module = "ch.qos.logback:logback-classic", version.ref = "logback" }
+gson = { module = "com.google.code.gson:gson", version.ref = "gson" }
+controlsfx = { module = "org.controlsfx:controlsfx", version.ref = "controlsfx" }
+
+[bundles]
+
+[plugins]
+javafx = { id = "org.openjfx.javafxplugin", version.ref = "javafxPlugin" }

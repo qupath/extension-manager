@@ -1,6 +1,7 @@
 plugins {
+    id("extensionmanager.java-conventions")
     application
-    id("org.openjfx.javafxplugin") version "0.1.0"
+    alias(libs.plugins.javafx)
 }
 
 repositories {
@@ -9,6 +10,7 @@ repositories {
 
 dependencies {
     implementation(project(":extensionmanager"))
+    implementation(libs.logback)
 }
 
 application {
@@ -16,7 +18,13 @@ application {
     mainModule = "qupath.ext.extensionmanager.app"
 }
 
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(libs.versions.java.get())
+    }
+}
+
 javafx {
-    version = "23.0.1"
+    version = libs.versions.javafx.get()
     modules = listOf("javafx.controls", "javafx.fxml")
 }
