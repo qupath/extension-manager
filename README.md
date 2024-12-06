@@ -30,7 +30,7 @@ javafx {
 }
 ```
 
-Then, take a look at the `Main` class of `extensionmanager-app` to see
+Then, take a look at the `ExtensionManagerApp` class of `extensionmanager-app` to see
 an example on how to use the extension manager.
 
 ## Building

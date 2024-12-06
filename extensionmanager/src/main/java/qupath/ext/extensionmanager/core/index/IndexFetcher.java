@@ -3,7 +3,6 @@ package qupath.ext.extensionmanager.core.index;
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
-import qupath.ext.extensionmanager.core.index.model.Index;
 
 import java.net.URI;
 import java.net.http.HttpClient;

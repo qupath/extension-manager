@@ -10,7 +10,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import qupath.ext.extensionmanager.core.index.model.Extension;
+import qupath.ext.extensionmanager.core.index.Extension;
 import qupath.ext.extensionmanager.gui.UiUtils;
 
 import java.io.IOException;

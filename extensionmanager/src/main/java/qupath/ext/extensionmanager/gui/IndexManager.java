@@ -22,7 +22,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionIndexManager;
 import qupath.ext.extensionmanager.core.index.IndexFetcher;
-import qupath.ext.extensionmanager.core.index.model.Index;
+import qupath.ext.extensionmanager.core.index.Index;
 import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 import qupath.ext.extensionmanager.core.tools.GitHubRawLinkFinder;
 

@@ -19,15 +19,24 @@ import java.util.List;
  * an empty extension JAR file inside) is used as the extension directory.
  * This <a href="https://github.com/Rylern/test-index">index</a> is used.
  */
-public class Main extends Application {
+public class ExtensionManagerApp extends Application {
 
     private ExtensionIndexManager extensionIndexManager;
+
+    /**
+     * Start the extension manager application.
+     *
+     * @param args the command line arguments passed to the application
+     */
+    public static void main(String[] args) {
+        launch(args);
+    }
 
     @Override
     public void start(Stage stage) throws IOException {
         extensionIndexManager = new ExtensionIndexManager(
                 new SimpleObjectProperty<>(createExtensionDirectory()),
-                Main.class.getClassLoader(),
+                ExtensionManagerApp.class.getClassLoader(),
                 "v0.6.0-rc3",
                 new Registry(List.of(new SavedIndex(
                         "QuPath index",
@@ -45,10 +54,6 @@ public class Main extends Application {
         if (extensionIndexManager != null) {
             extensionIndexManager.close();
         }
-    }
-
-    public static void main(String[] args) {
-        launch();
     }
 
     private Path createExtensionDirectory() throws IOException {
