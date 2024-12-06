@@ -99,10 +99,16 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
 
                         if (filesToFind.test(filePath)) {
                             if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
+                                logger.debug("File {} addition detected", filePath);
                                 onFileAdded.accept(filePath);
                             } else if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
+                                logger.debug("File {} deletion detected", filePath);
                                 onFileDeleted.accept(filePath);
+                            } else {
+                                logger.debug("Unexpected event: {}", kind);
                             }
+                        } else {
+                            logger.debug("The file {} doesn't match the predicate, so it won't be reported", filePath);
                         }
                     }
                     key.reset();
@@ -119,6 +125,8 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
     }
 
     private void registerDirectory(Path directory) throws IOException {
+        logger.debug("Registering directories in {} with depth {}", directory, depth);
+
         Files.walkFileTree(
                 directory,
                 EnumSet.noneOf(FileVisitOption.class),
@@ -127,8 +135,10 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
                     @Override
                     public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
                         if (directoriesToSkip.test(dir)) {
+                            logger.debug("Skipping {} as it doesn't match the predicate", dir);
                             return FileVisitResult.SKIP_SUBTREE;
                         } else {
+                            logger.debug("Registering {}", dir);
                             keys.put(
                                     dir.register(
                                             watchService,

@@ -71,10 +71,14 @@ public class FilesWatcher implements AutoCloseable {
     }
 
     private synchronized void setFiles() {
+        Path directory = directoryToWatch.getValue();
+
+        logger.debug("Clearing file list and searching in {}", directory);
+
         files.clear();
 
-        Path directory = directoryToWatch.getValue();
         if (directory == null) {
+            logger.debug("The directory to watch is null. No file will be added");
             return;
         }
 
@@ -91,6 +95,10 @@ public class FilesWatcher implements AutoCloseable {
     }
 
     private synchronized void setDirectoryWatcher() {
+        Path directory = directoryToWatch.getValue();
+
+        logger.debug("Resetting directory watcher to watch {}", directory);
+
         if (directoryWatcher != null) {
             try {
                 directoryWatcher.close();
@@ -99,8 +107,8 @@ public class FilesWatcher implements AutoCloseable {
             }
         }
 
-        Path directory = directoryToWatch.getValue();
         if (directory == null) {
+            logger.debug("The directory to watch is null. No file will be detected");
             return;
         }
 
@@ -111,11 +119,15 @@ public class FilesWatcher implements AutoCloseable {
                     filesToFind,
                     directoriesToSkip,
                     addedFile -> {
+                        logger.debug("File {} added", addedFile);
+
                         synchronized (this) {
                             files.add(addedFile);
                         }
                     },
                     removedFile -> {
+                        logger.debug("File {} removed", removedFile);
+
                         synchronized (this) {
                             files.remove(removedFile);
                         }
@@ -123,7 +135,7 @@ public class FilesWatcher implements AutoCloseable {
             );
         } catch (IOException | UnsupportedOperationException | SecurityException e) {
             logger.debug(String.format(
-                    "Error when creating extension directory watcher for %s. Extensions manually installed won't be detected.",
+                    "Error when creating files watcher for %s. Files added to this directory won't be detected.",
                     directory
             ), e);
         }

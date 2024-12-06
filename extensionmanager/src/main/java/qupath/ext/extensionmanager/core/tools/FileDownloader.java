@@ -41,7 +41,7 @@ public class FileDownloader {
      *                   will be a float between 0 and 1 indicating the progress of the download (0: beginning,
      *                   1: finished). This function will be called from the calling thread
      * @throws IOException if an I/O error occurs when sending the request or receiving the file
-     * @throws InterruptedException if the download is interrupted
+     * @throws InterruptedException if this function is interrupted
      * @throws IllegalArgumentException if the provided URI does not contain a valid scheme ("http" or "https")
      * @throws java.io.FileNotFoundException if the downloaded file already exists but is a directory rather than a regular
      * file, does not exist but cannot be created, or cannot be opened for any other reason
@@ -54,6 +54,7 @@ public class FileDownloader {
             ));
         }
 
+        logger.debug("Sending request to {}", uri);
         try (
                 HttpClient client = HttpClient
                         .newBuilder()
@@ -68,6 +69,12 @@ public class FileDownloader {
                             .build(),
                     HttpResponse.BodyHandlers.ofInputStream()
             );
+            if (response.statusCode() != 200) {
+                throw new RuntimeException(String.format(
+                        "Request to %s failed with status code %d.", uri, response.statusCode()
+                ));
+            }
+            logger.debug("Got response with status 200 {} from {}", response, uri);
 
             OptionalInt contentLength = getContentLength(response);
 
@@ -78,8 +85,11 @@ public class FileDownloader {
                 byte[] buffer = new byte[BUFFER_SIZE];
                 long bytesDownloaded = 0L;
 
+                logger.debug("Starting downloading {}", uri);
                 int bytesRead;
                 while ((bytesRead = inputStream.read(buffer)) > -1) {
+                    logger.trace("{} bytes downloaded", bytesRead);
+
                     bytesDownloaded += bytesRead;
 
                     if (contentLength.isPresent()) {
@@ -92,6 +102,7 @@ public class FileDownloader {
                         throw new InterruptedException();
                     }
                 }
+                logger.debug("Download of {} ended successfully", uri);
             }
         }
     }
@@ -116,15 +127,18 @@ public class FileDownloader {
             );
             return OptionalInt.empty();
         }
-        String contentLength = contentLengthEntry.getFirst();
+        String contentLengthText = contentLengthEntry.getFirst();
 
         try {
-            return OptionalInt.of(Integer.parseInt(contentLength));
+            int contentLength = Integer.parseInt(contentLengthText);
+            logger.debug("Found content length of {} bytes in {}", contentLength, response.headers());
+
+            return OptionalInt.of(contentLength);
         } catch (NumberFormatException e) {
             logger.debug(
                     "The {} header {} cannot be converted to a number. Cannot indicate progress of {} download",
                     CONTENT_LENGTH_ATTRIBUTE,
-                    contentLength,
+                    contentLengthText,
                     response.uri()
             );
             return OptionalInt.empty();

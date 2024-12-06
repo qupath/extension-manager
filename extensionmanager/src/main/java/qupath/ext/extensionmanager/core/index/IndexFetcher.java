@@ -33,11 +33,11 @@ public class IndexFetcher {
      * a valid index
      */
     public static CompletableFuture<Index> getIndex(URI uri) {
-        if (!"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme())) {
-            return CompletableFuture.failedFuture(new IllegalArgumentException(
-                    String.format("Unknown scheme %s in %s", uri.getScheme(), uri)
-            ));
-        }
+//        if (!"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme())) {
+//            return CompletableFuture.failedFuture(new IllegalArgumentException(
+//                    String.format("Unknown scheme %s in %s", uri.getScheme(), uri)
+//            ));
+//        }
 
         HttpClient httpClient = HttpClient.newBuilder()
                 .followRedirects(HttpClient.Redirect.ALWAYS)

@@ -1,5 +1,8 @@
 package qupath.ext.extensionmanager.core.tools;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,6 +21,7 @@ import java.util.zip.ZipInputStream;
  */
 public class ZipExtractor {
 
+    private static final Logger logger = LoggerFactory.getLogger(ZipExtractor.class);
     private static final int BUFFER_SIZE = 1024;
 
     private ZipExtractor() {
@@ -44,6 +48,7 @@ public class ZipExtractor {
         byte[] buffer = new byte[BUFFER_SIZE];
         int numberOfZipFiles = getNumberOfFilesInZip(inputZipPath);
 
+        logger.debug("Starting extracting {} files {} to {}", numberOfZipFiles, inputZipPath, outputFolderPath);
         try (
                 InputStream inputStream = Files.newInputStream(inputZipPath);
                 ZipInputStream zipInputStream = new ZipInputStream(inputStream)
@@ -72,6 +77,7 @@ public class ZipExtractor {
                             outputStream.write(buffer, 0, len);
                         }
                     }
+                    logger.debug("File {} extracted to {}", zipEntry, newFile);
                 }
 
                 onProgress.accept((float) i / numberOfZipFiles);

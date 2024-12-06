@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.reflect.TypeToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.net.URI;
 import java.net.URISyntaxException;
@@ -24,6 +26,7 @@ import java.util.regex.Pattern;
  */
 public class GitHubRawLinkFinder {
 
+    private static final Logger logger = LoggerFactory.getLogger(GitHubRawLinkFinder.class);
     private static final String GITHUB_HOST = "github.com";
     private static final Pattern REPOSITORY_PATTERN = Pattern.compile("^\\/([^\\/]+)\\/([^\\/]+)(?:\\/(?:[^\\/]+)\\/(?:[^\\/]+)\\/(.*))?");
     private static final String GET_REPOSITORY_CONTENT_URL = "https://api.github.com/repos/%s/%s/contents/%s";
@@ -55,6 +58,7 @@ public class GitHubRawLinkFinder {
         } catch (IllegalArgumentException e) {
             return CompletableFuture.failedFuture(e);
         }
+        logger.debug("{} found in {}", gitHubRepository, url);
 
         URI uri;
         try {
@@ -79,6 +83,7 @@ public class GitHubRawLinkFinder {
                 .followRedirects(HttpClient.Redirect.ALWAYS)
                 .build();
 
+        logger.debug("Sending request to {}", uri);
         return client.sendAsync(
                 HttpRequest.newBuilder()
                         .uri(uri)
@@ -92,20 +97,39 @@ public class GitHubRawLinkFinder {
                         "Request to %s failed with status code %d.", uri, response.statusCode()
                 ));
             }
+            logger.debug("Got response with status 200 {} from {}", response, uri);
 
             List<FileEntry> fileEntries;
             try {
                 fileEntries = gson.fromJson(response.body(), new TypeToken<List<FileEntry>>(){}.getType());
             } catch (JsonSyntaxException e) {
+                logger.debug("{} is not a list of file entries. Trying to see if it's a file entry", response.body(), e);
                 fileEntries = List.of(gson.fromJson(response.body(), FileEntry.class));
+                logger.debug("{} is a file entry", response.body());
             }
             if (fileEntries == null) {
                 throw new RuntimeException(String.format("The response to %s is empty.", uri));
             }
 
             return fileEntries.stream()
-                    .filter(fileEntry -> fileEntry.name != null && fileEntry.download_url != null)
-                    .filter(fileEntry -> filePredicate.test(fileEntry.name))
+                    .filter(fileEntry -> {
+                        if (fileEntry.name != null && fileEntry.download_url != null) {
+                            logger.debug("File entry {} retained because it has a name and a download URL", fileEntry);
+                            return true;
+                        } else {
+                            logger.debug("File entry {} skipped because it lacks a name or a download URL", fileEntry);
+                            return false;
+                        }
+                    })
+                    .filter(fileEntry -> {
+                        if (filePredicate.test(fileEntry.name)) {
+                            logger.debug("File entry {} retained because it matches the predicate", fileEntry);
+                            return true;
+                        } else {
+                            logger.debug("File entry {} skipped because it doesn't match the predicate", fileEntry);
+                            return false;
+                        }
+                    })
                     .findAny()
                     .map(FileEntry::download_url)
                     .orElseThrow(() -> new NoSuchElementException(String.format(

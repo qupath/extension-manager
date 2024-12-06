@@ -82,10 +82,9 @@ class ExtensionModificationWindow extends Stage {
 
         name.setText(extension.name());
 
-        version.getItems().addAll(
-                extension.releases().stream()
-                        .filter(release -> release.versionRange().isCompatible(extensionIndexManager.getVersion()))
-                        .toList()
+        version.getItems().addAll(extension.releases().stream()
+                .filter(release -> release.versionRange().isCompatible(extensionIndexManager.getVersion()))
+                .toList()
         );
         version.setConverter(new StringConverter<>() {
             @Override
@@ -149,7 +148,13 @@ class ExtensionModificationWindow extends Stage {
                             optionalDependencies.isSelected()
                     ),
                     progress -> Platform.runLater(() -> progressWindow.setProgress(progress)),
-                    status -> Platform.runLater(() -> progressWindow.setStatus(status)),
+                    (step, resource) -> Platform.runLater(() -> progressWindow.setStatus(MessageFormat.format(
+                            resources.getString(switch (step) {
+                                case DOWNLOADING -> "Index.ExtensionModificationWindow.downloading";
+                                case EXTRACTING_ZIP -> "Index.ExtensionModificationWindow.extracting";
+                            }),
+                            resource
+                    ))),
                     error -> {
                         if (error != null) {
                             logger.error("Error while installing extension", error);

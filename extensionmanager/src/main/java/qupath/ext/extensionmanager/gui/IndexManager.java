@@ -88,6 +88,10 @@ public class IndexManager extends Stage {
     private void onAddClicked(ActionEvent ignored) {
         UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
 
+        if (indexURL.getText() == null || indexURL.getText().isBlank()) {
+            return;
+        }
+
         GitHubRawLinkFinder.getRawLinkOfFileInRepository(indexURL.getText(), INDEX_FILE_NAME::equals)
                 .exceptionally(error -> {
                     logger.debug("Attempt to get raw link of {} failed. Considering it to be a raw link.", indexURL.getText(), error);

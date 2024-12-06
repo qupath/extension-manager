@@ -1,5 +1,8 @@
 package qupath.ext.extensionmanager.core;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
@@ -11,6 +14,8 @@ import java.nio.file.Path;
  * This class is thread-safe.
  */
 class ExtensionClassLoader extends URLClassLoader {
+
+    private static final Logger logger = LoggerFactory.getLogger(ExtensionClassLoader.class);
 
     /**
      * Create the extension class loader.
@@ -34,5 +39,6 @@ class ExtensionClassLoader extends URLClassLoader {
      */
     public synchronized void addJar(Path jarPath) throws MalformedURLException {
         addURL(jarPath.toUri().toURL());
+        logger.debug("File {} loaded by extension class loader", jarPath);
     }
 }

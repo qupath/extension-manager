@@ -9,7 +9,6 @@ import javafx.collections.ObservableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.index.IndexFetcher;
-import qupath.ext.extensionmanager.core.index.Index;
 import qupath.ext.extensionmanager.core.savedentities.UpdateAvailable;
 import qupath.ext.extensionmanager.core.tools.FileDownloader;
 import qupath.ext.extensionmanager.core.tools.ZipExtractor;
@@ -34,6 +33,7 @@ import java.util.Objects;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
@@ -62,6 +62,19 @@ public class ExtensionIndexManager implements AutoCloseable{
     private final String version;
     private final Registry defaultRegistry;
     private record IndexExtension(SavedIndex savedIndex, Extension extension) {}
+    /**
+     * Indicate an extension installation step
+     */
+    public enum InstallationStep {
+        /**
+         * Some files are being downloaded
+         */
+        DOWNLOADING,
+        /**
+         * Some files are being extracted
+         */
+        EXTRACTING_ZIP
+    }
 
     /**
      * Create the extension index manager.
@@ -160,25 +173,38 @@ public class ExtensionIndexManager implements AutoCloseable{
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
     public void addIndex(List<SavedIndex> savedIndexes) throws IOException {
+        List<SavedIndex> indexesToAdd;
         synchronized (this) {
-            for (SavedIndex savedIndex: savedIndexes) {
-                if (this.savedIndexes.stream().anyMatch(index -> index.name().equals(savedIndex.name()))) {
-                    logger.warn("Index {} has the same name as an existing index and will not be added", savedIndex);
-                } else {
-                    this.savedIndexes.add(savedIndex);
-                }
+            indexesToAdd = savedIndexes.stream()
+                    .filter(savedIndex -> {
+                        if (this.savedIndexes.stream().noneMatch(index -> index.name().equals(savedIndex.name()))) {
+                            return true;
+                        } else {
+                            logger.warn("Index {} has the same name as an existing index and will not be added", savedIndex);
+                            return false;
+                        }
+                    })
+                    .toList();
+
+            if (indexesToAdd.isEmpty()) {
+                logger.debug("No index to add");
+                return;
             }
+
+            this.savedIndexes.addAll(indexesToAdd);
         }
 
         try {
             extensionFolderManager.saveRegistry(new Registry(this.savedIndexes));
         } catch (IOException | SecurityException | NullPointerException e) {
             synchronized (this) {
-                this.savedIndexes.removeAll(savedIndexes);
+                this.savedIndexes.removeAll(indexesToAdd);
             }
 
             throw e;
         }
+
+        logger.info("Indexes {} added", indexesToAdd);
     }
 
     /**
@@ -210,7 +236,7 @@ public class ExtensionIndexManager implements AutoCloseable{
 
         for (SavedIndex savedIndex: savedIndexes) {
             try {
-                extensionFolderManager.deleteIndex(savedIndex);
+                extensionFolderManager.deleteExtensionsFromIndex(savedIndex);
             } catch (IOException | SecurityException | InvalidPathException | NullPointerException e) {
                 logger.debug(String.format("Could not delete index %s", savedIndex), e);
             }
@@ -223,6 +249,8 @@ public class ExtensionIndexManager implements AutoCloseable{
                 }
             }
         }
+
+        logger.info("Indexes {} removed", savedIndexes);
     }
 
     /**
@@ -253,43 +281,20 @@ public class ExtensionIndexManager implements AutoCloseable{
      */
     public CompletableFuture<List<UpdateAvailable>> getAvailableUpdates() {
         return CompletableFuture.supplyAsync(() -> {
-            List<UpdateAvailable> updateAvailable = new ArrayList<>();
-
             List<SavedIndex> savedIndexes;
             synchronized (this) {
                 // Prevent modifications to savedIndexes while iterating
                 savedIndexes = new ArrayList<>(this.savedIndexes);
             }
 
-            for (SavedIndex savedIndex: savedIndexes) {
-                Index index = IndexFetcher.getIndex(savedIndex.rawUri()).join();
-
-                updateAvailable.addAll(index.extensions().stream()
-                        .map(extension -> {
-                            Optional<InstalledExtension> installedExtension = getInstalledExtension(new IndexExtension(savedIndex, extension)).get();
-
-                            if (installedExtension.isPresent()) {
-                                String installedRelease = installedExtension.get().releaseName();
-                                Optional<Release> maxCompatibleRelease = extension.getMaxCompatibleRelease(version);
-
-                                if (maxCompatibleRelease.isPresent() &&
-                                        new Version(maxCompatibleRelease.get().name()).compareTo(new Version(installedRelease)) > 0
-                                ) {
-                                    return new UpdateAvailable(
-                                            extension.name(),
-                                            installedExtension.get().releaseName(),
-                                            maxCompatibleRelease.get().name()
-                                    );
-                                }
-                            }
-                            return null;
-                        })
-                        .filter(Objects::nonNull)
-                        .toList()
-                );
-            }
-
-            return updateAvailable;
+            return savedIndexes.stream()
+                    .map(savedIndex -> IndexFetcher.getIndex(savedIndex.rawUri()).join().extensions().stream()
+                            .map(extension -> getUpdateAvailable(savedIndex, extension))
+                            .filter(Objects::nonNull)
+                            .toList()
+                    )
+                    .flatMap(List::stream)
+                    .toList();
         });
     }
 
@@ -320,8 +325,10 @@ public class ExtensionIndexManager implements AutoCloseable{
      * @param onProgress a function that will be called at different steps during the installation. Its parameter
      *                   will be a float between 0 and 1 indicating the progress of the installation (0: beginning,
      *                   1: finished). This function will be called from the calling thread
-     * @param onStatusChanged a function that will be called at different steps during the installation. Its parameter
-     *                        will be a String describing the installation step currently happening
+     * @param onStatusChanged a function that will be called at different steps during the installation. Its first parameter
+     *                        will be the step currently happening, and its second parameter a text describing the resource
+     *                        on which the step is happening (for example, a link if the step is a download). This function
+     *                        will be called from the calling thread
      * @param onComplete a function that will be called when the installation is complete. Its parameter is a Throwable
      *                   indicating the error if the operation failed and null if the operation succeeded. This function
      *                   is guaranteed to be called at the end of the operation. This function will be called from the
@@ -332,7 +339,7 @@ public class ExtensionIndexManager implements AutoCloseable{
             Extension extension,
             InstalledExtension installationInformation,
             Consumer<Float> onProgress,
-            Consumer<String> onStatusChanged,
+            BiConsumer<InstallationStep, String> onStatusChanged,
             Consumer<Throwable> onComplete
     ) {
         var extensionProperty = installedExtensions.computeIfAbsent(
@@ -341,22 +348,30 @@ public class ExtensionIndexManager implements AutoCloseable{
         );
 
         try {
+            logger.debug("Deleting files of {} before installing or updating it", extension);
             extensionFolderManager.deleteExtension(savedIndex, extension);
             synchronized (this) {
                 extensionProperty.set(Optional.empty());
             }
 
             Map<URI, Path> downloadUrlToFileName = getDownloadUrlsToFileNames(savedIndex, extension, installationInformation);
+
             int i = 0;
             for (var entry: downloadUrlToFileName.entrySet()) {
                 float progressOffset = (float) i / downloadUrlToFileName.size();
                 boolean downloadingZipArchive = entry.getValue().toString().endsWith(".zip");
 
+                if (downloadingZipArchive) {
+                    logger.debug("Downloading and extracting {} to {}", entry.getKey(), entry.getValue());
+                } else {
+                    logger.debug("Downloading {} to {}", entry.getKey(), entry.getValue());
+                }
+
                 float step = downloadingZipArchive ?
                         (float) 1 / (2 * downloadUrlToFileName.size()) :
                         (float) 1 / downloadUrlToFileName.size();
 
-                onStatusChanged.accept(String.format("Downloading %s...", entry.getKey()));
+                onStatusChanged.accept(InstallationStep.DOWNLOADING, entry.getKey().toString());
                 FileDownloader.downloadFile(
                         entry.getKey(),
                         entry.getValue(),
@@ -364,7 +379,7 @@ public class ExtensionIndexManager implements AutoCloseable{
                 );
 
                 if (downloadingZipArchive) {
-                    onStatusChanged.accept(String.format("Extracting %s...", entry.getValue()));
+                    onStatusChanged.accept(InstallationStep.EXTRACTING_ZIP, entry.getValue().toString());
                     ZipExtractor.extractZipToFolder(
                             entry.getValue(),
                             entry.getValue().getParent(),
@@ -379,6 +394,7 @@ public class ExtensionIndexManager implements AutoCloseable{
                 extensionProperty.set(Optional.of(installationInformation));
             }
 
+            logger.info("Extension {} of {} installed", extension, savedIndex);
             onComplete.accept(null);
         } catch (IOException | InterruptedException | IllegalArgumentException | SecurityException | NullPointerException e) {
             synchronized (this) {
@@ -415,16 +431,22 @@ public class ExtensionIndexManager implements AutoCloseable{
         synchronized (this) {
             extensionProperty.set(Optional.empty());
         }
+
+        logger.info("Extension {} of {} removed", extension, savedIndex);
     }
 
     private synchronized void setIndexesFromRegistry() {
+        this.savedIndexes.clear();
+
         try {
-            this.savedIndexes.addAll(extensionFolderManager.getSavedRegistry().getIndexes());
+            this.savedIndexes.addAll(extensionFolderManager.getSavedRegistry().indexes());
+            logger.debug("Indexes set from saved registry");
         } catch (Exception e) {
-            logger.debug("Error while retrieving saved registry. Using default one.", e);
+            logger.debug("Error while retrieving saved registry. Using default one {} if not null", defaultRegistry, e);
 
             if (defaultRegistry != null) {
-                this.savedIndexes.addAll(defaultRegistry.getIndexes());
+                this.savedIndexes.addAll(defaultRegistry.indexes());
+                logger.debug("Indexes set from default registry");
             }
         }
     }
@@ -459,6 +481,41 @@ public class ExtensionIndexManager implements AutoCloseable{
                     e
             );
             return new SimpleObjectProperty<>(Optional.empty());
+        }
+    }
+
+    private UpdateAvailable getUpdateAvailable(SavedIndex savedIndex, Extension extension) {
+        Optional<InstalledExtension> installedExtension = getInstalledExtension(
+                new IndexExtension(savedIndex, extension)
+        ).get();
+
+        if (installedExtension.isPresent()) {
+            String installedRelease = installedExtension.get().releaseName();
+            Optional<Release> maxCompatibleRelease = extension.getMaxCompatibleRelease(version);
+
+            if (maxCompatibleRelease.isPresent() &&
+                    new Version(maxCompatibleRelease.get().name()).compareTo(new Version(installedRelease)) > 0
+            ) {
+                logger.debug(
+                        "Extension {} installed and updatable to {}",
+                        extension,
+                        maxCompatibleRelease.get().name()
+                );
+                return new UpdateAvailable(
+                        extension.name(),
+                        installedExtension.get().releaseName(),
+                        maxCompatibleRelease.get().name()
+                );
+            } else {
+                logger.debug(
+                        "Extension {} installed but no compatible update found",
+                        extension
+                );
+                return null;
+            }
+        } else {
+            logger.debug("Extension {} not installed, so no update available", extension);
+            return null;
         }
     }
 

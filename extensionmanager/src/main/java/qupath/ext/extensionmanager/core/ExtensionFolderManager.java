@@ -16,6 +16,7 @@ import qupath.ext.extensionmanager.core.tools.FilesWatcher;
 import qupath.ext.extensionmanager.core.tools.FileTools;
 
 import java.io.BufferedWriter;
+import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -192,6 +193,7 @@ class ExtensionFolderManager implements AutoCloseable {
                 BufferedWriter writer = new BufferedWriter(fileWriter)
         ) {
             writer.write(gson.toJson(registry));
+            logger.debug("Registry {} saved", registry);
         }
     }
 
@@ -214,10 +216,10 @@ class ExtensionFolderManager implements AutoCloseable {
      * @throws java.nio.file.InvalidPathException if a Path object cannot be constructed from the index
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
-    public synchronized void deleteIndex(SavedIndex savedIndex) throws IOException {
-        FileTools.deleteDirectoryRecursively(
-                getAndCreateIndexesFolder().resolve(savedIndex.name()).toFile()
-        );
+    public synchronized void deleteExtensionsFromIndex(SavedIndex savedIndex) throws IOException {
+        File indexDirectory = getAndCreateIndexesFolder().resolve(savedIndex.name()).toFile();
+        FileTools.deleteDirectoryRecursively(indexDirectory);
+        logger.debug("The extension files of {} located in {} have been deleted", savedIndex, indexDirectory);
     }
 
     /**
@@ -263,6 +265,7 @@ class ExtensionFolderManager implements AutoCloseable {
             }
         }
         if (versionPath == null) {
+            logger.debug("No folder found in {}. Guessing {} is not installed", extensionPath, extension);
             return Optional.empty();
         }
 
@@ -271,14 +274,33 @@ class ExtensionFolderManager implements AutoCloseable {
                 FileType.MAIN_JAR.name
         );
         if (!FileTools.isDirectoryNotEmpty(mainJarFolderPath)) {
+            logger.debug(
+                    "The folder at {} is not a non-empty directory. Guessing {} is not installed",
+                    mainJarFolderPath,
+                    extension
+            );
             return Optional.empty();
         }
+        logger.debug("Extension {} detected at {}", extension, mainJarFolderPath);
 
         Path optionalDependenciesFolderPath = Paths.get(
                 versionPath.toString(),
                 FileType.OPTIONAL_DEPENDENCIES.name
         );
         boolean optionalDependenciesInstalled = FileTools.isDirectoryNotEmpty(optionalDependenciesFolderPath);
+        if (optionalDependenciesInstalled) {
+            logger.debug(
+                    "Optional dependencies of {} detected because {} is a non-empty directory",
+                    extension,
+                    optionalDependenciesFolderPath
+            );
+        } else {
+            logger.debug(
+                    "Optional dependencies of {} not detected because {} is not a non-empty directory",
+                    extension,
+                    optionalDependenciesFolderPath
+            );
+        }
 
         return Optional.of(new InstalledExtension(versionPath.toFile().getName(), optionalDependenciesInstalled));
     }
@@ -312,6 +334,7 @@ class ExtensionFolderManager implements AutoCloseable {
         );
 
         if (Files.isRegularFile(folderPath)) {
+            logger.debug("Deleting {} because it should be a directory", folderPath);
             Files.deleteIfExists(folderPath);
         }
         Files.createDirectories(folderPath);
@@ -332,6 +355,7 @@ class ExtensionFolderManager implements AutoCloseable {
      */
     public synchronized void deleteExtension(SavedIndex savedIndex, Extension extension) throws IOException {
         FileTools.deleteDirectoryRecursively(getExtensionFolder(savedIndex, extension).toFile());
+        logger.debug("The extension files of {} belonging to {} have been deleted", extension, savedIndex);
     }
 
     private Path getRegistryPath() throws IOException {
@@ -342,6 +366,7 @@ class ExtensionFolderManager implements AutoCloseable {
         Path indexesFolder = extensionDirectoryPath.get().resolve(INDEXES_FOLDER);
 
         if (Files.isRegularFile(indexesFolder)) {
+            logger.debug("Deleting {} because it should be a directory", indexesFolder);
             Files.deleteIfExists(indexesFolder);
         }
         Files.createDirectories(indexesFolder);

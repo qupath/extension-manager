@@ -1,5 +1,7 @@
 package qupath.ext.extensionmanager.core.index;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.Version;
 
 import java.util.List;
@@ -16,6 +18,8 @@ import java.util.List;
  * @param excludes any specific versions that are not compatible
  */
 public record VersionRange(String min, String max, List<String> excludes) {
+
+    private static final Logger logger = LoggerFactory.getLogger(VersionRange.class);
 
     /**
      * Create a version range.
@@ -120,14 +124,33 @@ public record VersionRange(String min, String max, List<String> excludes) {
         Version versionObject = new Version(version);
 
         if (new Version(min).compareTo(versionObject) > 0) {
+            logger.debug(
+                    "This version range {} is not compatible with {} because of the minimum compatible version",
+                    this,
+                    version
+            );
             return false;
         }
 
         if (max != null && versionObject.compareTo(new Version(max)) > 0) {
+            logger.debug(
+                    "This version range {} is not compatible with {} because of the maximum compatible version",
+                    this,
+                    version
+            );
             return false;
         }
 
-        return excludes == null || excludes.stream().map(Version::new).noneMatch(versionObject::equals);
+        if (excludes != null && excludes.stream().map(Version::new).anyMatch(versionObject::equals)) {
+            logger.debug(
+                    "This version range {} is not compatible with {} because of the excluded versions",
+                    this,
+                    version
+            );
+            return false;
+        }
+
+        return true;
     }
 }
 

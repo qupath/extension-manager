@@ -1,5 +1,8 @@
 package qupath.ext.extensionmanager.core.tools;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileVisitOption;
@@ -19,6 +22,7 @@ import java.util.stream.Stream;
  */
 public class FileTools {
 
+    private static final Logger logger = LoggerFactory.getLogger(FileTools.class);
     private FileTools() {
         throw new AssertionError("This class is not instantiable.");
     }
@@ -43,6 +47,7 @@ public class FileTools {
     ) throws IOException {
         List<Path> files = new ArrayList<>();
 
+        logger.debug("Searching files in {} with depth {}", directory, depth);
         Files.walkFileTree(
                 directory,
                 EnumSet.noneOf(FileVisitOption.class),
@@ -52,8 +57,10 @@ public class FileTools {
                     @Override
                     public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
                         if (directoriesToSkip.test(dir)) {
+                            logger.debug("Skipping directory {}", dir);
                             return FileVisitResult.SKIP_SUBTREE;
                         } else {
+                            logger.debug("Search will continue in {}", dir);
                             return FileVisitResult.CONTINUE;
                         }
                     }
@@ -61,7 +68,10 @@ public class FileTools {
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
                         if (filesToFind.test(file)) {
+                            logger.debug("File {} found", file);
                             files.add(file);
+                        } else {
+                            logger.debug("File {} found but not retained as it doesn't match the predicate", file);
                         }
                         return FileVisitResult.CONTINUE;
                     }
@@ -82,9 +92,16 @@ public class FileTools {
     public static boolean isDirectoryNotEmpty(Path path) throws IOException {
         if (Files.isDirectory(path)) {
             try (Stream<Path> entries = Files.list(path)) {
-                return entries.findAny().isPresent();
+                if (entries.findAny().isPresent()) {
+                    logger.debug("The specified path {} is a non-empty directory", path);
+                    return true;
+                } else {
+                    logger.debug("The specified path {} is an empty directory", path);
+                    return false;
+                }
             }
         } else {
+            logger.debug("The specified path {} is not an existing directory", path);
             return false;
         }
     }
@@ -99,6 +116,7 @@ public class FileTools {
      * some files
      */
     public static void deleteDirectoryRecursively(File directoryToBeDeleted) throws IOException {
+        logger.debug("Deleting children of {}", directoryToBeDeleted);
         File[] childFiles = directoryToBeDeleted.listFiles();
         if (childFiles != null) {
             for (File file : childFiles) {
@@ -106,6 +124,7 @@ public class FileTools {
             }
         }
 
+        logger.debug("Deleting {}", directoryToBeDeleted);
         Files.deleteIfExists(directoryToBeDeleted.toPath());
     }
 
