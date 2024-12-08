@@ -7,6 +7,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * A class loader that loads extension classes.
@@ -16,6 +18,7 @@ import java.nio.file.Path;
 class ExtensionClassLoader extends URLClassLoader {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionClassLoader.class);
+    private final Set<String> filenamesAdded = new HashSet<>();
 
     /**
      * Create the extension class loader.
@@ -40,5 +43,15 @@ class ExtensionClassLoader extends URLClassLoader {
     public synchronized void addJar(Path jarPath) throws MalformedURLException {
         addURL(jarPath.toUri().toURL());
         logger.debug("File {} loaded by extension class loader", jarPath);
+
+        String filename = jarPath.getFileName().toString();
+        if (filenamesAdded.contains(filename)) {
+            logger.warn(
+                    "A JAR file with the same file name ({}) was already added to this class loader. {} will probably not be loaded",
+                    filename,
+                    jarPath
+            );
+        }
+        filenamesAdded.add(filename);
     }
 }
