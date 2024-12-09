@@ -5,6 +5,7 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
@@ -18,14 +19,19 @@ import qupath.ext.extensionmanager.core.index.Extension;
 import qupath.ext.extensionmanager.core.index.Release;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
 import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
+import qupath.ext.extensionmanager.core.tools.FileTools;
 import qupath.ext.extensionmanager.gui.ProgressWindow;
 import qupath.ext.extensionmanager.gui.UiUtils;
 
 import java.io.IOException;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.text.MessageFormat;
+import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Stream;
 
 /**
  * A window that provide choices to install or modify the installation of an extension.
@@ -41,7 +47,7 @@ class ExtensionModificationWindow extends Stage {
     @FXML
     private Label name;
     @FXML
-    private ChoiceBox<Release> version;
+    private ChoiceBox<Release> release;
     @FXML
     private CheckBox optionalDependencies;
     @FXML
@@ -82,11 +88,11 @@ class ExtensionModificationWindow extends Stage {
 
         name.setText(extension.name());
 
-        version.getItems().addAll(extension.releases().stream()
+        release.getItems().addAll(extension.releases().stream()
                 .filter(release -> release.versionRange().isCompatible(extensionIndexManager.getVersion()))
                 .toList()
         );
-        version.setConverter(new StringConverter<>() {
+        release.setConverter(new StringConverter<>() {
             @Override
             public String toString(Release object) {
                 return object == null ? null : object.name();
@@ -97,15 +103,15 @@ class ExtensionModificationWindow extends Stage {
                 return null;
             }
         });
-        version.getSelectionModel().select(installedExtension == null ?
-                version.getItems().isEmpty() ? null : version.getItems().getFirst() :
-                version.getItems().stream()
+        release.getSelectionModel().select(installedExtension == null ?
+                release.getItems().isEmpty() ? null : release.getItems().getFirst() :
+                release.getItems().stream()
                         .filter(release -> release.name().equals(installedExtension.releaseName()))
                         .findAny()
-                        .orElse(version.getItems().isEmpty() ? null : version.getItems().getFirst())
+                        .orElse(release.getItems().isEmpty() ? null : release.getItems().getFirst())
         );
 
-        optionalDependencies.visibleProperty().bind(version.getSelectionModel()
+        optionalDependencies.visibleProperty().bind(release.getSelectionModel()
                 .selectedItemProperty()
                 .map(release -> !release.optionalDependencyUrls().isEmpty())
         );
@@ -120,8 +126,29 @@ class ExtensionModificationWindow extends Stage {
 
     @FXML
     private void onSubmitClicked(ActionEvent ignored) {
-        if (version.getSelectionModel().isEmpty()) {
+        if (release.getSelectionModel().isEmpty()) {
             return;
+        }
+        Release selectedRelease = release.getSelectionModel().getSelectedItem();
+
+        try {
+            if (isJarAlreadyDownloaded(selectedRelease)) {
+                var confirmation = new Alert(
+                        Alert.AlertType.CONFIRMATION,
+                        resources.getString("Index.ExtensionModificationWindow.extensionAlreadyInstalled")
+                ).showAndWait();
+
+                if (confirmation.isEmpty() || !confirmation.get().equals(ButtonType.OK)) {
+                    return;
+                }
+            }
+        } catch (NullPointerException | InvalidPathException e) {
+            logger.debug(
+                    "Cannot get file name from {}. Assuming {} with release {} is not already installed",
+                    selectedRelease.mainUrl(),
+                    extension,
+                    selectedRelease
+            );
         }
 
         try {
@@ -134,7 +161,7 @@ class ExtensionModificationWindow extends Stage {
                                     "Index.ExtensionModificationWindow.updating"
                             ),
                             extension.name(),
-                            version.getSelectionModel().getSelectedItem().name()
+                            selectedRelease.name()
                     ),
                     executor::shutdownNow
             );
@@ -144,7 +171,7 @@ class ExtensionModificationWindow extends Stage {
                     savedIndex,
                     extension,
                     new InstalledExtension(
-                            version.getSelectionModel().getSelectedItem().name(),
+                            selectedRelease.name(),
                             optionalDependencies.isSelected()
                     ),
                     progress -> Platform.runLater(() -> progressWindow.setProgress(progress)),
@@ -169,7 +196,7 @@ class ExtensionModificationWindow extends Stage {
                                         MessageFormat.format(
                                                 resources.getString("Index.ExtensionModificationWindow.installed"),
                                                 extension.name(),
-                                                version.getSelectionModel().getSelectedItem().name()
+                                                release.getSelectionModel().getSelectedItem().name()
                                         )
                                 ).show();
                             } else {
@@ -178,7 +205,7 @@ class ExtensionModificationWindow extends Stage {
                                         MessageFormat.format(
                                                 resources.getString("Index.ExtensionModificationWindow.notInstalled"),
                                                 extension.name(),
-                                                version.getSelectionModel().getSelectedItem().name(),
+                                                release.getSelectionModel().getSelectedItem().name(),
                                                 error.getLocalizedMessage()
                                         )
                                 ).show();
@@ -193,5 +220,16 @@ class ExtensionModificationWindow extends Stage {
         } catch (IOException e) {
             logger.error("Error while creating progress window", e);
         }
+    }
+
+    private boolean isJarAlreadyDownloaded(Release release) {
+        return Stream.concat(
+                extensionIndexManager.getManuallyInstalledJars().stream(),
+                extensionIndexManager.getIndexedManagedInstalledJars().stream()
+        )
+                .map(Path::getFileName)
+                .filter(Objects::nonNull)
+                .map(Path::toString)
+                .anyMatch(path -> path.equalsIgnoreCase(FileTools.getFileNameFromURI(release.mainUrl())));
     }
 }

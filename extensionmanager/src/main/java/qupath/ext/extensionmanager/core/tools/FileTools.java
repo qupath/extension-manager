@@ -5,10 +5,12 @@ import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.FileVisitOption;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
@@ -137,5 +139,19 @@ public class FileTools {
      */
     public static String stripInvalidFilenameCharacters(String name) {
         return name.replaceAll("[\\\\/:\"*?<>|\\n\\r]+", "");
+    }
+
+    /**
+     * Get the name of the file or directory denoted by the path contained in the
+     * provided URI.
+     *
+     * @param uri the URI containing the file name to retrieve
+     * @return the file name denoted by the path contained in the provided URI
+     * @throws NullPointerException if the path of the provided URI is undefined
+     * @throws java.nio.file.InvalidPathException if the path of the provided URI cannot be
+     * converted to a Path
+     */
+    public static String getFileNameFromURI(URI uri) {
+        return Paths.get(uri.getPath()).getFileName().toString();
     }
 }

@@ -11,6 +11,7 @@ import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.index.IndexFetcher;
 import qupath.ext.extensionmanager.core.savedentities.UpdateAvailable;
 import qupath.ext.extensionmanager.core.tools.FileDownloader;
+import qupath.ext.extensionmanager.core.tools.FileTools;
 import qupath.ext.extensionmanager.core.tools.ZipExtractor;
 import qupath.ext.extensionmanager.core.index.Extension;
 import qupath.ext.extensionmanager.core.index.Release;
@@ -547,7 +548,7 @@ public class ExtensionIndexManager implements AutoCloseable{
                                 release.get().name(),
                                 ExtensionFolderManager.FileType.MAIN_JAR
                         ).toString(),
-                        getFileNameFromURI(release.get().mainUrl())
+                        FileTools.getFileNameFromURI(release.get().mainUrl())
                 )
         );
 
@@ -561,7 +562,7 @@ public class ExtensionIndexManager implements AutoCloseable{
                                     release.get().name(),
                                     ExtensionFolderManager.FileType.JAVADOCS
                             ).toString(),
-                            getFileNameFromURI(javadocUri)
+                            FileTools.getFileNameFromURI(javadocUri)
                     )
             );
         }
@@ -576,7 +577,7 @@ public class ExtensionIndexManager implements AutoCloseable{
                                     release.get().name(),
                                     ExtensionFolderManager.FileType.REQUIRED_DEPENDENCIES
                             ).toString(),
-                            getFileNameFromURI(requiredDependencyUri)
+                            FileTools.getFileNameFromURI(requiredDependencyUri)
                     )
             );
         }
@@ -592,7 +593,7 @@ public class ExtensionIndexManager implements AutoCloseable{
                                         release.get().name(),
                                         ExtensionFolderManager.FileType.OPTIONAL_DEPENDENCIES
                                 ).toString(),
-                                getFileNameFromURI(optionalDependencyUri)
+                                FileTools.getFileNameFromURI(optionalDependencyUri)
                         )
                 );
             }
@@ -609,9 +610,5 @@ public class ExtensionIndexManager implements AutoCloseable{
                 logger.error(String.format("Cannot load extension %s", path), e);
             }
         }
-    }
-
-    private static String getFileNameFromURI(URI uri) {
-        return Paths.get(uri.getPath()).getFileName().toString();
     }
 }

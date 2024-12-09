@@ -25,7 +25,7 @@
                 </Label>
                 <HBox alignment="CENTER_LEFT" spacing="10.0">
                     <Label text="%Index.ExtensionModificationWindow.version" />
-                    <ChoiceBox fx:id="version" prefWidth="150.0" />
+                    <ChoiceBox fx:id="release" prefWidth="150.0" />
                 </HBox>
                 <CheckBox fx:id="optionalDependencies" mnemonicParsing="false" text="%Index.ExtensionModificationWindow.installOptionalDependencies" />
                 <HBox alignment="CENTER">
