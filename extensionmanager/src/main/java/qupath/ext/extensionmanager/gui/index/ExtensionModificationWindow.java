@@ -1,6 +1,7 @@
 package qupath.ext.extensionmanager.gui.index;
 
 import javafx.application.Platform;
+import javafx.beans.binding.Bindings;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
@@ -15,6 +16,7 @@ import javafx.util.StringConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionIndexManager;
+import qupath.ext.extensionmanager.core.Version;
 import qupath.ext.extensionmanager.core.index.Extension;
 import qupath.ext.extensionmanager.core.index.Release;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
@@ -118,9 +120,9 @@ class ExtensionModificationWindow extends Stage {
         optionalDependencies.managedProperty().bind(optionalDependencies.visibleProperty());
         optionalDependencies.setSelected(installedExtension != null && installedExtension.optionalDependenciesInstalled());
 
-        submit.setText(resources.getString(installedExtension == null ?
-                "Index.ExtensionModificationWindow.install" :
-                "Index.ExtensionModificationWindow.update"
+        submit.textProperty().bind(Bindings.createStringBinding(
+                () -> resources.getString(getSubmitText()),
+                release.getSelectionModel().selectedItemProperty()
         ));
     }
 
@@ -226,6 +228,30 @@ class ExtensionModificationWindow extends Stage {
                 }
         ));
         executor.shutdown();
+    }
+
+    private String getSubmitText() {
+        if (installedExtension == null) {
+            return "Index.ExtensionModificationWindow.install";
+        } else if (release.getSelectionModel().getSelectedItem() == null) {
+            return "Index.ExtensionModificationWindow.update";
+        } else {
+            try {
+                Version selectedVersion = new Version(release.getSelectionModel().getSelectedItem().name());
+                Version installedVersion = new Version(installedExtension.releaseName());
+
+                if (selectedVersion.compareTo(installedVersion) < 0) {
+                    return "Index.ExtensionModificationWindow.downgrade";
+                } else if (selectedVersion.compareTo(installedVersion) > 0) {
+                    return "Index.ExtensionModificationWindow.update";
+                } else {
+                    return "Index.ExtensionModificationWindow.reinstall";
+                }
+            } catch (IllegalArgumentException e) {
+                logger.debug("Cannot create version from selected item or installed release", e);
+                return "Index.ExtensionModificationWindow.update";
+            }
+        }
     }
 
     private boolean isJarAlreadyDownloaded(Release release) {
