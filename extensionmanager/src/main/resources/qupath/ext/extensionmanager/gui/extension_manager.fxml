@@ -12,7 +12,7 @@
 
 <fx:root height="400.0" title="%ExtensionManager.title" type="Stage" width="800.0" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
     <scene>
-        <Scene>
+        <Scene stylesheets="@styles.css">
             <VBox>
               <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
                   <VBox alignment="CENTER">
