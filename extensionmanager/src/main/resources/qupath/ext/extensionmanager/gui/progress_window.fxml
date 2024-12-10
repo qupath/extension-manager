@@ -21,7 +21,7 @@
                         <Font name="System Italic" size="13.0" />
                     </font>
                 </Label>
-                <ProgressBar fx:id="progressBar" prefWidth="200.0" progress="0.0" />
+                <ProgressBar fx:id="progressBar" maxWidth="1.7976931348623157E308" prefWidth="200.0" progress="0.0" VBox.vgrow="ALWAYS" />
                 <Button mnemonicParsing="false" onAction="#onCancelClicked" text="%ProgressWindow.cancel" />
             </VBox>
         </Scene>
