@@ -47,6 +47,7 @@ class ManuallyInstalledExtensionLine extends HBox {
         }
 
         delete.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.MINUS_CIRCLE));
+        delete.getGraphic().getStyleClass().add("delete-button");
     }
 
     @FXML
