@@ -93,7 +93,9 @@ class ExtensionLine extends HBox {
         info.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.INFO_CIRCLE));
 
         add.getGraphic().getStyleClass().add("add-button");
+        settings.getGraphic().getStyleClass().add("other-buttons");
         delete.getGraphic().getStyleClass().add("delete-button");
+        info.getGraphic().getStyleClass().add("other-buttons");
 
         add.visibleProperty().bind(Bindings.createBooleanBinding(
                 () -> installedExtension.get().isEmpty(),

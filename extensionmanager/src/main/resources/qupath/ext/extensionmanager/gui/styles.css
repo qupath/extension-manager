@@ -5,3 +5,7 @@
 .delete-button {
     -fx-text-fill: firebrick;
 }
+
+.other-buttons {
+    -fx-opacity: 0.8;
+}
