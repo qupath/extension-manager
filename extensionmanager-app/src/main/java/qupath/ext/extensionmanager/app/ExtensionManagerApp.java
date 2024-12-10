@@ -41,8 +41,8 @@ public class ExtensionManagerApp extends Application {
                 new Registry(List.of(new SavedIndex(
                         "QuPath index",
                         "Extensions maintained by the QuPath team",
-                        URI.create("https://github.com/Rylern/test-index"),
-                        URI.create("https://raw.githubusercontent.com/Rylern/test-index/refs/heads/main/index.json")
+                        URI.create("https://github.com/qupath/qupath-index"),
+                        URI.create("https://raw.githubusercontent.com/qupath/qupath-index/refs/heads/main/index.json")
                 )))
         );
 
