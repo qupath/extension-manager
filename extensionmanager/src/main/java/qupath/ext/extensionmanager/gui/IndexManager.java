@@ -15,9 +15,11 @@ import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableRow;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.Tooltip;
 import javafx.scene.input.Clipboard;
 import javafx.scene.input.ClipboardContent;
 import javafx.stage.Stage;
+import javafx.util.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionIndexManager;
@@ -160,7 +162,8 @@ public class IndexManager extends Stage {
                             index.name(),
                             index.description(),
                             new URI(indexUrl),
-                            uri
+                            uri,
+                            true
                     )));
                 } catch (URISyntaxException | SecurityException | NullPointerException | IOException e) {
                     logger.error("Error when saving index {}", index.name(), e);
@@ -195,6 +198,7 @@ public class IndexManager extends Stage {
         urlColumn.setCellValueFactory(cellData -> new SimpleObjectProperty<>(cellData.getValue().uri()));
         descriptionColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().description()));
 
+        nameColumn.setCellFactory(getStringCellFactory());
         urlColumn.setCellFactory(column -> new TableCell<>() {
             @Override
             protected void updateItem(URI item, boolean empty) {
@@ -202,12 +206,16 @@ public class IndexManager extends Stage {
 
                 if (empty || item == null) {
                     setText(null);
+                    setTooltip(null);
                 } else {
                     setTextOverrun(OverrunStyle.LEADING_ELLIPSIS);
                     setText(item.toString());
+
+                    setTooltip(new Tooltip(item.toString()));
                 }
             }
         });
+        descriptionColumn.setCellFactory(getStringCellFactory());
     }
 
     private void setDoubleClickHandler() {
@@ -253,10 +261,31 @@ public class IndexManager extends Stage {
 
         MenuItem removeItem = new MenuItem(resources.getString("IndexManager.remove"));
         removeItem.setOnAction(ignored -> {
+            List<String> nonDeletableIndexes = indexTable.getSelectionModel().getSelectedItems().stream()
+                    .filter(savedIndex -> !savedIndex.deletable())
+                    .map(SavedIndex::name)
+                    .toList();
+            if (!nonDeletableIndexes.isEmpty()) {
+                new Alert(
+                        Alert.AlertType.WARNING,
+                        MessageFormat.format(
+                                "{0} cannot be deleted.",
+                                nonDeletableIndexes.size() == 1 ? nonDeletableIndexes.getFirst() : nonDeletableIndexes.toString()
+                        )
+                ).show();
+            }
+
+            List<SavedIndex> indexesToDelete = indexTable.getSelectionModel().getSelectedItems().stream()
+                    .filter(SavedIndex::deletable)
+                    .toList();
+            if (indexesToDelete.isEmpty()) {
+                return;
+            }
+
             try {
-                extensionIndexManager.removeIndexes(indexTable.getSelectionModel().getSelectedItems());
+                extensionIndexManager.removeIndexes(indexesToDelete);
             } catch (IOException | SecurityException | NullPointerException e) {
-                logger.error("Error when removing {}", indexTable.getSelectionModel().getSelectedItems(), e);
+                logger.error("Error when removing {}", indexesToDelete, e);
 
                 new Alert(
                         Alert.AlertType.ERROR,
@@ -268,5 +297,22 @@ public class IndexManager extends Stage {
             }
         });
         menu.getItems().add(removeItem);
+    }
+
+    private static Callback<TableColumn<SavedIndex, String>, TableCell<SavedIndex, String>> getStringCellFactory() {
+        return column -> new TableCell<>() {
+            @Override
+            protected void updateItem(String item, boolean empty) {
+                super.updateItem(item, empty);
+
+                if (empty || item == null) {
+                    setText(null);
+                    setTooltip(null);
+                } else {
+                    setText(item);
+                    setTooltip(new Tooltip(item));
+                }
+            }
+        };
     }
 }

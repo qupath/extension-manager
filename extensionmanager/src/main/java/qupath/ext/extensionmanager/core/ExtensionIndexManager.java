@@ -212,6 +212,9 @@ public class ExtensionIndexManager implements AutoCloseable{
      * Remove indexes from the available list. This will remove them from the
      * saved registry and delete any installed extension belonging to these indexes.
      * <p>
+     * Indexes that are not deletable (see {@link SavedIndex#deletable()}) won't be
+     * deleted.
+     * <p>
      * If an exception occurs (see below), the provided indexes are not added.
      *
      * @param savedIndexes the indexes to remove
@@ -221,21 +224,36 @@ public class ExtensionIndexManager implements AutoCloseable{
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
     public void removeIndexes(List<SavedIndex> savedIndexes) throws IOException {
+        List<SavedIndex> indexesToRemove = savedIndexes.stream()
+                .filter(savedIndex -> {
+                    if (savedIndex.deletable()) {
+                        return true;
+                    } else {
+                        logger.warn("Index {} is not deletable and won't be deleted", savedIndex);
+                        return false;
+                    }
+                })
+                .toList();
+        if (indexesToRemove.isEmpty()) {
+            logger.debug("No index to remove");
+            return;
+        }
+
         synchronized (this) {
-            this.savedIndexes.removeAll(savedIndexes);
+            this.savedIndexes.removeAll(indexesToRemove);
         }
 
         try {
             extensionFolderManager.saveRegistry(new Registry(this.savedIndexes));
         } catch (IOException | SecurityException | NullPointerException e) {
             synchronized (this) {
-                this.savedIndexes.addAll(savedIndexes);
+                this.savedIndexes.addAll(indexesToRemove);
             }
 
             throw e;
         }
 
-        for (SavedIndex savedIndex: savedIndexes) {
+        for (SavedIndex savedIndex: indexesToRemove) {
             try {
                 extensionFolderManager.deleteExtensionsFromIndex(savedIndex);
             } catch (IOException | SecurityException | InvalidPathException | NullPointerException e) {
@@ -244,14 +262,14 @@ public class ExtensionIndexManager implements AutoCloseable{
         }
 
         for (var entry: installedExtensions.entrySet()) {
-            if (savedIndexes.contains(entry.getKey().savedIndex)) {
+            if (indexesToRemove.contains(entry.getKey().savedIndex)) {
                 synchronized (this) {
                     entry.getValue().set(Optional.empty());
                 }
             }
         }
 
-        logger.info("Indexes {} removed", savedIndexes);
+        logger.info("Indexes {} removed", indexesToRemove);
     }
 
     /**

@@ -12,5 +12,6 @@ import java.net.URI;
  * @param uri a URI pointing to the raw content of the index, or to a GitHub repository where the
  *            index can be found
  * @param rawUri the URI pointing to the raw content of the index (can be same as {@link #uri})
+ * @param deletable whether this metadata can be deleted
  */
-public record SavedIndex(String name, String description, URI uri, URI rawUri) {}
+public record SavedIndex(String name, String description, URI uri, URI rawUri, boolean deletable) {}
