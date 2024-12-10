@@ -6,6 +6,7 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.OverrunStyle;
@@ -272,7 +273,7 @@ public class IndexManager extends Stage {
                                 "{0} cannot be deleted.",
                                 nonDeletableIndexes.size() == 1 ? nonDeletableIndexes.getFirst() : nonDeletableIndexes.toString()
                         )
-                ).show();
+                ).showAndWait();
             }
 
             List<SavedIndex> indexesToDelete = indexTable.getSelectionModel().getSelectedItems().stream()
@@ -282,8 +283,18 @@ public class IndexManager extends Stage {
                 return;
             }
 
+            var deleteExtensionsResponse = new Alert(
+                    Alert.AlertType.CONFIRMATION,
+                    resources.getString("IndexManager.deleteExtensions"),
+                    ButtonType.NO,
+                    ButtonType.YES
+            ).showAndWait();
+
             try {
-                extensionIndexManager.removeIndexes(indexesToDelete);
+                extensionIndexManager.removeIndexes(
+                        indexesToDelete,
+                        deleteExtensionsResponse.isPresent() && deleteExtensionsResponse.get().equals(ButtonType.YES)
+                );
             } catch (IOException | SecurityException | NullPointerException e) {
                 logger.error("Error when removing {}", indexesToDelete, e);
 

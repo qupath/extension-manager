@@ -218,12 +218,13 @@ public class ExtensionIndexManager implements AutoCloseable{
      * If an exception occurs (see below), the provided indexes are not added.
      *
      * @param savedIndexes the indexes to remove
+     * @param removeExtensions whether to remove extensions belonging to the indexes to remove
      * @throws IOException if an I/O error occurs while saving the registry file. In that case,
      * the provided indexes are not added
      * @throws SecurityException if the user doesn't have sufficient rights to save the registry file
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
-    public void removeIndexes(List<SavedIndex> savedIndexes) throws IOException {
+    public void removeIndexes(List<SavedIndex> savedIndexes, boolean removeExtensions) throws IOException {
         List<SavedIndex> indexesToRemove = savedIndexes.stream()
                 .filter(savedIndex -> {
                     if (savedIndex.deletable()) {
@@ -253,18 +254,20 @@ public class ExtensionIndexManager implements AutoCloseable{
             throw e;
         }
 
-        for (SavedIndex savedIndex: indexesToRemove) {
-            try {
-                extensionFolderManager.deleteExtensionsFromIndex(savedIndex);
-            } catch (IOException | SecurityException | InvalidPathException | NullPointerException e) {
-                logger.debug(String.format("Could not delete index %s", savedIndex), e);
+        if (removeExtensions) {
+            for (SavedIndex savedIndex: indexesToRemove) {
+                try {
+                    extensionFolderManager.deleteExtensionsFromIndex(savedIndex);
+                } catch (IOException | SecurityException | InvalidPathException | NullPointerException e) {
+                    logger.debug(String.format("Could not delete index %s", savedIndex), e);
+                }
             }
-        }
 
-        for (var entry: installedExtensions.entrySet()) {
-            if (indexesToRemove.contains(entry.getKey().savedIndex)) {
-                synchronized (this) {
-                    entry.getValue().set(Optional.empty());
+            for (var entry: installedExtensions.entrySet()) {
+                if (indexesToRemove.contains(entry.getKey().savedIndex)) {
+                    synchronized (this) {
+                        entry.getValue().set(Optional.empty());
+                    }
                 }
             }
         }
