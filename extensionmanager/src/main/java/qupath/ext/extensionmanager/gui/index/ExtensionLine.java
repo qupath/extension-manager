@@ -9,6 +9,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
+import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import org.controlsfx.glyphfont.FontAwesome;
 import org.slf4j.Logger;
@@ -39,6 +40,8 @@ class ExtensionLine extends HBox {
     private final Extension extension;
     @FXML
     private Label name;
+    @FXML
+    private Tooltip tooltip;
     @FXML
     private Button add;
     @FXML
@@ -86,6 +89,8 @@ class ExtensionLine extends HBox {
                 name.setText(extension.name());
             }
         }));
+
+        tooltip.setText(extension.description());
 
         add.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.PLUS_CIRCLE));
         settings.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.GEAR));
