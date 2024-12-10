@@ -151,10 +151,10 @@ class ExtensionModificationWindow extends Stage {
             );
         }
 
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        ProgressWindow progressWindow;
         try {
-            ExecutorService executor = Executors.newSingleThreadExecutor();
-
-            ProgressWindow progressWindow = new ProgressWindow(
+            progressWindow = new ProgressWindow(
                     MessageFormat.format(
                             resources.getString(installedExtension == null ?
                                     "Index.ExtensionModificationWindow.installing" :
@@ -165,61 +165,67 @@ class ExtensionModificationWindow extends Stage {
                     ),
                     executor::shutdownNow
             );
-            progressWindow.show();
-
-            executor.execute(() -> extensionIndexManager.installOrUpdateExtension(
-                    savedIndex,
-                    extension,
-                    new InstalledExtension(
-                            selectedRelease.name(),
-                            optionalDependencies.isSelected()
-                    ),
-                    progress -> Platform.runLater(() -> progressWindow.setProgress(progress)),
-                    (step, resource) -> Platform.runLater(() -> progressWindow.setStatus(MessageFormat.format(
-                            resources.getString(switch (step) {
-                                case DOWNLOADING -> "Index.ExtensionModificationWindow.downloading";
-                                case EXTRACTING_ZIP -> "Index.ExtensionModificationWindow.extracting";
-                            }),
-                            resource
-                    ))),
-                    error -> {
-                        if (error != null) {
-                            logger.error("Error while installing extension", error);
-                        }
-
-                        Platform.runLater(() -> {
-                            progressWindow.close();
-
-                            if (error == null) {
-                                new Alert(
-                                        Alert.AlertType.INFORMATION,
-                                        MessageFormat.format(
-                                                resources.getString("Index.ExtensionModificationWindow.installed"),
-                                                extension.name(),
-                                                release.getSelectionModel().getSelectedItem().name()
-                                        )
-                                ).show();
-                            } else {
-                                new Alert(
-                                        Alert.AlertType.ERROR,
-                                        MessageFormat.format(
-                                                resources.getString("Index.ExtensionModificationWindow.notInstalled"),
-                                                extension.name(),
-                                                release.getSelectionModel().getSelectedItem().name(),
-                                                error.getLocalizedMessage()
-                                        )
-                                ).show();
-                            }
-
-                            close();
-                        });
-
-                        executor.shutdown();
-                    }
-            ));
         } catch (IOException e) {
             logger.error("Error while creating progress window", e);
+            new Alert(
+                    Alert.AlertType.ERROR,
+                    resources.getString("Index.ExtensionModificationWindow.cannotCreateProgressWindow")
+            ).show();
+
+            executor.shutdown();
+            return;
         }
+
+        progressWindow.show();
+        executor.execute(() -> extensionIndexManager.installOrUpdateExtension(
+                savedIndex,
+                extension,
+                new InstalledExtension(
+                        selectedRelease.name(),
+                        optionalDependencies.isSelected()
+                ),
+                progress -> Platform.runLater(() -> progressWindow.setProgress(progress)),
+                (step, resource) -> Platform.runLater(() -> progressWindow.setStatus(MessageFormat.format(
+                        resources.getString(switch (step) {
+                            case DOWNLOADING -> "Index.ExtensionModificationWindow.downloading";
+                            case EXTRACTING_ZIP -> "Index.ExtensionModificationWindow.extracting";
+                        }),
+                        resource
+                ))),
+                error -> {
+                    if (error != null) {
+                        logger.error("Error while installing extension", error);
+                    }
+
+                    Platform.runLater(() -> {
+                        progressWindow.close();
+
+                        if (error == null) {
+                            new Alert(
+                                    Alert.AlertType.INFORMATION,
+                                    MessageFormat.format(
+                                            resources.getString("Index.ExtensionModificationWindow.installed"),
+                                            extension.name(),
+                                            release.getSelectionModel().getSelectedItem().name()
+                                    )
+                            ).show();
+                        } else {
+                            new Alert(
+                                    Alert.AlertType.ERROR,
+                                    MessageFormat.format(
+                                            resources.getString("Index.ExtensionModificationWindow.notInstalled"),
+                                            extension.name(),
+                                            release.getSelectionModel().getSelectedItem().name(),
+                                            error.getLocalizedMessage()
+                                    )
+                            ).show();
+                        }
+
+                        close();
+                    });
+                }
+        ));
+        executor.shutdown();
     }
 
     private boolean isJarAlreadyDownloaded(Release release) {

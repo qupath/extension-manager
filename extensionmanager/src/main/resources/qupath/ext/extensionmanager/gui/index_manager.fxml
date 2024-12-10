@@ -30,7 +30,7 @@
                     <padding>
                         <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />
                     </padding>
-                    <TextField fx:id="indexURL" promptText="%IndexManager.indexUrl" HBox.hgrow="ALWAYS">
+                    <TextField fx:id="indexUrl" promptText="%IndexManager.indexUrl" HBox.hgrow="ALWAYS">
                   <tooltip>
                      <Tooltip text="%IndexManager.urlPointingToGitHubRepository" />
                   </tooltip></TextField>

@@ -32,6 +32,9 @@ import java.net.URISyntaxException;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.ResourceBundle;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * A window that allows managing indexes.
@@ -52,7 +55,7 @@ public class IndexManager extends Stage {
     @FXML
     private TableColumn<SavedIndex, String> descriptionColumn;
     @FXML
-    private TextField indexURL;
+    private TextField indexUrl;
 
     /**
      * Create the window.
@@ -88,62 +91,103 @@ public class IndexManager extends Stage {
     private void onAddClicked(ActionEvent ignored) {
         UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
 
-        if (indexURL.getText() == null || indexURL.getText().isBlank()) {
+        String indexUrl = this.indexUrl.getText();
+        if (indexUrl == null || indexUrl.isBlank()) {
             return;
         }
 
-        GitHubRawLinkFinder.getRawLinkOfFileInRepository(indexURL.getText(), INDEX_FILE_NAME::equals)
-                .exceptionally(error -> {
-                    logger.debug("Attempt to get raw link of {} failed. Considering it to be a raw link.", indexURL.getText(), error);
+        ExecutorService executor = Executors.newSingleThreadExecutor();
+        ProgressWindow progressWindow;
+        try {
+            progressWindow = new ProgressWindow(
+                    MessageFormat.format(
+                            resources.getString("IndexManager.fetching"),
+                            indexUrl
+                    ),
+                    executor::shutdownNow
+            );
+        } catch (IOException e) {
+            logger.error("Error while creating progress window", e);
+            new Alert(
+                    Alert.AlertType.ERROR,
+                    resources.getString("IndexManager.cannotCreateProgressWindow")
+            ).show();
 
-                    return URI.create(indexURL.getText());
-                })
-                .thenAcceptAsync(uri -> {
-                    Index index = IndexFetcher.getIndex(uri).join();
+            executor.shutdown();
+            return;
+        }
+        progressWindow.show();
 
-                    if (extensionIndexManager.getIndexes().stream().anyMatch(savedIndex -> savedIndex.name().equals(index.name()))) {
-                        Platform.runLater(() -> new Alert(
-                                Alert.AlertType.ERROR,
-                                MessageFormat.format(
-                                        resources.getString("IndexManager.indexAlreadyExists"),
-                                        index.name()
-                                )
-                        ).show());
-                        return;
-                    }
+        executor.execute(() -> {
+            try {
+                Platform.runLater(() -> progressWindow.setStatus(MessageFormat.format(
+                        resources.getString("IndexManager.attemptingToGetRawLink"),
+                        indexUrl
+                )));
 
-                    try {
-                        extensionIndexManager.addIndex(List.of(new SavedIndex(
-                                index.name(),
-                                index.description(),
-                                new URI(indexURL.getText()),
-                                uri
-                        )));
-                    } catch (URISyntaxException | SecurityException | NullPointerException | IOException e) {
-                        logger.error(String.format("Error when saving index %s", index.name()), e);
+                URI uri;
+                try {
+                    uri = GitHubRawLinkFinder.getRawLinkOfFileInRepository(indexUrl, INDEX_FILE_NAME::equals).get();
+                } catch (ExecutionException e) {
+                    logger.debug("Attempt to get raw link of {} failed. Considering it to be a raw link.", indexUrl, e);
+                    uri = new URI(indexUrl);
+                }
 
-                        Platform.runLater(() -> new Alert(
-                                Alert.AlertType.ERROR,
-                                MessageFormat.format(
-                                        resources.getString("IndexManager.cannotSaveIndex"),
-                                        e.getLocalizedMessage()
-                                )
-                        ).show());
-                    }
-                })
-                .exceptionally(error -> {
-                    logger.debug("Error when fetching index at {}", indexURL.getText(), error);
+                URI finalUri = uri;
+                Platform.runLater(() -> {
+                    progressWindow.setProgress(0.5f);
+                    progressWindow.setStatus(MessageFormat.format(
+                            resources.getString("IndexManager.fetchingIndexLocatedAt"),
+                            finalUri.toString()
+                    ));
+                });
+                Index index = IndexFetcher.getIndex(uri).get();
+                Platform.runLater(() -> progressWindow.setProgress(1));
+
+                if (extensionIndexManager.getIndexes().stream().anyMatch(savedIndex -> savedIndex.name().equals(index.name()))) {
+                    Platform.runLater(() -> new Alert(
+                            Alert.AlertType.ERROR,
+                            MessageFormat.format(
+                                    resources.getString("IndexManager.indexAlreadyExists"),
+                                    index.name()
+                            )
+                    ).show());
+                    return;
+                }
+
+                try {
+                    extensionIndexManager.addIndex(List.of(new SavedIndex(
+                            index.name(),
+                            index.description(),
+                            new URI(indexUrl),
+                            uri
+                    )));
+                } catch (URISyntaxException | SecurityException | NullPointerException | IOException e) {
+                    logger.error("Error when saving index {}", index.name(), e);
 
                     Platform.runLater(() -> new Alert(
                             Alert.AlertType.ERROR,
                             MessageFormat.format(
-                                    resources.getString("IndexManager.cannotAddIndex"),
-                                    error.getLocalizedMessage()
+                                    resources.getString("IndexManager.cannotSaveIndex"),
+                                    e.getLocalizedMessage()
                             )
                     ).show());
+                }
+            } catch (Exception e) {
+                logger.debug("Error when fetching index at {}", indexUrl, e);
 
-                    return null;
-                });
+                Platform.runLater(() -> new Alert(
+                        Alert.AlertType.ERROR,
+                        MessageFormat.format(
+                                resources.getString("IndexManager.cannotAddIndex"),
+                                e.getLocalizedMessage()
+                        )
+                ).show());
+            } finally {
+                Platform.runLater(progressWindow::close);
+            }
+        });
+        executor.shutdown();
     }
 
     private void setColumns() {
