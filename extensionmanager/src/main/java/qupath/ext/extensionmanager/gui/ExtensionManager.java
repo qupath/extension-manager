@@ -224,6 +224,7 @@ public class ExtensionManager extends Stage {
         if (indexManager == null) {
             try {
                 indexManager = new IndexManager(extensionIndexManager, model, onInvalidExtensionDirectory);
+                indexManager.initOwner(this);
                 indexManager.show();
             } catch (IOException e) {
                 logger.error("Error while creating index manager window", e);
