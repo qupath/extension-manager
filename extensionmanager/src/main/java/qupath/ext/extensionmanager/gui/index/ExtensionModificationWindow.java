@@ -4,9 +4,7 @@ import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
@@ -24,6 +22,7 @@ import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 import qupath.ext.extensionmanager.core.tools.FileTools;
 import qupath.ext.extensionmanager.gui.ProgressWindow;
 import qupath.ext.extensionmanager.gui.UiUtils;
+import qupath.fx.dialogs.Dialogs;
 
 import java.io.IOException;
 import java.nio.file.InvalidPathException;
@@ -135,12 +134,12 @@ class ExtensionModificationWindow extends Stage {
 
         try {
             if (isJarAlreadyDownloaded(selectedRelease)) {
-                var confirmation = new Alert(
-                        Alert.AlertType.CONFIRMATION,
-                        resources.getString("Index.ExtensionModificationWindow.extensionAlreadyInstalled")
-                ).showAndWait();
+                var confirmation = Dialogs.showConfirmDialog(
+                        resources.getString("Index.ExtensionModificationWindow.extensionAlreadyInstalled"),
+                        resources.getString("Index.ExtensionModificationWindow.extensionAlreadyInstalledDetails")
+                );
 
-                if (confirmation.isEmpty() || !confirmation.get().equals(ButtonType.OK)) {
+                if (!confirmation) {
                     return;
                 }
             }
@@ -169,11 +168,6 @@ class ExtensionModificationWindow extends Stage {
             );
         } catch (IOException e) {
             logger.error("Error while creating progress window", e);
-            new Alert(
-                    Alert.AlertType.ERROR,
-                    resources.getString("Index.ExtensionModificationWindow.cannotCreateProgressWindow")
-            ).show();
-
             executor.shutdown();
             return;
         }
@@ -195,34 +189,31 @@ class ExtensionModificationWindow extends Stage {
                         resource
                 ))),
                 error -> {
-                    if (error != null) {
+                    if (error == null) {
+                        Dialogs.showInfoNotification(
+                                resources.getString("Index.ExtensionModificationWindow.extensionManager"),
+                                MessageFormat.format(
+                                        resources.getString("Index.ExtensionModificationWindow.installed"),
+                                        extension.name(),
+                                        release.getSelectionModel().getSelectedItem().name()
+                                )
+                        );
+                    } else {
                         logger.error("Error while installing extension", error);
+
+                        Dialogs.showErrorMessage(
+                                resources.getString("Index.ExtensionModificationWindow.error"),
+                                MessageFormat.format(
+                                        resources.getString("Index.ExtensionModificationWindow.notInstalled"),
+                                        extension.name(),
+                                        release.getSelectionModel().getSelectedItem().name(),
+                                        error.getLocalizedMessage()
+                                )
+                        );
                     }
 
                     Platform.runLater(() -> {
                         progressWindow.close();
-
-                        if (error == null) {
-                            new Alert(
-                                    Alert.AlertType.INFORMATION,
-                                    MessageFormat.format(
-                                            resources.getString("Index.ExtensionModificationWindow.installed"),
-                                            extension.name(),
-                                            release.getSelectionModel().getSelectedItem().name()
-                                    )
-                            ).show();
-                        } else {
-                            new Alert(
-                                    Alert.AlertType.ERROR,
-                                    MessageFormat.format(
-                                            resources.getString("Index.ExtensionModificationWindow.notInstalled"),
-                                            extension.name(),
-                                            release.getSelectionModel().getSelectedItem().name(),
-                                            error.getLocalizedMessage()
-                                    )
-                            ).show();
-                        }
-
                         close();
                     });
                 }

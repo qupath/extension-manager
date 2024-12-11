@@ -1,13 +1,10 @@
 package qupath.ext.extensionmanager.gui.index;
 
-import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
@@ -20,6 +17,7 @@ import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
 import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 import qupath.ext.extensionmanager.gui.ExtensionIndexModel;
 import qupath.ext.extensionmanager.gui.UiUtils;
+import qupath.fx.dialogs.Dialogs;
 
 import java.io.IOException;
 import java.text.MessageFormat;
@@ -154,45 +152,45 @@ class ExtensionLine extends HBox {
 
     @FXML
     private void onDeleteClicked(ActionEvent ignored) {
-        var confirmation = new Alert(
-                Alert.AlertType.CONFIRMATION,
+        var confirmation = Dialogs.showConfirmDialog(
+                resources.getString("Index.ExtensionLine.removeExtension"),
                 MessageFormat.format(
                         resources.getString("Index.ExtensionLine.remove"),
                         extension.name()
                 )
-        ).showAndWait();
-
-        if (confirmation.isPresent() && confirmation.get().equals(ButtonType.OK)) {
-            CompletableFuture.runAsync(() -> {
-                try {
-                    extensionIndexManager.removeExtension(savedIndex, extension);
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }).handle((v, error) -> {
-                if (error == null) {
-                    Platform.runLater(() -> new Alert(
-                            Alert.AlertType.INFORMATION,
-                            MessageFormat.format(
-                                    resources.getString("Index.ExtensionLine.removed"),
-                                    extension.name()
-                            )
-                    ).show());
-                } else {
-                    logger.error("Error while deleting extension", error);
-
-                    Platform.runLater(() -> new Alert(
-                            Alert.AlertType.ERROR,
-                            MessageFormat.format(
-                                    resources.getString("Index.ExtensionLine.cannotDeleteExtension"),
-                                    error.getLocalizedMessage()
-                            )
-                    ).show());
-                }
-
-                return null;
-            });
+        );
+        if (!confirmation) {
+            return;
         }
+
+        CompletableFuture.runAsync(() -> {
+            try {
+                extensionIndexManager.removeExtension(savedIndex, extension);
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }).handle((v, error) -> {
+            if (error == null) {
+                Dialogs.showInfoNotification(
+                        resources.getString("Index.ExtensionLine.extensionManager"),
+                        MessageFormat.format(
+                                resources.getString("Index.ExtensionLine.removed"),
+                                extension.name()
+                        )
+                );
+            } else {
+                logger.error("Error while deleting extension", error);
+
+                Dialogs.showErrorMessage(
+                        resources.getString("Index.ExtensionLine.error"),
+                        MessageFormat.format(
+                                resources.getString("Index.ExtensionLine.cannotDeleteExtension"),
+                                error.getLocalizedMessage()
+                        )
+                );
+            }
+            return null;
+        });
     }
 
     @FXML

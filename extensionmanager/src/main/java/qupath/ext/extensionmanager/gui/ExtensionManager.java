@@ -17,6 +17,7 @@ import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionIndexManager;
 import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 import qupath.ext.extensionmanager.gui.index.IndexPane;
+import qupath.fx.dialogs.Dialogs;
 
 import java.io.File;
 import java.io.IOException;
@@ -75,6 +76,7 @@ public class ExtensionManager extends Stage {
         this.onInvalidExtensionDirectory = onInvalidExtensionDirectory;
 
         UiUtils.loadFXML(this, ExtensionManager.class.getResource("extension_manager.fxml"));
+        Dialogs.setPrimaryWindow(this);
 
         UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
 

@@ -15,7 +15,6 @@ dependencies {
 
 application {
     mainClass = "qupath.ext.extensionmanager.app.ExtensionManagerApp"
-    mainModule = "qupath.ext.extensionmanager.app"
 }
 
 java {
