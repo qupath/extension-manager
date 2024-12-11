@@ -55,11 +55,12 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
      * @param directoriesToSkip a predicate indicating directories not to watch
      * @param onFileAdded a function that will be called when a new file is added to one of the watched directory.
      *                    Its parameter will be the path of the new file. This function may be called from
-     *                    any thread
+     *                    any thread. If files already exist in the provided directory to watch, this function
+     *                    will be called on them
      * @param onFileDeleted a function that will be called when a file is removed from one of the watched directory.
      *                      Its parameter will be the path of the deleted file. This function may be called
-     *                      from any thread. Note that if a folder containing a file is deleted, this function
-     *                      won't be called for this file
+     *                      from any thread. If a folder containing a file to consider is deleted, this function will be
+     *                      called on this file
      * @throws IOException if an I/O error occurs
      * @throws UnsupportedOperationException if watching file system is not supported by
      * this system
