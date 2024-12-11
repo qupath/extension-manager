@@ -18,7 +18,10 @@
                   <VBox alignment="CENTER">
                       <VBox fx:id="indexes" />
                       <TitledPane fx:id="manuallyInstalledExtensionsPane" text="%ExtensionManager.manuallyInstalledExtensions">
-                          <VBox fx:id="manuallyInstalledExtensions" spacing="10.0" />
+                          <VBox fx:id="manuallyInstalledExtensions">
+                        <padding>
+                           <Insets top="0.0" />
+                        </padding></VBox>
                       </TitledPane>
                   <Label fx:id="noIndexOrExtension" text="%ExtensionManager.noIndexOrExtensionInstalled">
                      <VBox.margin>

@@ -33,6 +33,22 @@ public class UiUtils {
     private static final ResourceBundle resources = ResourceBundle.getBundle("qupath.ext.extensionmanager.strings");
     private static final GlyphFont fontAwesome = GlyphFontRegistry.font("FontAwesome");
 
+    /**
+     * A CSS class.
+     */
+    public enum CssClass {
+        /**
+         * A class to apply to an odd element of a vertical list
+         */
+        ODD_ROW("odd-row");
+
+        private final String className;
+
+        CssClass(String className) {
+            this.className = className;
+        }
+    }
+
     private UiUtils() {
         throw new AssertionError("This class is not instantiable.");
     }
@@ -56,6 +72,16 @@ public class UiUtils {
      */
     public static ResourceBundle getResources() {
         return resources;
+    }
+
+    /**
+     * Get the name of a CSS class.
+     *
+     * @param cssClass the CSS class containing the name to retrieve
+     * @return the name of the provided CSS class
+     */
+    public static String getClassName(CssClass cssClass) {
+        return cssClass.className;
     }
 
     /**

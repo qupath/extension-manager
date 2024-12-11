@@ -40,6 +40,7 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
     private final Set<Path> addedFiles = new HashSet<>();
     private final WatchService watchService;
     private final int depth;
+    private final Predicate<Path> filesToFind;
     private final Predicate<Path> directoriesToSkip;
     private final Consumer<Path> onFileAdded;
 
@@ -75,6 +76,7 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
     ) throws IOException {
         this.watchService = FileSystems.getDefault().newWatchService();
         this.depth = depth;
+        this.filesToFind = filesToFind;
         this.directoriesToSkip = directoriesToSkip;
         this.onFileAdded = onFileAdded;
 
@@ -174,9 +176,11 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
 
                     @Override
                     public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                        logger.debug("File {} detected while visiting {}", file, directory);
-                        onFileAdded.accept(file);
-                        addedFiles.add(file);
+                        if (filesToFind.test(file)) {
+                            logger.debug("File {} detected while visiting {}", file, directory);
+                            onFileAdded.accept(file);
+                            addedFiles.add(file);
+                        }
 
                         return FileVisitResult.CONTINUE;
                     }

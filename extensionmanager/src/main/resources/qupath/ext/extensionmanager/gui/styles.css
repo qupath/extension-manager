@@ -1,3 +1,7 @@
+.odd-row {
+    -fx-background-color: -fx-control-inner-background-alt;
+}
+
 .add-button {
     -fx-text-fill: limegreen;
 }

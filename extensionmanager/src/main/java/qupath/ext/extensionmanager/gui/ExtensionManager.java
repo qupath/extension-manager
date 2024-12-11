@@ -32,6 +32,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 /**
  * A window that displays information and controls regarding indexes and their extensions.
@@ -253,10 +254,18 @@ public class ExtensionManager extends Stage {
     }
 
     private void setManuallyInstalledExtensions() {
-        manuallyInstalledExtensions.getChildren().setAll(model.getManuallyInstalledJars().stream()
-                .map(jarPath -> {
+        manuallyInstalledExtensions.getChildren().setAll(IntStream.range(0, model.getManuallyInstalledJars().size())
+                .mapToObj(i -> {
                     try {
-                        return new ManuallyInstalledExtensionLine(jarPath);
+                        ManuallyInstalledExtensionLine manuallyInstalledExtensionLine = new ManuallyInstalledExtensionLine(
+                                model.getManuallyInstalledJars().get(i)
+                        );
+
+                        if (i % 2 == 0) {
+                            manuallyInstalledExtensionLine.getStyleClass().add(UiUtils.getClassName(UiUtils.CssClass.ODD_ROW));
+                        }
+
+                        return manuallyInstalledExtensionLine;
                     } catch (IOException e) {
                         logger.error("Error while manually installed extensionLine", e);
                         return null;

@@ -14,6 +14,7 @@ import qupath.ext.extensionmanager.gui.UiUtils;
 
 import java.io.IOException;
 import java.util.Objects;
+import java.util.stream.IntStream;
 
 /**
  * A pane that displays information and controls regarding an index and its extensions.
@@ -38,10 +39,21 @@ public class IndexPane extends TitledPane {
 
         IndexFetcher.getIndex(savedIndex.rawUri()).handle((fetchedIndex, error) -> {
             if (error == null) {
-                Platform.runLater(() -> extensions.getChildren().addAll(fetchedIndex.extensions().stream()
-                        .map(extension -> {
+                Platform.runLater(() -> extensions.getChildren().addAll(IntStream.range(0, fetchedIndex.extensions().size())
+                        .mapToObj(i -> {
                             try {
-                                return new ExtensionLine(extensionIndexManager, model, savedIndex, extension);
+                                ExtensionLine extensionLine = new ExtensionLine(
+                                        extensionIndexManager,
+                                        model,
+                                        savedIndex,
+                                        fetchedIndex.extensions().get(i)
+                                );
+
+                                if (i % 2 == 0) {
+                                    extensionLine.getStyleClass().add(UiUtils.getClassName(UiUtils.CssClass.ODD_ROW));
+                                }
+
+                                return extensionLine;
                             } catch (IOException e) {
                                 logger.error("Error while creating extension line", e);
                                 return null;
