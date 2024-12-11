@@ -46,13 +46,8 @@ public class FilesWatcher implements AutoCloseable {
         this.filesToFind = filesToFind;
         this.directoriesToSkip = directoriesToSkip;
 
-        setFiles();
         setDirectoryWatcher();
-
-        directoryToWatch.addListener((p, o, n) -> {
-            setFiles();
-            setDirectoryWatcher();
-        });
+        directoryToWatch.addListener((p, o, n) -> setDirectoryWatcher());
     }
 
     @Override
@@ -70,34 +65,11 @@ public class FilesWatcher implements AutoCloseable {
         return filesImmutable;
     }
 
-    private synchronized void setFiles() {
-        Path directory = directoryToWatch.getValue();
-
-        logger.debug("Clearing file list and searching in {}", directory);
-
-        files.clear();
-
-        if (directory == null) {
-            logger.debug("The directory to watch is null. No file will be added");
-            return;
-        }
-
-        try {
-            files.addAll(FileTools.findFilesRecursively(
-                    directory,
-                    filesToFind,
-                    directoriesToSkip,
-                    MAX_SEARCH_DEPTH
-            ));
-        } catch (IOException | SecurityException e) {
-            logger.debug(String.format("Error when searching files in %s", directory), e);
-        }
-    }
-
     private synchronized void setDirectoryWatcher() {
         Path directory = directoryToWatch.getValue();
 
-        logger.debug("Resetting directory watcher to watch {}", directory);
+        logger.debug("Clearing file list and resetting directory watcher to watch {}", directory);
+        files.clear();
 
         if (directoryWatcher != null) {
             try {

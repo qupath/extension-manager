@@ -18,7 +18,10 @@ import java.nio.file.WatchService;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.util.EnumSet;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -34,9 +37,11 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
     private static final Logger logger = LoggerFactory.getLogger(RecursiveDirectoryWatcher.class);
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Map<WatchKey, Path> keys = new HashMap<>();
+    private final Set<Path> addedFiles = new HashSet<>();
     private final WatchService watchService;
     private final int depth;
     private final Predicate<Path> directoriesToSkip;
+    private final Consumer<Path> onFileAdded;
 
     /**
      * Set up some listeners to be called when files are added or removed
@@ -71,6 +76,7 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
         this.watchService = FileSystems.getDefault().newWatchService();
         this.depth = depth;
         this.directoriesToSkip = directoriesToSkip;
+        this.onFileAdded = onFileAdded;
 
         registerDirectory(directoryToWatch);
 
@@ -96,19 +102,34 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
                         if (Files.isDirectory(filePath) && kind == StandardWatchEventKinds.ENTRY_CREATE) {
                             registerDirectory(filePath);
                         }
+                        if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
+                            List<Path> filesToRemove = addedFiles.stream()
+                                    .filter(path -> FileTools.isFileParentOfAnotherFile(
+                                            filePath.toFile(),
+                                            path.toFile())
+                                    )
+                                    .toList();
+
+                            for (Path fileToRemove: filesToRemove) {
+                                onFileDeleted.accept(fileToRemove);
+                                addedFiles.remove(fileToRemove);
+                            }
+                        }
 
                         if (filesToFind.test(filePath)) {
                             if (kind == StandardWatchEventKinds.ENTRY_CREATE) {
                                 logger.debug("File {} addition detected", filePath);
                                 onFileAdded.accept(filePath);
+                                addedFiles.add(filePath);
                             } else if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
                                 logger.debug("File {} deletion detected", filePath);
                                 onFileDeleted.accept(filePath);
+                                addedFiles.remove(filePath);
                             } else {
                                 logger.debug("Unexpected event: {}", kind);
                             }
                         } else {
-                            logger.debug("The file {} doesn't match the predicate, so it won't be reported", filePath);
+                            logger.debug("The file or directory {} doesn't match the predicate, so it won't be reported", filePath);
                         }
                     }
                     key.reset();
@@ -149,6 +170,15 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
 
                             return FileVisitResult.CONTINUE;
                         }
+                    }
+
+                    @Override
+                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+                        logger.debug("File {} detected while visiting {}", file, directory);
+                        onFileAdded.accept(file);
+                        addedFiles.add(file);
+
+                        return FileVisitResult.CONTINUE;
                     }
                 });
     }

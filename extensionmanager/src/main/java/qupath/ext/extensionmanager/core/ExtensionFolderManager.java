@@ -148,7 +148,7 @@ class ExtensionFolderManager implements AutoCloseable {
                     }
                 }),
                 isJar,
-                path -> true
+                path -> false
         );
     }
 

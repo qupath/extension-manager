@@ -6,17 +6,9 @@ import org.slf4j.LoggerFactory;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.FileVisitOption;
-import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.nio.file.SimpleFileVisitor;
-import java.nio.file.attribute.BasicFileAttributes;
-import java.util.ArrayList;
-import java.util.EnumSet;
-import java.util.List;
-import java.util.function.Predicate;
 import java.util.stream.Stream;
 
 /**
@@ -27,60 +19,6 @@ public class FileTools {
     private static final Logger logger = LoggerFactory.getLogger(FileTools.class);
     private FileTools() {
         throw new AssertionError("This class is not instantiable.");
-    }
-
-    /**
-     * Find files recursively in the specified directory. Some files and directories can be skipped.
-     *
-     * @param directory the directory from where to start the search
-     * @param filesToFind a predicate indicating if a file should be returned
-     * @param directoriesToSkip a predicate indicating directories to skip during the search
-     * @return a list of all files that respect the file predicate, are descendant of the provided directory,
-     * are not descendant of the directories to skip, and whose depth is below the provided one
-     * @param depth the maximum number of directory levels to visit
-     * @throws IOException if an I/O error occurs
-     * @throws SecurityException if the user doesn't have sufficient rights to search in the provided directory
-     */
-    public static List<Path> findFilesRecursively(
-            Path directory,
-            Predicate<Path> filesToFind,
-            Predicate<Path> directoriesToSkip,
-            int depth
-    ) throws IOException {
-        List<Path> files = new ArrayList<>();
-
-        logger.debug("Searching files in {} with depth {}", directory, depth);
-        Files.walkFileTree(
-                directory,
-                EnumSet.noneOf(FileVisitOption.class),
-                depth,
-                new SimpleFileVisitor<>() {
-
-                    @Override
-                    public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
-                        if (directoriesToSkip.test(dir)) {
-                            logger.debug("Skipping directory {}", dir);
-                            return FileVisitResult.SKIP_SUBTREE;
-                        } else {
-                            logger.debug("Search will continue in {}", dir);
-                            return FileVisitResult.CONTINUE;
-                        }
-                    }
-
-                    @Override
-                    public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
-                        if (filesToFind.test(file)) {
-                            logger.debug("File {} found", file);
-                            files.add(file);
-                        } else {
-                            logger.debug("File {} found but not retained as it doesn't match the predicate", file);
-                        }
-                        return FileVisitResult.CONTINUE;
-                    }
-                }
-        );
-
-        return files;
     }
 
     /**
@@ -153,5 +91,25 @@ public class FileTools {
      */
     public static String getFileNameFromURI(URI uri) {
         return Paths.get(uri.getPath()).getFileName().toString();
+    }
+
+    /**
+     * Indicate whether a file is a parent of another file. The provided
+     * files don't have to exist.
+     *
+     * @param possibleParent the file that may be a parent of the other file
+     * @param possibleChild the file that may be a child of the other file
+     * @return a boolean indicating whether the possible parent is actually a parent of the other file
+     */
+    public static boolean isFileParentOfAnotherFile(File possibleParent, File possibleChild) {
+        File parent = possibleChild.getParentFile();
+        while (parent != null) {
+            if (parent.equals(possibleParent)) {
+                return true;
+            } else {
+                parent = parent.getParentFile();
+            }
+        }
+        return false;
     }
 }
