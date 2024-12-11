@@ -82,13 +82,13 @@ class ExtensionLine extends HBox {
         } else {
             name.setText(extension.name());
         }
-        installedExtension.addListener((p, o, n) -> Platform.runLater(() -> {
+        installedExtension.addListener((p, o, n) -> {
             if (n.isPresent()) {
                 name.setText(String.format("%s %s", extension.name(), n.get().releaseName()));
             } else {
                 name.setText(extension.name());
             }
-        }));
+        });
 
         tooltip.setText(extension.description());
 
