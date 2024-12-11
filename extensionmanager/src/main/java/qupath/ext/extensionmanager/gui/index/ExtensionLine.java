@@ -118,6 +118,10 @@ class ExtensionLine extends HBox {
         add.managedProperty().bind(add.visibleProperty());
         settings.managedProperty().bind(settings.visibleProperty());
         delete.managedProperty().bind(delete.visibleProperty());
+
+        add.setDisable(extension.releases().stream()
+                .noneMatch(release -> release.versionRange().isCompatible(extensionIndexManager.getVersion()))
+        );
     }
 
     @FXML
