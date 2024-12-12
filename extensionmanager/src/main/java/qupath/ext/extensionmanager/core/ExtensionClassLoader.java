@@ -7,7 +7,9 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLClassLoader;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -19,6 +21,7 @@ class ExtensionClassLoader extends URLClassLoader {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionClassLoader.class);
     private final Set<String> filenamesAdded = new HashSet<>();
+    private final List<Runnable> runnables = new ArrayList<>();
 
     /**
      * Create the extension class loader.
@@ -53,5 +56,23 @@ class ExtensionClassLoader extends URLClassLoader {
             );
         }
         filenamesAdded.add(filename);
+
+        for (Runnable runnable: runnables) {
+            try {
+                runnable.run();
+            } catch (Exception e) {
+                logger.error("Error when calling runnable of class loader", e);
+            }
+        }
+    }
+
+    /**
+     * Set a runnable to be called each time a JAR file is loaded by this class loader. The call may
+     * happen from any thread.
+     *
+     * @param runnable the runnable to run when a JAR file is loaded
+     */
+    public synchronized void addOnJarLoadedRunnable(Runnable runnable) {
+        runnables.add(runnable);
     }
 }

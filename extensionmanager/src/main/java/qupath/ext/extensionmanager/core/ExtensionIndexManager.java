@@ -136,6 +136,16 @@ public class ExtensionIndexManager implements AutoCloseable{
     }
 
     /**
+     * Set a runnable to be called each time a JAR file is loaded by {@link #getClassLoader()}. The call may
+     * happen from any thread.
+     *
+     * @param runnable the runnable to run when a JAR file is loaded
+     */
+    public void addOnJarLoadedRunnable(Runnable runnable) {
+        extensionClassLoader.addOnJarLoadedRunnable(runnable);
+    }
+
+    /**
      * @return a read only property containing the path to the extension folder.
      * It may be updated from any thread and the path (but not the property) can
      * be null or invalid
