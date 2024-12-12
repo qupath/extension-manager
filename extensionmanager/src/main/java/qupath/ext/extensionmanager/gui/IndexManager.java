@@ -6,7 +6,6 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.OverrunStyle;
@@ -28,6 +27,7 @@ import qupath.ext.extensionmanager.core.index.IndexFetcher;
 import qupath.ext.extensionmanager.core.index.Index;
 import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 import qupath.ext.extensionmanager.core.tools.GitHubRawLinkFinder;
+import qupath.fx.dialogs.Dialogs;
 
 import java.io.IOException;
 import java.net.URI;
@@ -40,9 +40,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * A window that allows managing indexes.
+ * A window to manage indexes.
  */
-public class IndexManager extends Stage {
+class IndexManager extends Stage {
 
     private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
     private static final ResourceBundle resources = UiUtils.getResources();
@@ -111,11 +111,6 @@ public class IndexManager extends Stage {
             );
         } catch (IOException e) {
             logger.error("Error while creating progress window", e);
-            new Alert(
-                    Alert.AlertType.ERROR,
-                    resources.getString("IndexManager.cannotCreateProgressWindow")
-            ).show();
-
             executor.shutdown();
             return;
         }
@@ -229,14 +224,14 @@ public class IndexManager extends Stage {
                     UiUtils.openLinkInWebBrowser(url).exceptionally(error -> {
                         logger.error("Error when opening {} in browser", url, error);
 
-                        Platform.runLater(() -> new Alert(
-                                Alert.AlertType.ERROR,
+                        Dialogs.showErrorMessage(
+                                resources.getString("IndexManager.browserError"),
                                 MessageFormat.format(
                                         resources.getString("IndexManager.cannotOpen"),
                                         url,
                                         error.getLocalizedMessage()
                                 )
-                        ).show());
+                        );
 
                         return null;
                     });
@@ -267,13 +262,14 @@ public class IndexManager extends Stage {
                     .map(SavedIndex::name)
                     .toList();
             if (!nonDeletableIndexes.isEmpty()) {
-                new Alert(
-                        Alert.AlertType.WARNING,
+                Dialogs.showErrorMessage(
+                        resources.getString("IndexManager.error"),
                         MessageFormat.format(
-                                "{0} cannot be deleted.",
+                                resources.getString("IndexManager.cannotBeDeleted"),
                                 nonDeletableIndexes.size() == 1 ? nonDeletableIndexes.getFirst() : nonDeletableIndexes.toString()
                         )
-                ).showAndWait();
+                );
+                return;
             }
 
             List<SavedIndex> indexesToDelete = indexTable.getSelectionModel().getSelectedItems().stream()
@@ -283,28 +279,26 @@ public class IndexManager extends Stage {
                 return;
             }
 
-            var deleteExtensionsResponse = new Alert(
-                    Alert.AlertType.CONFIRMATION,
-                    resources.getString("IndexManager.deleteExtensions"),
-                    ButtonType.NO,
-                    ButtonType.YES
-            ).showAndWait();
+            var deleteExtensionsResponse = Dialogs.showConfirmDialog(
+                    resources.getString("IndexManager.deleteIndex"),
+                    resources.getString("IndexManager.deleteExtensions")
+            );
 
             try {
                 extensionIndexManager.removeIndexes(
                         indexesToDelete,
-                        deleteExtensionsResponse.isPresent() && deleteExtensionsResponse.get().equals(ButtonType.YES)
+                        deleteExtensionsResponse
                 );
             } catch (IOException | SecurityException | NullPointerException e) {
                 logger.error("Error when removing {}", indexesToDelete, e);
 
-                new Alert(
-                        Alert.AlertType.ERROR,
+                Dialogs.showErrorMessage(
+                        resources.getString("IndexManager.error"),
                         MessageFormat.format(
                                 resources.getString("IndexManager.cannotRemoveSelectedIndexes"),
                                 e.getLocalizedMessage()
                         )
-                ).show();
+                );
             }
         });
         menu.getItems().add(removeItem);

@@ -4,14 +4,11 @@ plugins {
     alias(libs.plugins.javafx)
 }
 
-repositories {
-    mavenCentral()
-}
-
 dependencies {
     implementation(libs.slf4j)
     implementation(libs.gson)
     implementation(libs.controlsfx)
+    implementation(libs.qupath.fxtras)
 }
 
 java {

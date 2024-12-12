@@ -1,9 +1,7 @@
 package qupath.ext.extensionmanager.gui.index;
 
-import javafx.application.Platform;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.stage.Modality;
@@ -12,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.index.Extension;
 import qupath.ext.extensionmanager.gui.UiUtils;
+import qupath.fx.dialogs.Dialogs;
 
 import java.io.IOException;
 import java.text.MessageFormat;
@@ -47,17 +46,19 @@ class ExtensionDetails extends Stage {
 
     @FXML
     private void onHomepageClicked(ActionEvent ignored) {
-        UiUtils.openLinkInWebBrowser(homepage.getText()).exceptionally(error -> {
-            logger.error("Error when opening {} in browser", homepage.getText(), error);
+        String link = homepage.getText();
 
-            Platform.runLater(() -> new Alert(
-                    Alert.AlertType.ERROR,
+        UiUtils.openLinkInWebBrowser(link).exceptionally(error -> {
+            logger.error("Error when opening {} in browser", link, error);
+
+            Dialogs.showErrorMessage(
+                    resources.getString("Index.ExtensionDetails.browserError"),
                     MessageFormat.format(
                             resources.getString("Index.ExtensionDetails.cannotOpen"),
-                            homepage.getText(),
+                            link,
                             error.getLocalizedMessage()
                     )
-            ).show());
+            );
 
             return null;
         });

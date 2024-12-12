@@ -2,14 +2,13 @@ package qupath.ext.extensionmanager.gui;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.layout.HBox;
 import org.controlsfx.glyphfont.FontAwesome;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import qupath.fx.dialogs.Dialogs;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -52,28 +51,37 @@ class ManuallyInstalledExtensionLine extends HBox {
 
     @FXML
     private void onDeleteClicked(ActionEvent ignored) {
-        var confirmation = new Alert(
-                Alert.AlertType.CONFIRMATION,
+        var confirmation = Dialogs.showConfirmDialog(
+                resources.getString("ManuallyInstalledExtensionLine.deleteExtension"),
                 MessageFormat.format(
                         resources.getString("ManuallyInstalledExtensionLine.remove"),
                         jarPath.getFileName()
                 )
-        ).showAndWait();
+        );
+        if(!confirmation) {
+            return;
+        }
 
-        if (confirmation.isPresent() && confirmation.get().equals(ButtonType.OK)) {
-            try {
-                Files.delete(jarPath);
-            } catch (IOException | SecurityException e) {
-                logger.error(String.format("Cannot delete %s extension", jarPath), e);
+        try {
+            Files.delete(jarPath);
 
-                new Alert(
-                        Alert.AlertType.ERROR,
-                        MessageFormat.format(
-                                resources.getString("ManuallyInstalledExtensionLine.cannotDeleteExtension"),
-                                e.getLocalizedMessage()
-                        )
-                ).show();
-            }
+            Dialogs.showInfoNotification(
+                    resources.getString("ManuallyInstalledExtensionLine.extensionManager"),
+                    MessageFormat.format(
+                            resources.getString("ManuallyInstalledExtensionLine.extensionRemoved"),
+                            jarPath.getFileName()
+                    )
+            );
+        } catch (IOException | SecurityException e) {
+            logger.error(String.format("Cannot delete %s extension", jarPath), e);
+
+            Dialogs.showErrorMessage(
+                    resources.getString("ManuallyInstalledExtensionLine.deleteExtension"),
+                    MessageFormat.format(
+                            resources.getString("ManuallyInstalledExtensionLine.cannotDeleteExtension"),
+                            e.getLocalizedMessage()
+                    )
+            );
         }
     }
 }

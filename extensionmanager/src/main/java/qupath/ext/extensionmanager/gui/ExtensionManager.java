@@ -1,13 +1,10 @@
 package qupath.ext.extensionmanager.gui;
 
-import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
-import javafx.scene.control.Alert;
-import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.VBox;
@@ -17,6 +14,7 @@ import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionIndexManager;
 import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 import qupath.ext.extensionmanager.gui.index.IndexPane;
+import qupath.fx.dialogs.Dialogs;
 
 import java.io.File;
 import java.io.IOException;
@@ -119,10 +117,10 @@ public class ExtensionManager extends Stage {
 
         Path extensionFolder = extensionDirectoryPath.get();
         if (extensionFolder == null) {
-            new Alert(
-                    Alert.AlertType.ERROR,
+            Dialogs.showErrorMessage(
+                    resources.getString("ExtensionManager.error"),
                     resources.getString("ExtensionManager.cannotCopyFiles")
-            ).show();
+            );
             return;
         }
 
@@ -153,15 +151,17 @@ public class ExtensionManager extends Stage {
                 })
                 .toList();
         if (!destinationFilesAlreadyExisting.isEmpty()) {
-            var confirmation = new Alert(
-                    Alert.AlertType.CONFIRMATION,
+            var confirmation = Dialogs.showConfirmDialog(
+                    resources.getString("ExtensionManager.copyFiles"),
                     MessageFormat.format(
                             resources.getString("ExtensionManager.alreadyExist"),
-                            destinationFilesAlreadyExisting
+                            destinationFilesAlreadyExisting.size() == 1 ?
+                                    destinationFilesAlreadyExisting.getFirst() :
+                                    destinationFilesAlreadyExisting
                     )
-            ).showAndWait();
+            );
 
-            if (confirmation.isEmpty() || !confirmation.get().equals(ButtonType.OK)) {
+            if (!confirmation) {
                 return;
             }
         }
@@ -177,15 +177,15 @@ public class ExtensionManager extends Stage {
         }
 
         if (!errors.isEmpty()) {
-            new Alert(
-                    Alert.AlertType.ERROR,
+            Dialogs.showErrorMessage(
+                    resources.getString("ExtensionManager.copyError"),
                     MessageFormat.format(
                             resources.getString("ExtensionManager.errorWhileCopying"),
                             errors.stream()
                                     .map(Throwable::getLocalizedMessage)
                                     .collect(Collectors.joining("\n"))
                     )
-            ).show();
+            );
         }
     }
 
@@ -195,24 +195,24 @@ public class ExtensionManager extends Stage {
 
         Path extensionDirectory = extensionIndexManager.getExtensionDirectoryPath().get();
         if (extensionDirectory == null) {
-            new Alert(
-                    Alert.AlertType.ERROR,
+            Dialogs.showErrorMessage(
+                    resources.getString("ExtensionManager.error"),
                     resources.getString("ExtensionManager.cannotOpenExtensionDirectory")
-            ).show();
+            );
             return;
         }
 
         UiUtils.openFolderInFileExplorer(extensionDirectory).exceptionally(error -> {
             logger.error("Error while opening QuPath extension directory {}", extensionDirectory, error);
 
-            Platform.runLater(() -> new Alert(
-                    Alert.AlertType.ERROR,
+            Dialogs.showErrorMessage(
+                    resources.getString("ExtensionManager.error"),
                     MessageFormat.format(
                             resources.getString("ExtensionManager.cannotOpen"),
                             extensionDirectory,
                             error.getLocalizedMessage()
                     )
-            ).show());
+            );
 
             return null;
         });
