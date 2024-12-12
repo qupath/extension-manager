@@ -63,7 +63,7 @@ public class IndexPane extends TitledPane {
                         .toList()
                 ));
             } else {
-                logger.warn("Error when fetching fetchedIndex at {}", savedIndex.rawUri(), error);
+                logger.warn("Error when fetching index at {}", savedIndex.rawUri(), error);
             }
             return null;
         });

@@ -4,6 +4,7 @@ import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
@@ -201,15 +202,15 @@ class ExtensionModificationWindow extends Stage {
                     } else {
                         logger.error("Error while installing extension", error);
 
-                        Dialogs.showErrorMessage(
-                                resources.getString("Index.ExtensionModificationWindow.error"),
+                        Platform.runLater(() -> new Alert(
+                                Alert.AlertType.ERROR,
                                 MessageFormat.format(
                                         resources.getString("Index.ExtensionModificationWindow.notInstalled"),
                                         extension.name(),
                                         release.getSelectionModel().getSelectedItem().name(),
                                         error.getLocalizedMessage()
                                 )
-                        );
+                        ).show());
                     }
 
                     Platform.runLater(() -> {
