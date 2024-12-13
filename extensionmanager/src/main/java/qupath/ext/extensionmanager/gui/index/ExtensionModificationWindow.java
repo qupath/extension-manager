@@ -85,12 +85,9 @@ class ExtensionModificationWindow extends Stage {
 
         initModality(Modality.APPLICATION_MODAL);
 
-        setTitle(MessageFormat.format(
-                resources.getString(installedExtension == null ?
-                        "Index.ExtensionModificationWindow.installX" :
-                        "Index.ExtensionModificationWindow.editX"
-                ),
-                extension.name()
+        setTitle(resources.getString(installedExtension == null ?
+                "Index.ExtensionModificationWindow.installExtension" :
+                "Index.ExtensionModificationWindow.editExtension"
         ));
 
         name.setText(extension.name());
