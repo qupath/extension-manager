@@ -37,7 +37,7 @@ class ExtensionClassLoader extends URLClassLoader {
     /**
      * Load a JAR file located on the provided path.
      *
-     * @param jarPath the path to the JAR file to load
+     * @param jarPath the path of the JAR file to load
      * @throws java.io.IOError if an I/O error occurs while obtaining the absolute path of the
      * provided path
      * @throws SecurityException if the user doesn't have read rights on the provided path
@@ -64,6 +64,18 @@ class ExtensionClassLoader extends URLClassLoader {
                 logger.error("Error when calling runnable of class loader", e);
             }
         }
+    }
+
+    /**
+     * Indicate that a JAR file should be unloaded.
+     * While this function doesn't currently unload the JAR, it is recommended
+     * to call it when a JAR file given to {@link #addJar(Path)} should not be
+     * loaded anymore. A future implementation may actually unload the JAR
+     *
+     * @param jarPath the path of the JAR file to unload
+     */
+    public synchronized void removeJar(Path jarPath) {
+        filenamesAdded.remove(jarPath.getFileName().toString());
     }
 
     /**
