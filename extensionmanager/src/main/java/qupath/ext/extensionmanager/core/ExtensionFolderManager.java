@@ -140,7 +140,7 @@ class ExtensionFolderManager implements AutoCloseable {
                         return null;
                     } else {
                         try {
-                            return getAndCreateIndexesFolder();
+                            return getAndCreateIndexesDirectory();
                         } catch (IOException | InvalidPathException | SecurityException | NullPointerException e) {
                             logger.debug(String.format("Error when getting index path from %s", path), e);
                             return null;
@@ -156,6 +156,34 @@ class ExtensionFolderManager implements AutoCloseable {
     public void close() throws Exception {
         manuallyInstalledExtensionsWatcher.close();
         indexManagedInstalledExtensionsWatcher.close();
+    }
+
+    /**
+     * @return a read only property containing the path to the extension folder.
+     * It may be updated from any thread and the path (but not the property) can be null
+     * or invalid
+     */
+    public ReadOnlyObjectProperty<Path> getExtensionDirectoryPath() {
+        return extensionDirectoryPath;
+    }
+
+    /**
+     * Save the provided registry to disk. It can later be retrieved with
+     * {@link #getSavedRegistry()}.
+     *
+     * @param registry the registry to save
+     * @throws IOException if an I/O error occurs while writing the registry file
+     * @throws SecurityException if the user doesn't have sufficient rights to save the file
+     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
+     */
+    public synchronized void saveRegistry(Registry registry) throws IOException {
+        try (
+                FileWriter fileWriter = new FileWriter(getRegistryPath().toFile());
+                BufferedWriter writer = new BufferedWriter(fileWriter)
+        ) {
+            writer.write(gson.toJson(registry));
+            logger.debug("Registry {} saved", registry);
+        }
     }
 
     /**
@@ -179,35 +207,23 @@ class ExtensionFolderManager implements AutoCloseable {
     }
 
     /**
-     * Save the provided registry to disk. It can later be retrieved with
-     * {@link #getSavedRegistry()}.
+     * Get the path to the directory containing the provided index. This will create the
+     * directory if it doesn't already exist.
      *
-     * @param registry the registry to save
-     * @throws IOException if an I/O error occurs while writing the registry file
-     * @throws SecurityException if the user doesn't have sufficient rights to save the file
-     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
+     * @param savedIndex the index to retrieve
+     * @return the path to the directory containing the provided index
+     * @throws IOException if an I/O error occurs while creating the directory
+     * @throws InvalidPathException if the path cannot be created
+     * @throws SecurityException if the user doesn't have enough rights to create the directory
      */
-    public synchronized void saveRegistry(Registry registry) throws IOException {
-        try (
-                FileWriter fileWriter = new FileWriter(getRegistryPath().toFile());
-                BufferedWriter writer = new BufferedWriter(fileWriter)
-        ) {
-            writer.write(gson.toJson(registry));
-            logger.debug("Registry {} saved", registry);
-        }
+    public Path getIndexDirectoryPath(SavedIndex savedIndex) throws IOException {
+        return getAndCreateIndexesDirectory().resolve(FileTools.stripInvalidFilenameCharacters(savedIndex.name()));
     }
 
     /**
-     * @return a read only property containing the path to the extension folder.
-     * It may be updated from any thread and the path (but not the property) can be null
-     * or invalid
-     */
-    public ReadOnlyObjectProperty<Path> getExtensionDirectoryPath() {
-        return extensionDirectoryPath;
-    }
-
-    /**
-     * Delete all extensions belonging to the provided index.
+     * Delete all extensions belonging to the provided index. This will move the directory
+     * returned by {@link #getIndexDirectoryPath(SavedIndex)} to trash or recursively delete
+     * it if moving to trash is not supported by this platform.
      *
      * @param savedIndex the index to delete
      * @throws IOException if an I/O error occur while deleting the files
@@ -217,25 +233,24 @@ class ExtensionFolderManager implements AutoCloseable {
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
     public synchronized void deleteExtensionsFromIndex(SavedIndex savedIndex) throws IOException {
-        File indexDirectory = getAndCreateIndexesFolder().resolve(savedIndex.name()).toFile();
-        FileTools.deleteDirectoryRecursively(indexDirectory);
+        File indexDirectory = getIndexDirectoryPath(savedIndex).toFile();
+        FileTools.moveDirectoryToTrashOrDeleteRecursively(indexDirectory);
         logger.debug("The extension files of {} located in {} have been deleted", savedIndex, indexDirectory);
     }
 
     /**
-     * @return a read-only observable list of paths pointing to JAR files that were
-     * manually added (i.e. not with an index) to the extension directory
+     * Get the path to the directory containing the provided extension of the provided
+     * index. This will create the directory if it doesn't already exist.
+     *
+     * @param savedIndex the index owning the extension
+     * @param extension the extension to retrieve
+     * @return the path to the folder containing the provided extension
+     * @throws IOException if an I/O error occurs while creating the directory
+     * @throws InvalidPathException if the path cannot be created
+     * @throws SecurityException if the user doesn't have enough rights to create the directory
      */
-    public ObservableList<Path> getManuallyInstalledJars() {
-        return manuallyInstalledExtensionsWatcher.getFiles();
-    }
-
-    /**
-     * @return a read-only observable list of paths pointing to JAR files that were
-     * added with indexes to the extension directory
-     */
-    public ObservableList<Path> getIndexedManagedInstalledJars() {
-        return indexManagedInstalledExtensionsWatcher.getFiles();
+    public Path getExtensionDirectoryPath(SavedIndex savedIndex, Extension extension) throws IOException {
+        return getIndexDirectoryPath(savedIndex).resolve(FileTools.stripInvalidFilenameCharacters(extension.name()));
     }
 
     /**
@@ -253,7 +268,7 @@ class ExtensionFolderManager implements AutoCloseable {
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
     public synchronized Optional<InstalledExtension> getInstalledExtension(SavedIndex savedIndex, Extension extension) throws IOException {
-        Path extensionPath = getExtensionFolder(savedIndex, extension);
+        Path extensionPath = getExtensionDirectoryPath(savedIndex, extension);
 
         Path versionPath = null;
         if (Files.isDirectory(extensionPath)) {
@@ -306,6 +321,24 @@ class ExtensionFolderManager implements AutoCloseable {
     }
 
     /**
+     * Delete all files of an extension belonging to an index. This will move the
+     * {@link #getExtensionDirectoryPath(SavedIndex, Extension)} directory to trash or
+     * recursively delete it the platform doesn't support moving files to trash.
+     *
+     * @param savedIndex the index owning the extension to delete
+     * @param extension the extension to delete
+     * @throws IOException if an I/O error occurs while deleting the folder
+     * @throws java.nio.file.InvalidPathException if the Path object of the extension folder cannot be created, for example
+     * because the extensions folder path contain invalid characters
+     * @throws SecurityException if the user doesn't have sufficient rights to delete the folder
+     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
+     */
+    public synchronized void deleteExtension(SavedIndex savedIndex, Extension extension) throws IOException {
+        FileTools.moveDirectoryToTrashOrDeleteRecursively(getExtensionDirectoryPath(savedIndex, extension).toFile());
+        logger.debug("The extension files of {} belonging to {} have been deleted", extension, savedIndex);
+    }
+
+    /**
      * Get (and create if it doesn't already exist) the path to the folder
      * containing the specified files of the provided extension at the specified
      * version belonging to the provided index.
@@ -328,7 +361,7 @@ class ExtensionFolderManager implements AutoCloseable {
             FileType fileType
     ) throws IOException {
         Path folderPath = Paths.get(
-                getExtensionFolder(savedIndex, extension).toString(),
+                getExtensionDirectoryPath(savedIndex, extension).toString(),
                 releaseName,
                 fileType.name
         );
@@ -343,26 +376,26 @@ class ExtensionFolderManager implements AutoCloseable {
     }
 
     /**
-     * Delete all files of an extension belonging to an index.
-     *
-     * @param savedIndex the index owning the extension to delete
-     * @param extension the extension to delete
-     * @throws IOException if an I/O error occurs while deleting the folder
-     * @throws java.nio.file.InvalidPathException if the Path object of the extension folder cannot be created, for example
-     * because the extensions folder path contain invalid characters
-     * @throws SecurityException if the user doesn't have sufficient rights to delete the folder
-     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
+     * @return a read-only observable list of paths pointing to JAR files that were
+     * manually added (i.e. not with an index) to the extension directory
      */
-    public synchronized void deleteExtension(SavedIndex savedIndex, Extension extension) throws IOException {
-        FileTools.deleteDirectoryRecursively(getExtensionFolder(savedIndex, extension).toFile());
-        logger.debug("The extension files of {} belonging to {} have been deleted", extension, savedIndex);
+    public ObservableList<Path> getManuallyInstalledJars() {
+        return manuallyInstalledExtensionsWatcher.getFiles();
+    }
+
+    /**
+     * @return a read-only observable list of paths pointing to JAR files that were
+     * added with indexes to the extension directory
+     */
+    public ObservableList<Path> getIndexedManagedInstalledJars() {
+        return indexManagedInstalledExtensionsWatcher.getFiles();
     }
 
     private Path getRegistryPath() throws IOException {
-        return getAndCreateIndexesFolder().resolve(REGISTRY_NAME);
+        return getAndCreateIndexesDirectory().resolve(REGISTRY_NAME);
     }
 
-    private Path getAndCreateIndexesFolder() throws IOException {
+    private Path getAndCreateIndexesDirectory() throws IOException {
         Path indexesFolder = extensionDirectoryPath.get().resolve(INDEXES_FOLDER);
 
         if (Files.isRegularFile(indexesFolder)) {
@@ -372,13 +405,5 @@ class ExtensionFolderManager implements AutoCloseable {
         Files.createDirectories(indexesFolder);
 
         return indexesFolder;
-    }
-
-    private Path getExtensionFolder(SavedIndex savedIndex, Extension extension) throws IOException {
-        return Paths.get(
-                getAndCreateIndexesFolder().toString(),
-                FileTools.stripInvalidFilenameCharacters(savedIndex.name()),
-                FileTools.stripInvalidFilenameCharacters(extension.name())
-        );
     }
 }

@@ -34,10 +34,12 @@ import java.net.URI;
 import java.net.URISyntaxException;
 import java.text.MessageFormat;
 import java.util.List;
+import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 
 /**
  * A window to manage indexes.
@@ -279,15 +281,28 @@ class IndexManager extends Stage {
                 return;
             }
 
-            var deleteExtensionsResponse = Dialogs.showConfirmDialog(
+            boolean deleteExtensions = Dialogs.showConfirmDialog(
                     resources.getString("IndexManager.deleteIndex"),
-                    resources.getString("IndexManager.deleteExtensions")
+                    MessageFormat.format(
+                            resources.getString("IndexManager.deleteExtensions"),
+                            indexesToDelete.stream()
+                                    .map(savedIndex -> {
+                                        try {
+                                            return String.format("\"%s\"", extensionIndexManager.getIndexDirectory(savedIndex));
+                                        } catch (IOException e) {
+                                            logger.error("Cannot retrieve path of {}", savedIndex, e);
+                                            return null;
+                                        }
+                                    })
+                                    .filter(Objects::nonNull)
+                                    .collect(Collectors.joining("\n"))
+                    )
             );
 
             try {
                 extensionIndexManager.removeIndexes(
                         indexesToDelete,
-                        deleteExtensionsResponse
+                        deleteExtensions
                 );
             } catch (IOException | SecurityException | NullPointerException e) {
                 logger.error("Error when removing {}", indexesToDelete, e);

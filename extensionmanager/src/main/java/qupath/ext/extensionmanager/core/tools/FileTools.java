@@ -3,6 +3,7 @@ package qupath.ext.extensionmanager.core.tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
@@ -43,6 +44,31 @@ public class FileTools {
         } else {
             logger.debug("The specified path {} is not an existing directory", path);
             return false;
+        }
+    }
+
+    /**
+     * Attempt to move the provided file to trash, or delete it (and all its children
+     * recursively if it's a directory) if the current platform does not support moving
+     * files to trash.
+     * This won't do anything if the provided file doesn't exist.
+     *
+     * @param directoryToBeDeleted the file or directory to delete
+     * @throws IOException if an I/O error occurs
+     * @throws SecurityException if the user doesn't have sufficient rights to move or
+     * delete some files
+     */
+    public static void moveDirectoryToTrashOrDeleteRecursively(File directoryToBeDeleted) throws IOException {
+        if (!directoryToBeDeleted.exists()) {
+            return;
+        }
+
+        Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
+
+        if (desktop != null && desktop.isSupported(Desktop.Action.MOVE_TO_TRASH)) {
+            desktop.moveToTrash(directoryToBeDeleted);
+        } else {
+            deleteDirectoryRecursively(directoryToBeDeleted);
         }
     }
 

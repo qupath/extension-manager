@@ -20,6 +20,8 @@ import qupath.ext.extensionmanager.gui.UiUtils;
 import qupath.fx.dialogs.Dialogs;
 
 import java.io.IOException;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.text.MessageFormat;
 import java.util.Optional;
 import java.util.ResourceBundle;
@@ -152,11 +154,20 @@ class ExtensionLine extends HBox {
 
     @FXML
     private void onDeleteClicked(ActionEvent ignored) {
+        Path directoryToDelete;
+        try {
+            directoryToDelete = extensionIndexManager.getExtensionDirectory(savedIndex, extension);
+        } catch (IOException | InvalidPathException | SecurityException e) {
+            logger.error("Cannot retrieve directory containing the files of the extension to delete", e);
+            return;
+        }
+
         var confirmation = Dialogs.showConfirmDialog(
                 resources.getString("Index.ExtensionLine.removeExtension"),
                 MessageFormat.format(
                         resources.getString("Index.ExtensionLine.remove"),
-                        extension.name()
+                        extension.name(),
+                        directoryToDelete
                 )
         );
         if (!confirmation) {

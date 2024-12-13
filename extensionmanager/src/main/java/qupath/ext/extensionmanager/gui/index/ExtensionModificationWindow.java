@@ -9,6 +9,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
+import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
@@ -52,6 +53,10 @@ class ExtensionModificationWindow extends Stage {
     private ChoiceBox<Release> release;
     @FXML
     private CheckBox optionalDependencies;
+    @FXML
+    private HBox warningContainer;
+    @FXML
+    private Label deleteDirectory;
     @FXML
     private Button submit;
 
@@ -120,6 +125,27 @@ class ExtensionModificationWindow extends Stage {
         optionalDependencies.managedProperty().bind(optionalDependencies.visibleProperty());
         optionalDependencies.setSelected(installedExtension != null && installedExtension.optionalDependenciesInstalled());
 
+        try {
+            Path extensionDirectory = extensionIndexManager.getExtensionDirectory(
+                    savedIndex,
+                    extension
+            );
+
+            if (FileTools.isDirectoryNotEmpty(extensionDirectory)) {
+                deleteDirectory.setText(MessageFormat.format(
+                        resources.getString("Index.ExtensionModificationWindow.deleteDirectory"),
+                        extensionDirectory.toString()
+                ));
+            } else {
+                warningContainer.setVisible(false);
+                warningContainer.setManaged(false);
+            }
+        } catch (IOException | InvalidPathException | SecurityException e) {
+            logger.error("Cannot see if extension directory is not empty", e);
+
+            deleteDirectory.setText(resources.getString("Index.ExtensionModificationWindow.extensionDirectoryNotRetrieved"));
+        }
+
         submit.textProperty().bind(Bindings.createStringBinding(
                 () -> resources.getString(getSubmitText()),
                 release.getSelectionModel().selectedItemProperty()
@@ -134,7 +160,7 @@ class ExtensionModificationWindow extends Stage {
         Release selectedRelease = release.getSelectionModel().getSelectedItem();
 
         try {
-            if (isJarAlreadyDownloaded(selectedRelease)) {
+            if (installedExtension == null && isJarAlreadyDownloaded(selectedRelease)) {
                 var confirmation = Dialogs.showConfirmDialog(
                         resources.getString("Index.ExtensionModificationWindow.extensionAlreadyInstalled"),
                         resources.getString("Index.ExtensionModificationWindow.extensionAlreadyInstalledDetails")

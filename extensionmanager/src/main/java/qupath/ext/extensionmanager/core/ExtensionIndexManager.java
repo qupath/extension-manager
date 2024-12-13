@@ -155,6 +155,35 @@ public class ExtensionIndexManager implements AutoCloseable{
     }
 
     /**
+     * Get the path to the directory containing the provided index. This will create the
+     * directory if it doesn't already exist.
+     *
+     * @param savedIndex the index to retrieve
+     * @return the path to the directory containing the provided index
+     * @throws IOException if an I/O error occurs while creating the directory
+     * @throws InvalidPathException if the path cannot be created
+     * @throws SecurityException if the user doesn't have enough rights to create the directory
+     */
+    public Path getIndexDirectory(SavedIndex savedIndex) throws IOException {
+        return extensionFolderManager.getIndexDirectoryPath(savedIndex);
+    }
+
+    /**
+     * Get the path to the directory containing the provided extension of the provided
+     * index. This will create the directory if it doesn't already exist.
+     *
+     * @param savedIndex the index owning the extension
+     * @param extension the extension to retrieve
+     * @return the path to the folder containing the provided extension
+     * @throws IOException if an I/O error occurs while creating the directory
+     * @throws InvalidPathException if the path cannot be created
+     * @throws SecurityException if the user doesn't have enough rights to create the directory
+     */
+    public Path getExtensionDirectory(SavedIndex savedIndex, Extension extension) throws IOException {
+        return extensionFolderManager.getExtensionDirectoryPath(savedIndex, extension);
+    }
+
+    /**
      * @return a text describing the release of the current software with the form "v[MAJOR].[MINOR].[PATCH]"
      * or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
      */
@@ -226,6 +255,9 @@ public class ExtensionIndexManager implements AutoCloseable{
      * deleted.
      * <p>
      * If an exception occurs (see below), the provided indexes are not added.
+     * <p>
+     * Warning: this will move the directory returned by {@link #getIndexDirectory(SavedIndex)} to
+     * trash if supported by this platform or recursively delete it if extension are asked to be removed.
      *
      * @param savedIndexes the indexes to remove
      * @param removeExtensions whether to remove extensions belonging to the indexes to remove
@@ -350,6 +382,9 @@ public class ExtensionIndexManager implements AutoCloseable{
      * internet connection and the size of the extension.
      * <p>
      * If the extension already exists, it will be deleted before downloading the provided version of the extension.
+     * <p>
+     * Warning: this will move to trash the directory returned by {@link #getExtensionDirectory(SavedIndex, Extension)}
+     * or recursively delete it if moving files to trash is not supported.
      *
      * @param savedIndex the index owning the extension to install/update
      * @param extension the extension to install/update
@@ -444,6 +479,9 @@ public class ExtensionIndexManager implements AutoCloseable{
     /**
      * Uninstall an extension by removing its files. This can take some time depending on the number
      * of files to delete and the speed of the disk.
+     * <p>
+     * Warning: this will move the directory returned by {@link #getExtensionDirectory(SavedIndex, Extension)}
+     * to trash or recursively delete it if moving files to trash is not supported by this platform.
      *
      * @param savedIndex the index owning the extension to uninstall
      * @param extension the extension to uninstall
