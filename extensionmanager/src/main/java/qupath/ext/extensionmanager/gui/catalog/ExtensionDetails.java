@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.gui.index;
+package qupath.ext.extensionmanager.gui.catalog;
 
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
@@ -8,7 +8,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import qupath.ext.extensionmanager.core.index.Extension;
+import qupath.ext.extensionmanager.core.catalog.Extension;
 import qupath.ext.extensionmanager.gui.UiUtils;
 import qupath.fx.dialogs.Dialogs;
 
@@ -52,9 +52,9 @@ class ExtensionDetails extends Stage {
             logger.error("Error when opening {} in browser", link, error);
 
             Dialogs.showErrorMessage(
-                    resources.getString("Index.ExtensionDetails.browserError"),
+                    resources.getString("Catalog.ExtensionDetails.browserError"),
                     MessageFormat.format(
-                            resources.getString("Index.ExtensionDetails.cannotOpen"),
+                            resources.getString("Catalog.ExtensionDetails.cannotOpen"),
                             link,
                             error.getLocalizedMessage()
                     )

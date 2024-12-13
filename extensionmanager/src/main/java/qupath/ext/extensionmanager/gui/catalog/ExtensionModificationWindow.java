@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.gui.index;
+package qupath.ext.extensionmanager.gui.catalog;
 
 import javafx.application.Platform;
 import javafx.beans.binding.Bindings;
@@ -15,12 +15,12 @@ import javafx.stage.Stage;
 import javafx.util.StringConverter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import qupath.ext.extensionmanager.core.ExtensionIndexManager;
+import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
 import qupath.ext.extensionmanager.core.Version;
-import qupath.ext.extensionmanager.core.index.Extension;
-import qupath.ext.extensionmanager.core.index.Release;
+import qupath.ext.extensionmanager.core.catalog.Extension;
+import qupath.ext.extensionmanager.core.catalog.Release;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
-import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
+import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
 import qupath.ext.extensionmanager.core.tools.FileTools;
 import qupath.ext.extensionmanager.gui.ProgressWindow;
 import qupath.ext.extensionmanager.gui.UiUtils;
@@ -43,8 +43,8 @@ class ExtensionModificationWindow extends Stage {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionModificationWindow.class);
     private static final ResourceBundle resources = UiUtils.getResources();
-    private final ExtensionIndexManager extensionIndexManager;
-    private final SavedIndex savedIndex;
+    private final ExtensionCatalogManager extensionCatalogManager;
+    private final SavedCatalog savedCatalog;
     private final Extension extension;
     private final InstalledExtension installedExtension;
     @FXML
@@ -63,21 +63,21 @@ class ExtensionModificationWindow extends Stage {
     /**
      * Create the window.
      *
-     * @param extensionIndexManager the extension index manager this window should use
-     * @param savedIndex the index owning the extension to modify
+     * @param extensionCatalogManager the extension catalog manager this window should use
+     * @param savedCatalog the catalog owning the extension to modify
      * @param extension the extension to modify
      * @param installedExtension information on the already installed extension if this window should allow modifying it,
      *                           or null if the extension is to be installed by this window
      * @throws IOException when an error occurs while creating the window
      */
     public ExtensionModificationWindow(
-            ExtensionIndexManager extensionIndexManager,
-            SavedIndex savedIndex,
+            ExtensionCatalogManager extensionCatalogManager,
+            SavedCatalog savedCatalog,
             Extension extension,
             InstalledExtension installedExtension
     ) throws IOException {
-        this.extensionIndexManager = extensionIndexManager;
-        this.savedIndex = savedIndex;
+        this.extensionCatalogManager = extensionCatalogManager;
+        this.savedCatalog = savedCatalog;
         this.extension = extension;
         this.installedExtension = installedExtension;
 
@@ -86,14 +86,14 @@ class ExtensionModificationWindow extends Stage {
         initModality(Modality.APPLICATION_MODAL);
 
         setTitle(resources.getString(installedExtension == null ?
-                "Index.ExtensionModificationWindow.installExtension" :
-                "Index.ExtensionModificationWindow.editExtension"
+                "Catalog.ExtensionModificationWindow.installExtension" :
+                "Catalog.ExtensionModificationWindow.editExtension"
         ));
 
         name.setText(extension.name());
 
         release.getItems().addAll(extension.releases().stream()
-                .filter(release -> release.versionRange().isCompatible(extensionIndexManager.getVersion()))
+                .filter(release -> release.versionRange().isCompatible(extensionCatalogManager.getVersion()))
                 .toList()
         );
         release.setConverter(new StringConverter<>() {
@@ -123,14 +123,14 @@ class ExtensionModificationWindow extends Stage {
         optionalDependencies.setSelected(installedExtension != null && installedExtension.optionalDependenciesInstalled());
 
         try {
-            Path extensionDirectory = extensionIndexManager.getExtensionDirectory(
-                    savedIndex,
+            Path extensionDirectory = extensionCatalogManager.getExtensionDirectory(
+                    savedCatalog,
                     extension
             );
 
             if (FileTools.isDirectoryNotEmpty(extensionDirectory)) {
                 deleteDirectory.setText(MessageFormat.format(
-                        resources.getString("Index.ExtensionModificationWindow.deleteDirectory"),
+                        resources.getString("Catalog.ExtensionModificationWindow.deleteDirectory"),
                         extensionDirectory.toString()
                 ));
             } else {
@@ -140,7 +140,7 @@ class ExtensionModificationWindow extends Stage {
         } catch (IOException | InvalidPathException | SecurityException e) {
             logger.error("Cannot see if extension directory is not empty", e);
 
-            deleteDirectory.setText(resources.getString("Index.ExtensionModificationWindow.extensionDirectoryNotRetrieved"));
+            deleteDirectory.setText(resources.getString("Catalog.ExtensionModificationWindow.extensionDirectoryNotRetrieved"));
         }
 
         submit.textProperty().bind(Bindings.createStringBinding(
@@ -159,8 +159,8 @@ class ExtensionModificationWindow extends Stage {
         try {
             if (installedExtension == null && isJarAlreadyDownloaded(selectedRelease)) {
                 var confirmation = Dialogs.showConfirmDialog(
-                        resources.getString("Index.ExtensionModificationWindow.extensionAlreadyInstalled"),
-                        resources.getString("Index.ExtensionModificationWindow.extensionAlreadyInstalledDetails")
+                        resources.getString("Catalog.ExtensionModificationWindow.extensionAlreadyInstalled"),
+                        resources.getString("Catalog.ExtensionModificationWindow.extensionAlreadyInstalledDetails")
                 );
 
                 if (!confirmation) {
@@ -182,8 +182,8 @@ class ExtensionModificationWindow extends Stage {
             progressWindow = new ProgressWindow(
                     MessageFormat.format(
                             resources.getString(installedExtension == null ?
-                                    "Index.ExtensionModificationWindow.installing" :
-                                    "Index.ExtensionModificationWindow.updating"
+                                    "Catalog.ExtensionModificationWindow.installing" :
+                                    "Catalog.ExtensionModificationWindow.updating"
                             ),
                             extension.name(),
                             selectedRelease.name()
@@ -197,8 +197,8 @@ class ExtensionModificationWindow extends Stage {
         }
 
         progressWindow.show();
-        executor.execute(() -> extensionIndexManager.installOrUpdateExtension(
-                savedIndex,
+        executor.execute(() -> extensionCatalogManager.installOrUpdateExtension(
+                savedCatalog,
                 extension,
                 new InstalledExtension(
                         selectedRelease.name(),
@@ -207,17 +207,17 @@ class ExtensionModificationWindow extends Stage {
                 progress -> Platform.runLater(() -> progressWindow.setProgress(progress)),
                 (step, resource) -> Platform.runLater(() -> progressWindow.setStatus(MessageFormat.format(
                         resources.getString(switch (step) {
-                            case DOWNLOADING -> "Index.ExtensionModificationWindow.downloading";
-                            case EXTRACTING_ZIP -> "Index.ExtensionModificationWindow.extracting";
+                            case DOWNLOADING -> "Catalog.ExtensionModificationWindow.downloading";
+                            case EXTRACTING_ZIP -> "Catalog.ExtensionModificationWindow.extracting";
                         }),
                         resource
                 ))),
                 error -> {
                     if (error == null) {
                         Dialogs.showInfoNotification(
-                                resources.getString("Index.ExtensionModificationWindow.extensionManager"),
+                                resources.getString("Catalog.ExtensionModificationWindow.extensionManager"),
                                 MessageFormat.format(
-                                        resources.getString("Index.ExtensionModificationWindow.installed"),
+                                        resources.getString("Catalog.ExtensionModificationWindow.installed"),
                                         extension.name(),
                                         release.getSelectionModel().getSelectedItem().name()
                                 )
@@ -228,7 +228,7 @@ class ExtensionModificationWindow extends Stage {
                         Platform.runLater(() -> new Alert(
                                 Alert.AlertType.ERROR,
                                 MessageFormat.format(
-                                        resources.getString("Index.ExtensionModificationWindow.notInstalled"),
+                                        resources.getString("Catalog.ExtensionModificationWindow.notInstalled"),
                                         extension.name(),
                                         release.getSelectionModel().getSelectedItem().name(),
                                         error.getLocalizedMessage()
@@ -247,32 +247,32 @@ class ExtensionModificationWindow extends Stage {
 
     private String getSubmitText() {
         if (installedExtension == null) {
-            return "Index.ExtensionModificationWindow.install";
+            return "Catalog.ExtensionModificationWindow.install";
         } else if (release.getSelectionModel().getSelectedItem() == null) {
-            return "Index.ExtensionModificationWindow.update";
+            return "Catalog.ExtensionModificationWindow.update";
         } else {
             try {
                 Version selectedVersion = new Version(release.getSelectionModel().getSelectedItem().name());
                 Version installedVersion = new Version(installedExtension.releaseName());
 
                 if (selectedVersion.compareTo(installedVersion) < 0) {
-                    return "Index.ExtensionModificationWindow.downgrade";
+                    return "Catalog.ExtensionModificationWindow.downgrade";
                 } else if (selectedVersion.compareTo(installedVersion) > 0) {
-                    return "Index.ExtensionModificationWindow.update";
+                    return "Catalog.ExtensionModificationWindow.update";
                 } else {
-                    return "Index.ExtensionModificationWindow.reinstall";
+                    return "Catalog.ExtensionModificationWindow.reinstall";
                 }
             } catch (IllegalArgumentException e) {
                 logger.debug("Cannot create version from selected item or installed release", e);
-                return "Index.ExtensionModificationWindow.update";
+                return "Catalog.ExtensionModificationWindow.update";
             }
         }
     }
 
     private boolean isJarAlreadyDownloaded(Release release) {
         return Stream.concat(
-                extensionIndexManager.getManuallyInstalledJars().stream(),
-                extensionIndexManager.getIndexedManagedInstalledJars().stream()
+                extensionCatalogManager.getManuallyInstalledJars().stream(),
+                extensionCatalogManager.getCatalogManagedInstalledJars().stream()
         )
                 .map(Path::getFileName)
                 .filter(Objects::nonNull)

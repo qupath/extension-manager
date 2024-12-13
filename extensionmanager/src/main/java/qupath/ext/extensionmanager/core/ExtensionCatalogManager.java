@@ -8,15 +8,15 @@ import javafx.collections.ListChangeListener;
 import javafx.collections.ObservableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import qupath.ext.extensionmanager.core.index.IndexFetcher;
+import qupath.ext.extensionmanager.core.catalog.CatalogFetcher;
+import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
 import qupath.ext.extensionmanager.core.savedentities.UpdateAvailable;
 import qupath.ext.extensionmanager.core.tools.FileDownloader;
 import qupath.ext.extensionmanager.core.tools.FileTools;
 import qupath.ext.extensionmanager.core.tools.ZipExtractor;
-import qupath.ext.extensionmanager.core.index.Extension;
-import qupath.ext.extensionmanager.core.index.Release;
+import qupath.ext.extensionmanager.core.catalog.Extension;
+import qupath.ext.extensionmanager.core.catalog.Release;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
-import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
 import qupath.ext.extensionmanager.core.savedentities.Registry;
 
 import java.io.IOError;
@@ -38,31 +38,31 @@ import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 /**
- * A manager for indexes and extensions. It can be used to get access to all saved indexes,
- * add or remove an index, get access to all installed extensions, and install or delete an extension.
+ * A manager for catalogs and extensions. It can be used to get access to all saved catalogs,
+ * add or remove a catalog, get access to all installed extensions, and install or delete an extension.
  * Manually installed extensions are automatically detected.
  * <p>
  * It also automatically loads extension classes with a custom ClassLoader (see {@link #getClassLoader()}).
  * Note that removed extensions are not unloaded from the class loader.
  * <p>
- * The list of active indexes and installed extensions is determined by this class. It is internally saved
+ * The list of active catalogs and installed extensions is determined by this class. It is internally saved
  * in a registry JSON file located in the extension directory (see {@link Registry}).
  * <p>
  * This class is thread-safe.
  * <p>
  * This manager must be {@link #close() closed} once no longer used.
  */
-public class ExtensionIndexManager implements AutoCloseable{
+public class ExtensionCatalogManager implements AutoCloseable{
 
-    private static final Logger logger = LoggerFactory.getLogger(ExtensionIndexManager.class);
-    private final ObservableList<SavedIndex> savedIndexes = FXCollections.observableArrayList();
-    private final ObservableList<SavedIndex> savedIndexesImmutable = FXCollections.unmodifiableObservableList(savedIndexes);
-    private final Map<IndexExtension, ObjectProperty<Optional<InstalledExtension>>> installedExtensions = new ConcurrentHashMap<>();
+    private static final Logger logger = LoggerFactory.getLogger(ExtensionCatalogManager.class);
+    private final ObservableList<SavedCatalog> savedCatalogs = FXCollections.observableArrayList();
+    private final ObservableList<SavedCatalog> savedCatalogsImmutable = FXCollections.unmodifiableObservableList(savedCatalogs);
+    private final Map<CatalogExtension, ObjectProperty<Optional<InstalledExtension>>> installedExtensions = new ConcurrentHashMap<>();
     private final ExtensionFolderManager extensionFolderManager;
     private final ExtensionClassLoader extensionClassLoader;
     private final String version;
     private final Registry defaultRegistry;
-    private record IndexExtension(SavedIndex savedIndex, Extension extension) {}
+    private record CatalogExtension(SavedCatalog savedCatalog, Extension extension) {}
     /**
      * Indicate an extension installation step
      */
@@ -78,11 +78,11 @@ public class ExtensionIndexManager implements AutoCloseable{
     }
 
     /**
-     * Create the extension index manager.
+     * Create the extension catalog manager.
      *
      * @param extensionDirectoryPath a read-only property pointing to the path the extension directory should have. The
      *                               path can be null or invalid (but not the property). If this property is changed,
-     *                               indexes and extensions will be set to the content of the new value of the property
+     *                               catalogs and extensions will be set to the content of the new value of the property
      *                               (so will be reset if the new path is empty)
      * @param parentClassLoader the class loader that should be the parent of the extension class loader
      * @param version a text describing the release of the current software with the form "v[MAJOR].[MINOR].[PATCH]"
@@ -92,7 +92,7 @@ public class ExtensionIndexManager implements AutoCloseable{
      * @throws IllegalArgumentException if the provided version doesn't meet the specified requirements
      * @throws SecurityException if the user doesn't have enough rights to create the extension class loader
      */
-    public ExtensionIndexManager(
+    public ExtensionCatalogManager(
             ReadOnlyObjectProperty<Path> extensionDirectoryPath,
             ClassLoader parentClassLoader,
             String version,
@@ -105,13 +105,13 @@ public class ExtensionIndexManager implements AutoCloseable{
         this.version = version;
         this.defaultRegistry = defaultRegistry;
 
-        setIndexesFromRegistry();
+        setCatalogsFromRegistry();
         extensionDirectoryPath.addListener((p, o, n) -> {
-            setIndexesFromRegistry();
+            setCatalogsFromRegistry();
 
             synchronized (this) {
-                for (IndexExtension indexExtension: installedExtensions.keySet()) {
-                    installedExtensions.replace(indexExtension, getInstalledExtension(indexExtension));
+                for (CatalogExtension catalogExtension : installedExtensions.keySet()) {
+                    installedExtensions.replace(catalogExtension, getInstalledExtension(catalogExtension));
                 }
             }
         });
@@ -155,32 +155,32 @@ public class ExtensionIndexManager implements AutoCloseable{
     }
 
     /**
-     * Get the path to the directory containing the provided index. This will create the
+     * Get the path to the directory containing the provided catalog. This will create the
      * directory if it doesn't already exist.
      *
-     * @param savedIndex the index to retrieve
-     * @return the path to the directory containing the provided index
+     * @param savedCatalog the catalog to retrieve
+     * @return the path of the directory containing the provided catalog
      * @throws IOException if an I/O error occurs while creating the directory
      * @throws InvalidPathException if the path cannot be created
      * @throws SecurityException if the user doesn't have enough rights to create the directory
      */
-    public Path getIndexDirectory(SavedIndex savedIndex) throws IOException {
-        return extensionFolderManager.getIndexDirectoryPath(savedIndex);
+    public Path getCatalogDirectory(SavedCatalog savedCatalog) throws IOException {
+        return extensionFolderManager.getCatalogDirectoryPath(savedCatalog);
     }
 
     /**
      * Get the path to the directory containing the provided extension of the provided
-     * index. This will create the directory if it doesn't already exist.
+     * catalog. This will create the directory if it doesn't already exist.
      *
-     * @param savedIndex the index owning the extension
+     * @param savedCatalog the catalog owning the extension
      * @param extension the extension to retrieve
      * @return the path to the folder containing the provided extension
      * @throws IOException if an I/O error occurs while creating the directory
      * @throws InvalidPathException if the path cannot be created
      * @throws SecurityException if the user doesn't have enough rights to create the directory
      */
-    public Path getExtensionDirectory(SavedIndex savedIndex, Extension extension) throws IOException {
-        return extensionFolderManager.getExtensionDirectoryPath(savedIndex, extension);
+    public Path getExtensionDirectory(SavedCatalog savedCatalog, Extension extension) throws IOException {
+        return extensionFolderManager.getExtensionDirectoryPath(savedCatalog, extension);
     }
 
     /**
@@ -192,121 +192,121 @@ public class ExtensionIndexManager implements AutoCloseable{
     }
 
     /**
-     * @return a read-only observable list of all saved indexes. This list may be updated from any thread
+     * @return a read-only observable list of all saved catalogs. This list may be updated from any thread
      */
-    public ObservableList<SavedIndex> getIndexes() {
-        return savedIndexesImmutable;
+    public ObservableList<SavedCatalog> getCatalogs() {
+        return savedCatalogsImmutable;
     }
 
     /**
-     * Add indexes to the available list. This will save them to the registry.
-     * Indexes with the same name as an already existing index will not be added.
-     * No check will be performed concerning whether the provided indexes point to
-     * valid indexes.
+     * Add catalogs to the available list. This will save them to the registry.
+     * Catalogs with the same name as an already existing catalog will not be added.
+     * No check will be performed concerning whether the provided catalogs point to
+     * valid catalogs.
      * <p>
-     * If an exception occurs (see below), the provided indexes are not added.
+     * If an exception occurs (see below), the provided catalogs are not added.
      *
-     * @param savedIndexes the indexes to add
+     * @param savedCatalogs the catalogs to add
      * @throws IOException if an I/O error occurs while saving the registry file. In that case,
-     * the provided indexes are not added
+     * the provided catalogs are not added
      * @throws SecurityException if the user doesn't have sufficient rights to save the registry file
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
-    public void addIndex(List<SavedIndex> savedIndexes) throws IOException {
-        List<SavedIndex> indexesToAdd;
+    public void addCatalog(List<SavedCatalog> savedCatalogs) throws IOException {
+        List<SavedCatalog> catalogsToAdd;
         synchronized (this) {
-            indexesToAdd = savedIndexes.stream()
-                    .filter(savedIndex -> {
-                        if (this.savedIndexes.stream().noneMatch(index -> index.name().equals(savedIndex.name()))) {
+            catalogsToAdd = savedCatalogs.stream()
+                    .filter(savedCatalog -> {
+                        if (this.savedCatalogs.stream().noneMatch(catalog -> catalog.name().equals(savedCatalog.name()))) {
                             return true;
                         } else {
-                            logger.warn("Index {} has the same name as an existing index and will not be added", savedIndex);
+                            logger.warn("Catalog {} has the same name as an existing catalog and will not be added", savedCatalog);
                             return false;
                         }
                     })
                     .toList();
 
-            if (indexesToAdd.isEmpty()) {
-                logger.debug("No index to add");
+            if (catalogsToAdd.isEmpty()) {
+                logger.debug("No catalog to add");
                 return;
             }
 
-            this.savedIndexes.addAll(indexesToAdd);
+            this.savedCatalogs.addAll(catalogsToAdd);
         }
 
         try {
-            extensionFolderManager.saveRegistry(new Registry(this.savedIndexes));
+            extensionFolderManager.saveRegistry(new Registry(this.savedCatalogs));
         } catch (IOException | SecurityException | NullPointerException e) {
             synchronized (this) {
-                this.savedIndexes.removeAll(indexesToAdd);
+                this.savedCatalogs.removeAll(catalogsToAdd);
             }
 
             throw e;
         }
 
-        logger.info("Indexes {} added", indexesToAdd);
+        logger.info("Catalogs {} added", catalogsToAdd);
     }
 
     /**
-     * Remove indexes from the available list. This will remove them from the
-     * saved registry and delete any installed extension belonging to these indexes.
+     * Remove catalogs from the available list. This will remove them from the
+     * saved registry and delete any installed extension belonging to these catalogs.
      * <p>
-     * Indexes that are not deletable (see {@link SavedIndex#deletable()}) won't be
+     * Catalogs that are not deletable (see {@link SavedCatalog#deletable()}) won't be
      * deleted.
      * <p>
-     * If an exception occurs (see below), the provided indexes are not added.
+     * If an exception occurs (see below), the provided catalogs are not added.
      * <p>
-     * Warning: this will move the directory returned by {@link #getIndexDirectory(SavedIndex)} to
+     * Warning: this will move the directory returned by {@link #getCatalogDirectory(SavedCatalog)} to
      * trash if supported by this platform or recursively delete it if extension are asked to be removed.
      *
-     * @param savedIndexes the indexes to remove
-     * @param removeExtensions whether to remove extensions belonging to the indexes to remove
+     * @param savedCatalogs the catalogs to remove
+     * @param removeExtensions whether to remove extensions belonging to the catalogs to remove
      * @throws IOException if an I/O error occurs while saving the registry file. In that case,
-     * the provided indexes are not added
+     * the provided catalogs are not added
      * @throws SecurityException if the user doesn't have sufficient rights to save the registry file
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
-    public void removeIndexes(List<SavedIndex> savedIndexes, boolean removeExtensions) throws IOException {
-        List<SavedIndex> indexesToRemove = savedIndexes.stream()
-                .filter(savedIndex -> {
-                    if (savedIndex.deletable()) {
+    public void removeCatalogs(List<SavedCatalog> savedCatalogs, boolean removeExtensions) throws IOException {
+        List<SavedCatalog> catalogsToRemove = savedCatalogs.stream()
+                .filter(savedCatalog -> {
+                    if (savedCatalog.deletable()) {
                         return true;
                     } else {
-                        logger.warn("Index {} is not deletable and won't be deleted", savedIndex);
+                        logger.warn("Catalog {} is not deletable and won't be deleted", savedCatalog);
                         return false;
                     }
                 })
                 .toList();
-        if (indexesToRemove.isEmpty()) {
-            logger.debug("No index to remove");
+        if (catalogsToRemove.isEmpty()) {
+            logger.debug("No catalog to remove");
             return;
         }
 
         synchronized (this) {
-            this.savedIndexes.removeAll(indexesToRemove);
+            this.savedCatalogs.removeAll(catalogsToRemove);
         }
 
         try {
-            extensionFolderManager.saveRegistry(new Registry(this.savedIndexes));
+            extensionFolderManager.saveRegistry(new Registry(this.savedCatalogs));
         } catch (IOException | SecurityException | NullPointerException e) {
             synchronized (this) {
-                this.savedIndexes.addAll(indexesToRemove);
+                this.savedCatalogs.addAll(catalogsToRemove);
             }
 
             throw e;
         }
 
         if (removeExtensions) {
-            for (SavedIndex savedIndex: indexesToRemove) {
+            for (SavedCatalog savedCatalog : catalogsToRemove) {
                 try {
-                    extensionFolderManager.deleteExtensionsFromIndex(savedIndex);
+                    extensionFolderManager.deleteExtensionsFromCatalog(savedCatalog);
                 } catch (IOException | SecurityException | InvalidPathException | NullPointerException e) {
-                    logger.debug(String.format("Could not delete index %s", savedIndex), e);
+                    logger.debug(String.format("Could not delete catalog %s", savedCatalog), e);
                 }
             }
 
             for (var entry: installedExtensions.entrySet()) {
-                if (indexesToRemove.contains(entry.getKey().savedIndex)) {
+                if (catalogsToRemove.contains(entry.getKey().savedCatalog)) {
                     synchronized (this) {
                         entry.getValue().set(Optional.empty());
                     }
@@ -314,12 +314,12 @@ public class ExtensionIndexManager implements AutoCloseable{
             }
         }
 
-        logger.info("Indexes {} removed", indexesToRemove);
+        logger.info("Catalogs {} removed", catalogsToRemove);
     }
 
     /**
      * @return a read-only observable list of paths pointing to JAR files that were
-     * manually added (i.e. not with an index) to the extension directory. This list
+     * manually added (i.e. not with a catalog) to the extension directory. This list
      * can be updated from any thread
      */
     public ObservableList<Path> getManuallyInstalledJars() {
@@ -328,16 +328,16 @@ public class ExtensionIndexManager implements AutoCloseable{
 
     /**
      * @return a read-only observable list of paths pointing to JAR files that were
-     * added with indexes to the extension directory. This list can be updated from
+     * added with catalogs to the extension directory. This list can be updated from
      * any thread
      */
-    public ObservableList<Path> getIndexedManagedInstalledJars() {
-        return extensionFolderManager.getIndexedManagedInstalledJars();
+    public ObservableList<Path> getCatalogManagedInstalledJars() {
+        return extensionFolderManager.getCatalogManagedInstalledJars();
     }
 
 
     /**
-     * Get a list of updates available on the currently installed extensions (with indexes, extensions
+     * Get a list of updates available on the currently installed extensions (with catalogs, extensions
      * manually installed are not considered).
      *
      * @return a CompletableFuture with a list of available updates, or a failed CompletableFuture
@@ -345,15 +345,15 @@ public class ExtensionIndexManager implements AutoCloseable{
      */
     public CompletableFuture<List<UpdateAvailable>> getAvailableUpdates() {
         return CompletableFuture.supplyAsync(() -> {
-            List<SavedIndex> savedIndexes;
+            List<SavedCatalog> savedCatalogs;
             synchronized (this) {
-                // Prevent modifications to savedIndexes while iterating
-                savedIndexes = new ArrayList<>(this.savedIndexes);
+                // Prevent modifications to savedCatalogs while iterating
+                savedCatalogs = new ArrayList<>(this.savedCatalogs);
             }
 
-            return savedIndexes.stream()
-                    .map(savedIndex -> IndexFetcher.getIndex(savedIndex.rawUri()).join().extensions().stream()
-                            .map(extension -> getUpdateAvailable(savedIndex, extension))
+            return savedCatalogs.stream()
+                    .map(savedCatalog -> CatalogFetcher.getCatalog(savedCatalog.rawUri()).join().extensions().stream()
+                            .map(extension -> getUpdateAvailable(savedCatalog, extension))
                             .filter(Objects::nonNull)
                             .toList()
                     )
@@ -363,16 +363,16 @@ public class ExtensionIndexManager implements AutoCloseable{
     }
 
     /**
-     * Indicate whether an extension belonging to an index is installed.
+     * Indicate whether an extension belonging to a catalog is installed.
      *
-     * @param savedIndex the index owning the extension to find
+     * @param savedCatalog the catalog owning the extension to find
      * @param extension the extension to get installed information on
      * @return a read-only object property containing an Optional of an installed extension. If the Optional
      * is empty, then it means the extension is not installed. This property may be updated from any thread
      */
-    public ReadOnlyObjectProperty<Optional<InstalledExtension>> getInstalledExtension(SavedIndex savedIndex, Extension extension) {
+    public ReadOnlyObjectProperty<Optional<InstalledExtension>> getInstalledExtension(SavedCatalog savedCatalog, Extension extension) {
         return installedExtensions.computeIfAbsent(
-                new IndexExtension(savedIndex, extension),
+                new CatalogExtension(savedCatalog, extension),
                 this::getInstalledExtension
         );
     }
@@ -383,10 +383,10 @@ public class ExtensionIndexManager implements AutoCloseable{
      * <p>
      * If the extension already exists, it will be deleted before downloading the provided version of the extension.
      * <p>
-     * Warning: this will move to trash the directory returned by {@link #getExtensionDirectory(SavedIndex, Extension)}
+     * Warning: this will move to trash the directory returned by {@link #getExtensionDirectory(SavedCatalog, Extension)}
      * or recursively delete it if moving files to trash is not supported.
      *
-     * @param savedIndex the index owning the extension to install/update
+     * @param savedCatalog the catalog owning the extension to install/update
      * @param extension the extension to install/update
      * @param installationInformation what to install/update on the extension
      * @param onProgress a function that will be called at different steps during the installation. Its parameter
@@ -402,7 +402,7 @@ public class ExtensionIndexManager implements AutoCloseable{
      *                   calling thread
      */
     public void installOrUpdateExtension(
-            SavedIndex savedIndex,
+            SavedCatalog savedCatalog,
             Extension extension,
             InstalledExtension installationInformation,
             Consumer<Float> onProgress,
@@ -410,18 +410,18 @@ public class ExtensionIndexManager implements AutoCloseable{
             Consumer<Throwable> onComplete
     ) {
         var extensionProperty = installedExtensions.computeIfAbsent(
-                new IndexExtension(savedIndex, extension),
+                new CatalogExtension(savedCatalog, extension),
                 e -> new SimpleObjectProperty<>()
         );
 
         try {
             logger.debug("Deleting files of {} before installing or updating it", extension);
-            extensionFolderManager.deleteExtension(savedIndex, extension);
+            extensionFolderManager.deleteExtension(savedCatalog, extension);
             synchronized (this) {
                 extensionProperty.set(Optional.empty());
             }
 
-            Map<URI, Path> downloadUrlToFileName = getDownloadUrlsToFileNames(savedIndex, extension, installationInformation);
+            Map<URI, Path> downloadUrlToFileName = getDownloadUrlsToFileNames(savedCatalog, extension, installationInformation);
 
             int i = 0;
             for (var entry: downloadUrlToFileName.entrySet()) {
@@ -461,7 +461,7 @@ public class ExtensionIndexManager implements AutoCloseable{
                 extensionProperty.set(Optional.of(installationInformation));
             }
 
-            logger.info("Extension {} of {} installed", extension, savedIndex);
+            logger.info("Extension {} of {} installed", extension, savedCatalog);
             onComplete.accept(null);
         } catch (IOException | InterruptedException | IllegalArgumentException | SecurityException | NullPointerException e) {
             synchronized (this) {
@@ -480,10 +480,10 @@ public class ExtensionIndexManager implements AutoCloseable{
      * Uninstall an extension by removing its files. This can take some time depending on the number
      * of files to delete and the speed of the disk.
      * <p>
-     * Warning: this will move the directory returned by {@link #getExtensionDirectory(SavedIndex, Extension)}
+     * Warning: this will move the directory returned by {@link #getExtensionDirectory(SavedCatalog, Extension)}
      * to trash or recursively delete it if moving files to trash is not supported by this platform.
      *
-     * @param savedIndex the index owning the extension to uninstall
+     * @param savedCatalog the catalog owning the extension to uninstall
      * @param extension the extension to uninstall
      * @throws IOException if an I/O error occurs while deleting the folder
      * @throws java.nio.file.InvalidPathException if the path of the extension folder cannot be created,
@@ -491,32 +491,32 @@ public class ExtensionIndexManager implements AutoCloseable{
      * @throws SecurityException if the user doesn't have sufficient rights to delete the extension files
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
      */
-    public void removeExtension(SavedIndex savedIndex, Extension extension) throws IOException {
+    public void removeExtension(SavedCatalog savedCatalog, Extension extension) throws IOException {
         var extensionProperty = installedExtensions.computeIfAbsent(
-                new IndexExtension(savedIndex, extension),
+                new CatalogExtension(savedCatalog, extension),
                 e -> new SimpleObjectProperty<>()
         );
 
-        extensionFolderManager.deleteExtension(savedIndex, extension);
+        extensionFolderManager.deleteExtension(savedCatalog, extension);
         synchronized (this) {
             extensionProperty.set(Optional.empty());
         }
 
-        logger.info("Extension {} of {} removed", extension, savedIndex);
+        logger.info("Extension {} of {} removed", extension, savedCatalog);
     }
 
-    private synchronized void setIndexesFromRegistry() {
-        this.savedIndexes.clear();
+    private synchronized void setCatalogsFromRegistry() {
+        this.savedCatalogs.clear();
 
         try {
-            this.savedIndexes.addAll(extensionFolderManager.getSavedRegistry().indexes());
-            logger.debug("Indexes set from saved registry");
+            this.savedCatalogs.addAll(extensionFolderManager.getSavedRegistry().catalogs());
+            logger.debug("Catalogs set from saved registry");
         } catch (Exception e) {
             logger.debug("Error while retrieving saved registry. Using default one {} if not null", defaultRegistry, e);
 
             if (defaultRegistry != null) {
-                this.savedIndexes.addAll(defaultRegistry.indexes());
-                logger.debug("Indexes set from default registry");
+                this.savedCatalogs.addAll(defaultRegistry.catalogs());
+                logger.debug("Catalogs set from default registry");
             }
         }
     }
@@ -531,8 +531,8 @@ public class ExtensionIndexManager implements AutoCloseable{
             change.reset();
         });
 
-        addJars(extensionFolderManager.getIndexedManagedInstalledJars());
-        extensionFolderManager.getIndexedManagedInstalledJars().addListener((ListChangeListener<? super Path>) change -> {
+        addJars(extensionFolderManager.getCatalogManagedInstalledJars());
+        extensionFolderManager.getCatalogManagedInstalledJars().addListener((ListChangeListener<? super Path>) change -> {
             while (change.next()) {
                 addJars(change.getAddedSubList());
                 removeJars(change.getRemoved());
@@ -541,24 +541,24 @@ public class ExtensionIndexManager implements AutoCloseable{
         });
     }
 
-    private ObjectProperty<Optional<InstalledExtension>> getInstalledExtension(IndexExtension indexExtension) {
+    private ObjectProperty<Optional<InstalledExtension>> getInstalledExtension(CatalogExtension catalogExtension) {
         try {
             return new SimpleObjectProperty<>(extensionFolderManager.getInstalledExtension(
-                    indexExtension.savedIndex,
-                    indexExtension.extension
+                    catalogExtension.savedCatalog,
+                    catalogExtension.extension
             ));
         } catch (IOException | InvalidPathException | SecurityException | NullPointerException e) {
             logger.debug(
-                    String.format("Error while retrieving extension %s installation information", indexExtension.extension),
+                    String.format("Error while retrieving extension %s installation information", catalogExtension.extension),
                     e
             );
             return new SimpleObjectProperty<>(Optional.empty());
         }
     }
 
-    private UpdateAvailable getUpdateAvailable(SavedIndex savedIndex, Extension extension) {
+    private UpdateAvailable getUpdateAvailable(SavedCatalog savedCatalog, Extension extension) {
         Optional<InstalledExtension> installedExtension = getInstalledExtension(
-                new IndexExtension(savedIndex, extension)
+                new CatalogExtension(savedCatalog, extension)
         ).get();
 
         if (installedExtension.isPresent()) {
@@ -592,7 +592,7 @@ public class ExtensionIndexManager implements AutoCloseable{
     }
 
     private Map<URI, Path> getDownloadUrlsToFileNames(
-            SavedIndex savedIndex,
+            SavedCatalog savedCatalog,
             Extension extension,
             InstalledExtension installationInformation
     ) throws IOException {
@@ -614,7 +614,7 @@ public class ExtensionIndexManager implements AutoCloseable{
                 release.get().mainUrl(),
                 Paths.get(
                         extensionFolderManager.createAndGetExtensionPath(
-                                savedIndex,
+                                savedCatalog,
                                 extension,
                                 release.get().name(),
                                 ExtensionFolderManager.FileType.MAIN_JAR
@@ -628,7 +628,7 @@ public class ExtensionIndexManager implements AutoCloseable{
                     javadocUri,
                     Paths.get(
                             extensionFolderManager.createAndGetExtensionPath(
-                                    savedIndex,
+                                    savedCatalog,
                                     extension,
                                     release.get().name(),
                                     ExtensionFolderManager.FileType.JAVADOCS
@@ -643,7 +643,7 @@ public class ExtensionIndexManager implements AutoCloseable{
                     requiredDependencyUri,
                     Paths.get(
                             extensionFolderManager.createAndGetExtensionPath(
-                                    savedIndex,
+                                    savedCatalog,
                                     extension,
                                     release.get().name(),
                                     ExtensionFolderManager.FileType.REQUIRED_DEPENDENCIES
@@ -659,7 +659,7 @@ public class ExtensionIndexManager implements AutoCloseable{
                         optionalDependencyUri,
                         Paths.get(
                                 extensionFolderManager.createAndGetExtensionPath(
-                                        savedIndex,
+                                        savedCatalog,
                                         extension,
                                         release.get().name(),
                                         ExtensionFolderManager.FileType.OPTIONAL_DEPENDENCIES

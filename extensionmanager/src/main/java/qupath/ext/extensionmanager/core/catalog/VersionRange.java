@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.index;
+package qupath.ext.extensionmanager.core.catalog;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;

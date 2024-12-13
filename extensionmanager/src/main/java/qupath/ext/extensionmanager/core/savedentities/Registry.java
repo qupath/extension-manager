@@ -4,26 +4,25 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * A class containing information regarding a list of saved indexes.
+ * A class containing information regarding a list of saved catalogs.
  *
- * @param indexes the saved indexes
+ * @param catalogs the saved catalogs
  */
-public record Registry(List<SavedIndex> indexes) {
+public record Registry(List<SavedCatalog> catalogs) {
 
     /**
-     * Create a registry containing the provided list of indexes.
+     * Create a registry containing the provided list of catalogs.
      *
-     * @param indexes the indexes this registry should contain
+     * @param catalogs the catalogs this registry should contain
      */
-    public Registry(List<SavedIndex> indexes) {
-        this.indexes = Collections.unmodifiableList(indexes);
+    public Registry(List<SavedCatalog> catalogs) {
+        this.catalogs = Collections.unmodifiableList(catalogs);
     }
 
     /**
-     * @return an unmodifiable view of the indexes of this registry
+     * @return an unmodifiable view of the catalogs of this registry
      */
-    @Override
-    public List<SavedIndex> indexes() {
-        return indexes;
+    public List<SavedCatalog> catalogs() {
+        return catalogs;
     }
 }

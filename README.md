@@ -1,6 +1,6 @@
 # Extension manager
 
-A manager for [indexes](https://github.com/qupath/extension-index-model) and extensions.
+A manager for [catalogs](https://github.com/qupath/extension-catalog-model) and extensions.
 
 ## Installing
 

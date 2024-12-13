@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.gui.index;
+package qupath.ext.extensionmanager.gui.catalog;
 
 import javafx.beans.binding.Bindings;
 import javafx.beans.property.ReadOnlyObjectProperty;
@@ -11,11 +11,11 @@ import javafx.scene.layout.HBox;
 import org.controlsfx.glyphfont.FontAwesome;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import qupath.ext.extensionmanager.core.ExtensionIndexManager;
-import qupath.ext.extensionmanager.core.index.Extension;
+import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
+import qupath.ext.extensionmanager.core.catalog.Extension;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
-import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
-import qupath.ext.extensionmanager.gui.ExtensionIndexModel;
+import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
+import qupath.ext.extensionmanager.gui.ExtensionCatalogModel;
 import qupath.ext.extensionmanager.gui.UiUtils;
 import qupath.fx.dialogs.Dialogs;
 
@@ -34,9 +34,9 @@ class ExtensionLine extends HBox {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionLine.class);
     private static final ResourceBundle resources = UiUtils.getResources();
-    private final ExtensionIndexManager extensionIndexManager;
-    private final ExtensionIndexModel model;
-    private final SavedIndex savedIndex;
+    private final ExtensionCatalogManager extensionCatalogManager;
+    private final ExtensionCatalogModel model;
+    private final SavedCatalog savedCatalog;
     private final Extension extension;
     @FXML
     private Label name;
@@ -54,27 +54,27 @@ class ExtensionLine extends HBox {
     /**
      * Create the container.
      *
-     * @param extensionIndexManager the extension index manager this window should use
+     * @param extensionCatalogManager the extension catalog manager this window should use
      * @param model the model to use when accessing data
-     * @param savedIndex the index owning the extension to display
+     * @param savedCatalog the catalog owning the extension to display
      * @param extension the extension to display
      * @throws IOException when an error occurs while creating the container
      */
     public ExtensionLine(
-            ExtensionIndexManager extensionIndexManager,
-            ExtensionIndexModel model,
-            SavedIndex savedIndex,
+            ExtensionCatalogManager extensionCatalogManager,
+            ExtensionCatalogModel model,
+            SavedCatalog savedCatalog,
             Extension extension
     ) throws IOException {
-        this.extensionIndexManager = extensionIndexManager;
+        this.extensionCatalogManager = extensionCatalogManager;
         this.model = model;
-        this.savedIndex = savedIndex;
+        this.savedCatalog = savedCatalog;
         this.extension = extension;
 
         UiUtils.loadFXML(this, ExtensionLine.class.getResource("extension_line.fxml"));
 
         ReadOnlyObjectProperty<Optional<InstalledExtension>> installedExtension = model.getInstalledExtension(
-                savedIndex,
+                savedCatalog,
                 extension
         );
         if (installedExtension.get().isPresent()) {
@@ -120,7 +120,7 @@ class ExtensionLine extends HBox {
         delete.managedProperty().bind(delete.visibleProperty());
 
         add.setDisable(extension.releases().stream()
-                .noneMatch(release -> release.versionRange().isCompatible(extensionIndexManager.getVersion()))
+                .noneMatch(release -> release.versionRange().isCompatible(extensionCatalogManager.getVersion()))
         );
     }
 
@@ -128,10 +128,10 @@ class ExtensionLine extends HBox {
     private void onAddClicked(ActionEvent ignored) {
         try {
             new ExtensionModificationWindow(
-                    extensionIndexManager,
-                    savedIndex,
+                    extensionCatalogManager,
+                    savedCatalog,
                     extension,
-                    model.getInstalledExtension(savedIndex, extension).get().orElse(null)
+                    model.getInstalledExtension(savedCatalog, extension).get().orElse(null)
             ).show();
         } catch (IOException e) {
             logger.error("Error when creating extension modification window", e);
@@ -142,10 +142,10 @@ class ExtensionLine extends HBox {
     private void onSettingsClicked(ActionEvent ignored) {
         try {
             new ExtensionModificationWindow(
-                    extensionIndexManager,
-                    savedIndex,
+                    extensionCatalogManager,
+                    savedCatalog,
                     extension,
-                    model.getInstalledExtension(savedIndex, extension).get().orElse(null)
+                    model.getInstalledExtension(savedCatalog, extension).get().orElse(null)
             ).show();
         } catch (IOException e) {
             logger.error("Error when creating extension modification window", e);
@@ -156,16 +156,16 @@ class ExtensionLine extends HBox {
     private void onDeleteClicked(ActionEvent ignored) {
         Path directoryToDelete;
         try {
-            directoryToDelete = extensionIndexManager.getExtensionDirectory(savedIndex, extension);
+            directoryToDelete = extensionCatalogManager.getExtensionDirectory(savedCatalog, extension);
         } catch (IOException | InvalidPathException | SecurityException e) {
             logger.error("Cannot retrieve directory containing the files of the extension to delete", e);
             return;
         }
 
         var confirmation = Dialogs.showConfirmDialog(
-                resources.getString("Index.ExtensionLine.removeExtension"),
+                resources.getString("Catalog.ExtensionLine.removeExtension"),
                 MessageFormat.format(
-                        resources.getString("Index.ExtensionLine.remove"),
+                        resources.getString("Catalog.ExtensionLine.remove"),
                         extension.name(),
                         directoryToDelete
                 )
@@ -176,16 +176,16 @@ class ExtensionLine extends HBox {
 
         CompletableFuture.runAsync(() -> {
             try {
-                extensionIndexManager.removeExtension(savedIndex, extension);
+                extensionCatalogManager.removeExtension(savedCatalog, extension);
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
         }).handle((v, error) -> {
             if (error == null) {
                 Dialogs.showInfoNotification(
-                        resources.getString("Index.ExtensionLine.extensionManager"),
+                        resources.getString("Catalog.ExtensionLine.extensionManager"),
                         MessageFormat.format(
-                                resources.getString("Index.ExtensionLine.removed"),
+                                resources.getString("Catalog.ExtensionLine.removed"),
                                 extension.name()
                         )
                 );
@@ -193,9 +193,9 @@ class ExtensionLine extends HBox {
                 logger.error("Error while deleting extension", error);
 
                 Dialogs.showErrorMessage(
-                        resources.getString("Index.ExtensionLine.error"),
+                        resources.getString("Catalog.ExtensionLine.error"),
                         MessageFormat.format(
-                                resources.getString("Index.ExtensionLine.cannotDeleteExtension"),
+                                resources.getString("Catalog.ExtensionLine.cannotDeleteExtension"),
                                 error.getLocalizedMessage()
                         )
                 );

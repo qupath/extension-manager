@@ -16,14 +16,14 @@
             <VBox>
               <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
                   <VBox alignment="CENTER">
-                      <VBox fx:id="indexes" />
+                      <VBox fx:id="catalogs" />
                       <TitledPane fx:id="manuallyInstalledExtensionsPane" text="%ExtensionManager.manuallyInstalledExtensions">
                           <VBox fx:id="manuallyInstalledExtensions">
                         <padding>
                            <Insets top="0.0" />
                         </padding></VBox>
                       </TitledPane>
-                  <Label fx:id="noIndexOrExtension" text="%ExtensionManager.noIndexOrExtensionInstalled">
+                  <Label fx:id="noCatalogOrExtension" text="%ExtensionManager.noCatalogOrExtensionInstalled">
                      <VBox.margin>
                         <Insets bottom="10.0" left="10.0" right="10.0" top="10.0" />
                      </VBox.margin>
@@ -37,7 +37,7 @@
 
                 <HBox>
                     <Button maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#onOpenExtensionDirectory" text="%ExtensionManager.openExtensionDirectory" HBox.hgrow="ALWAYS" />
-                    <Button layoutX="10.0" layoutY="10.0" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#onManageIndexesClicked" text="%ExtensionManager.manageExtensionIndexes" HBox.hgrow="ALWAYS" />
+                    <Button layoutX="10.0" layoutY="10.0" maxWidth="1.7976931348623157E308" mnemonicParsing="false" onAction="#onManageCatalogsClicked" text="%ExtensionManager.manageExtensionCatalogs" HBox.hgrow="ALWAYS" />
                 </HBox>
             </VBox>
         </Scene>

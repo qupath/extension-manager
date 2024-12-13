@@ -11,9 +11,9 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import qupath.ext.extensionmanager.core.ExtensionIndexManager;
-import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
-import qupath.ext.extensionmanager.gui.index.IndexPane;
+import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
+import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
+import qupath.ext.extensionmanager.gui.catalog.CatalogPane;
 import qupath.fx.dialogs.Dialogs;
 
 import java.io.File;
@@ -33,31 +33,31 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 /**
- * A window that displays information and controls regarding indexes and their extensions.
+ * A window that displays information and controls regarding catalogs and their extensions.
  */
 public class ExtensionManager extends Stage {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionManager.class);
     private static final ResourceBundle resources = UiUtils.getResources();
-    private final ExtensionIndexManager extensionIndexManager;
-    private final ExtensionIndexModel model;
+    private final ExtensionCatalogManager extensionCatalogManager;
+    private final ExtensionCatalogModel model;
     private final Runnable onInvalidExtensionDirectory;
-    private IndexManager indexManager;
+    private CatalogManager catalogManager;
     @FXML
-    private VBox indexes;
+    private VBox catalogs;
     @FXML
     private TitledPane manuallyInstalledExtensionsPane;
     @FXML
     private VBox manuallyInstalledExtensions;
     @FXML
-    private Label noIndexOrExtension;
+    private Label noCatalogOrExtension;
 
     /**
      * Create the window.
      *
-     * @param extensionIndexManager the extension index manager this window should use
+     * @param extensionCatalogManager the extension catalog manager this window should use
      * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
-     *                                    directory (see {@link ExtensionIndexManager#getExtensionDirectoryPath()})
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectoryPath()})
      *                                    but this directory is currently invalid. It lets the possibility to the user to
      *                                    define and create a valid directory before performing the operation (which would
      *                                    fail if the directory is invalid). This function is guaranteed to be called from
@@ -65,20 +65,20 @@ public class ExtensionManager extends Stage {
      * @throws IOException when an error occurs while creating the container
      */
     public ExtensionManager(
-            ExtensionIndexManager extensionIndexManager,
+            ExtensionCatalogManager extensionCatalogManager,
             Runnable onInvalidExtensionDirectory
     ) throws IOException {
-        this.extensionIndexManager = extensionIndexManager;
-        this.model = new ExtensionIndexModel(extensionIndexManager);
+        this.extensionCatalogManager = extensionCatalogManager;
+        this.model = new ExtensionCatalogModel(extensionCatalogManager);
         this.onInvalidExtensionDirectory = onInvalidExtensionDirectory;
 
         UiUtils.loadFXML(this, ExtensionManager.class.getResource("extension_manager.fxml"));
 
-        UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
 
-        setIndexes();
-        model.getIndexes().addListener((ListChangeListener<? super SavedIndex>) change ->
-                setIndexes()
+        setCatalogs();
+        model.getCatalogs().addListener((ListChangeListener<? super SavedCatalog>) change ->
+                setCatalogs()
         );
 
         manuallyInstalledExtensionsPane.visibleProperty().bind(Bindings.isNotEmpty(manuallyInstalledExtensions.getChildren()));
@@ -89,11 +89,11 @@ public class ExtensionManager extends Stage {
                 setManuallyInstalledExtensions()
         );
 
-        noIndexOrExtension.visibleProperty().bind(
+        noCatalogOrExtension.visibleProperty().bind(
                 manuallyInstalledExtensionsPane.visibleProperty().not().and(
-                Bindings.isEmpty(indexes.getChildren()))
+                Bindings.isEmpty(catalogs.getChildren()))
         );
-        noIndexOrExtension.managedProperty().bind(noIndexOrExtension.visibleProperty());
+        noCatalogOrExtension.managedProperty().bind(noCatalogOrExtension.visibleProperty());
     }
 
     /**
@@ -191,9 +191,9 @@ public class ExtensionManager extends Stage {
 
     @FXML
     private void onOpenExtensionDirectory(ActionEvent ignored) {
-        UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
 
-        Path extensionDirectory = extensionIndexManager.getExtensionDirectoryPath().get();
+        Path extensionDirectory = extensionCatalogManager.getExtensionDirectoryPath().get();
         if (extensionDirectory == null) {
             Dialogs.showErrorMessage(
                     resources.getString("ExtensionManager.error"),
@@ -219,32 +219,32 @@ public class ExtensionManager extends Stage {
     }
 
     @FXML
-    private void onManageIndexesClicked(ActionEvent ignored) {
-        UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+    private void onManageCatalogsClicked(ActionEvent ignored) {
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
 
-        if (indexManager == null) {
+        if (catalogManager == null) {
             try {
-                indexManager = new IndexManager(extensionIndexManager, model, onInvalidExtensionDirectory);
-                indexManager.initOwner(this);
-                indexManager.show();
+                catalogManager = new CatalogManager(extensionCatalogManager, model, onInvalidExtensionDirectory);
+                catalogManager.initOwner(this);
+                catalogManager.show();
             } catch (IOException e) {
-                logger.error("Error while creating index manager window", e);
+                logger.error("Error while creating catalog manager window", e);
             }
         }
 
-        if (indexManager != null) {
-            indexManager.show();
-            indexManager.requestFocus();
+        if (catalogManager != null) {
+            catalogManager.show();
+            catalogManager.requestFocus();
         }
     }
 
-    private void setIndexes() {
-        indexes.getChildren().setAll(model.getIndexes().stream()
-                .map(index -> {
+    private void setCatalogs() {
+        catalogs.getChildren().setAll(model.getCatalogs().stream()
+                .map(catalog -> {
                     try {
-                        return new IndexPane(extensionIndexManager, index, model);
+                        return new CatalogPane(extensionCatalogManager, catalog, model);
                     } catch (IOException e) {
-                        logger.error("Error while creating index pane", e);
+                        logger.error("Error while creating catalog pane", e);
                         return null;
                     }
                 })

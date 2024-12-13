@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.index;
+package qupath.ext.extensionmanager.core.catalog;
 
 import qupath.ext.extensionmanager.core.Version;
 

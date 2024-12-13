@@ -22,10 +22,10 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import qupath.ext.extensionmanager.core.ExtensionIndexManager;
-import qupath.ext.extensionmanager.core.index.IndexFetcher;
-import qupath.ext.extensionmanager.core.index.Index;
-import qupath.ext.extensionmanager.core.savedentities.SavedIndex;
+import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
+import qupath.ext.extensionmanager.core.catalog.Catalog;
+import qupath.ext.extensionmanager.core.catalog.CatalogFetcher;
+import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
 import qupath.ext.extensionmanager.core.tools.GitHubRawLinkFinder;
 import qupath.fx.dialogs.Dialogs;
 
@@ -42,50 +42,50 @@ import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 /**
- * A window to manage indexes.
+ * A window to manage catalogs.
  */
-class IndexManager extends Stage {
+class CatalogManager extends Stage {
 
-    private static final Logger logger = LoggerFactory.getLogger(IndexManager.class);
+    private static final Logger logger = LoggerFactory.getLogger(CatalogManager.class);
     private static final ResourceBundle resources = UiUtils.getResources();
-    private static final String INDEX_FILE_NAME = "index.json";
-    private final ExtensionIndexManager extensionIndexManager;
+    private static final String CATALOG_FILE_NAME = "catalog.json";
+    private final ExtensionCatalogManager extensionCatalogManager;
     private final Runnable onInvalidExtensionDirectory;
     @FXML
-    private TableView<SavedIndex> indexTable;
+    private TableView<SavedCatalog> catalogTable;
     @FXML
-    private TableColumn<SavedIndex, String> nameColumn;
+    private TableColumn<SavedCatalog, String> nameColumn;
     @FXML
-    private TableColumn<SavedIndex, URI> urlColumn;
+    private TableColumn<SavedCatalog, URI> urlColumn;
     @FXML
-    private TableColumn<SavedIndex, String> descriptionColumn;
+    private TableColumn<SavedCatalog, String> descriptionColumn;
     @FXML
-    private TextField indexUrl;
+    private TextField catalogUrl;
 
     /**
      * Create the window.
      *
-     * @param extensionIndexManager the extension index manager this window should use
+     * @param extensionCatalogManager the extension catalog manager this window should use
      * @param model the model to use when accessing data
      * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
-     *                                    directory (see {@link ExtensionIndexManager#getExtensionDirectoryPath()})
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectoryPath()})
      *                                    but this directory is currently invalid. It lets the possibility to the user to
      *                                    define and create a valid directory before performing the operation (which would
      *                                    fail if the directory is invalid). This function is guaranteed to be called from
      *                                    the JavaFX Application Thread
      * @throws IOException when an error occurs while creating the window
      */
-    public IndexManager(
-            ExtensionIndexManager extensionIndexManager,
-            ExtensionIndexModel model,
+    public CatalogManager(
+            ExtensionCatalogManager extensionCatalogManager,
+            ExtensionCatalogModel model,
             Runnable onInvalidExtensionDirectory
     ) throws IOException {
-        this.extensionIndexManager = extensionIndexManager;
+        this.extensionCatalogManager = extensionCatalogManager;
         this.onInvalidExtensionDirectory = onInvalidExtensionDirectory;
 
-        UiUtils.loadFXML(this, IndexManager.class.getResource("index_manager.fxml"));
+        UiUtils.loadFXML(this, CatalogManager.class.getResource("catalog_manager.fxml"));
 
-        indexTable.setItems(model.getIndexes());
+        catalogTable.setItems(model.getCatalogs());
 
         setColumns();
         setDoubleClickHandler();
@@ -94,10 +94,10 @@ class IndexManager extends Stage {
 
     @FXML
     private void onAddClicked(ActionEvent ignored) {
-        UiUtils.promptExtensionDirectory(extensionIndexManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
 
-        String indexUrl = this.indexUrl.getText();
-        if (indexUrl == null || indexUrl.isBlank()) {
+        String catalogUrl = this.catalogUrl.getText();
+        if (catalogUrl == null || catalogUrl.isBlank()) {
             return;
         }
 
@@ -106,8 +106,8 @@ class IndexManager extends Stage {
         try {
             progressWindow = new ProgressWindow(
                     MessageFormat.format(
-                            resources.getString("IndexManager.fetching"),
-                            indexUrl
+                            resources.getString("CatalogManager.fetching"),
+                            catalogUrl
                     ),
                     executor::shutdownNow
             );
@@ -121,66 +121,66 @@ class IndexManager extends Stage {
         executor.execute(() -> {
             try {
                 Platform.runLater(() -> progressWindow.setStatus(MessageFormat.format(
-                        resources.getString("IndexManager.attemptingToGetRawLink"),
-                        indexUrl
+                        resources.getString("CatalogManager.attemptingToGetRawLink"),
+                        catalogUrl
                 )));
 
                 URI uri;
                 try {
-                    uri = GitHubRawLinkFinder.getRawLinkOfFileInRepository(indexUrl, INDEX_FILE_NAME::equals).get();
+                    uri = GitHubRawLinkFinder.getRawLinkOfFileInRepository(catalogUrl, CATALOG_FILE_NAME::equals).get();
                 } catch (ExecutionException e) {
-                    logger.debug("Attempt to get raw link of {} failed. Considering it to be a raw link.", indexUrl, e);
-                    uri = new URI(indexUrl);
+                    logger.debug("Attempt to get raw link of {} failed. Considering it to be a raw link.", catalogUrl, e);
+                    uri = new URI(catalogUrl);
                 }
 
                 URI finalUri = uri;
                 Platform.runLater(() -> {
                     progressWindow.setProgress(0.5f);
                     progressWindow.setStatus(MessageFormat.format(
-                            resources.getString("IndexManager.fetchingIndexLocatedAt"),
+                            resources.getString("CatalogManager.fetchingCatalogLocatedAt"),
                             finalUri.toString()
                     ));
                 });
-                Index index = IndexFetcher.getIndex(uri).get();
+                Catalog catalog = CatalogFetcher.getCatalog(uri).get();
                 Platform.runLater(() -> progressWindow.setProgress(1));
 
-                if (extensionIndexManager.getIndexes().stream().anyMatch(savedIndex -> savedIndex.name().equals(index.name()))) {
+                if (extensionCatalogManager.getCatalogs().stream().anyMatch(savedCatalog -> savedCatalog.name().equals(catalog.name()))) {
                     Platform.runLater(() -> new Alert(
                             Alert.AlertType.ERROR,
                             MessageFormat.format(
-                                    resources.getString("IndexManager.indexAlreadyExists"),
-                                    index.name()
+                                    resources.getString("CatalogManager.catalogAlreadyExists"),
+                                    catalog.name()
                             )
                     ).show());
                     return;
                 }
 
                 try {
-                    extensionIndexManager.addIndex(List.of(new SavedIndex(
-                            index.name(),
-                            index.description(),
-                            new URI(indexUrl),
+                    extensionCatalogManager.addCatalog(List.of(new SavedCatalog(
+                            catalog.name(),
+                            catalog.description(),
+                            new URI(catalogUrl),
                             uri,
                             true
                     )));
                 } catch (URISyntaxException | SecurityException | NullPointerException | IOException e) {
-                    logger.error("Error when saving index {}", index.name(), e);
+                    logger.error("Error when saving catalog {}", catalog.name(), e);
 
                     Platform.runLater(() -> new Alert(
                             Alert.AlertType.ERROR,
                             MessageFormat.format(
-                                    resources.getString("IndexManager.cannotSaveIndex"),
+                                    resources.getString("CatalogManager.cannotSaveCatalog"),
                                     e.getLocalizedMessage()
                             )
                     ).show());
                 }
             } catch (Exception e) {
-                logger.debug("Error when fetching index at {}", indexUrl, e);
+                logger.debug("Error when fetching catalog at {}", catalogUrl, e);
 
                 Platform.runLater(() -> new Alert(
                         Alert.AlertType.ERROR,
                         MessageFormat.format(
-                                resources.getString("IndexManager.cannotAddIndex"),
+                                resources.getString("CatalogManager.cannotAddCatalog"),
                                 e.getLocalizedMessage()
                         )
                 ).show());
@@ -217,8 +217,8 @@ class IndexManager extends Stage {
     }
 
     private void setDoubleClickHandler() {
-        indexTable.setRowFactory(tv -> {
-            TableRow<SavedIndex> row = new TableRow<>();
+        catalogTable.setRowFactory(tv -> {
+            TableRow<SavedCatalog> row = new TableRow<>();
             row.setOnMouseClicked(event -> {
                 if (event.getClickCount() == 2 && (!row.isEmpty())) {
                     String url = row.getItem().uri().toString();
@@ -227,9 +227,9 @@ class IndexManager extends Stage {
                         logger.error("Error when opening {} in browser", url, error);
 
                         Dialogs.showErrorMessage(
-                                resources.getString("IndexManager.browserError"),
+                                resources.getString("CatalogManager.browserError"),
                                 MessageFormat.format(
-                                        resources.getString("IndexManager.cannotOpen"),
+                                        resources.getString("CatalogManager.cannotOpen"),
                                         url,
                                         error.getLocalizedMessage()
                                 )
@@ -244,53 +244,53 @@ class IndexManager extends Stage {
     }
 
     private void setRightClickHandler() {
-        indexTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+        catalogTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
         ContextMenu menu = new ContextMenu();
-        indexTable.setContextMenu(menu);
+        catalogTable.setContextMenu(menu);
 
-        MenuItem copyItem = new MenuItem(resources.getString("IndexManager.copyUrl"));
+        MenuItem copyItem = new MenuItem(resources.getString("CatalogManager.copyUrl"));
         copyItem.setOnAction(ignored -> {
             ClipboardContent content = new ClipboardContent();
-            content.putString(indexTable.getSelectionModel().getSelectedItem().uri().toString());
+            content.putString(catalogTable.getSelectionModel().getSelectedItem().uri().toString());
             Clipboard.getSystemClipboard().setContent(content);
         });
         menu.getItems().add(copyItem);
 
-        MenuItem removeItem = new MenuItem(resources.getString("IndexManager.remove"));
+        MenuItem removeItem = new MenuItem(resources.getString("CatalogManager.remove"));
         removeItem.setOnAction(ignored -> {
-            List<String> nonDeletableIndexes = indexTable.getSelectionModel().getSelectedItems().stream()
-                    .filter(savedIndex -> !savedIndex.deletable())
-                    .map(SavedIndex::name)
+            List<String> nonDeletableCatalogs = catalogTable.getSelectionModel().getSelectedItems().stream()
+                    .filter(savedCatalog -> !savedCatalog.deletable())
+                    .map(SavedCatalog::name)
                     .toList();
-            if (!nonDeletableIndexes.isEmpty()) {
+            if (!nonDeletableCatalogs.isEmpty()) {
                 Dialogs.showErrorMessage(
-                        resources.getString("IndexManager.error"),
+                        resources.getString("CatalogManager.error"),
                         MessageFormat.format(
-                                resources.getString("IndexManager.cannotBeDeleted"),
-                                nonDeletableIndexes.size() == 1 ? nonDeletableIndexes.getFirst() : nonDeletableIndexes.toString()
+                                resources.getString("CatalogManager.cannotBeDeleted"),
+                                nonDeletableCatalogs.size() == 1 ? nonDeletableCatalogs.getFirst() : nonDeletableCatalogs.toString()
                         )
                 );
                 return;
             }
 
-            List<SavedIndex> indexesToDelete = indexTable.getSelectionModel().getSelectedItems().stream()
-                    .filter(SavedIndex::deletable)
+            List<SavedCatalog> catalogsToDelete = catalogTable.getSelectionModel().getSelectedItems().stream()
+                    .filter(SavedCatalog::deletable)
                     .toList();
-            if (indexesToDelete.isEmpty()) {
+            if (catalogsToDelete.isEmpty()) {
                 return;
             }
 
             boolean deleteExtensions = Dialogs.showConfirmDialog(
-                    resources.getString("IndexManager.deleteIndex"),
+                    resources.getString("CatalogManager.deleteCatalog"),
                     MessageFormat.format(
-                            resources.getString("IndexManager.deleteExtensions"),
-                            indexesToDelete.stream()
-                                    .map(savedIndex -> {
+                            resources.getString("CatalogManager.deleteExtensions"),
+                            catalogsToDelete.stream()
+                                    .map(savedCatalog -> {
                                         try {
-                                            return String.format("\"%s\"", extensionIndexManager.getIndexDirectory(savedIndex));
+                                            return String.format("\"%s\"", extensionCatalogManager.getCatalogDirectory(savedCatalog));
                                         } catch (IOException e) {
-                                            logger.error("Cannot retrieve path of {}", savedIndex, e);
+                                            logger.error("Cannot retrieve path of {}", savedCatalog, e);
                                             return null;
                                         }
                                     })
@@ -300,17 +300,17 @@ class IndexManager extends Stage {
             );
 
             try {
-                extensionIndexManager.removeIndexes(
-                        indexesToDelete,
+                extensionCatalogManager.removeCatalogs(
+                        catalogsToDelete,
                         deleteExtensions
                 );
             } catch (IOException | SecurityException | NullPointerException e) {
-                logger.error("Error when removing {}", indexesToDelete, e);
+                logger.error("Error when removing {}", catalogsToDelete, e);
 
                 Dialogs.showErrorMessage(
-                        resources.getString("IndexManager.error"),
+                        resources.getString("CatalogManager.error"),
                         MessageFormat.format(
-                                resources.getString("IndexManager.cannotRemoveSelectedIndexes"),
+                                resources.getString("CatalogManager.cannotRemoveSelectedCatalogs"),
                                 e.getLocalizedMessage()
                         )
                 );
@@ -319,7 +319,7 @@ class IndexManager extends Stage {
         menu.getItems().add(removeItem);
     }
 
-    private static Callback<TableColumn<SavedIndex, String>, TableCell<SavedIndex, String>> getStringCellFactory() {
+    private static Callback<TableColumn<SavedCatalog, String>, TableCell<SavedCatalog, String>> getStringCellFactory() {
         return column -> new TableCell<>() {
             @Override
             protected void updateItem(String item, boolean empty) {
