@@ -6,7 +6,7 @@
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.HBox?>
 
-<fx:root alignment="CENTER_LEFT" spacing="5.0" type="HBox" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
+<fx:root alignment="CENTER_LEFT" spacing="5.0" styleClass="row" type="HBox" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
    <Label fx:id="name" maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS">
       <tooltip>
          <Tooltip fx:id="tooltip" />
