@@ -39,29 +39,33 @@ public class IndexPane extends TitledPane {
 
         IndexFetcher.getIndex(savedIndex.rawUri()).handle((fetchedIndex, error) -> {
             if (error == null) {
-                Platform.runLater(() -> extensions.getChildren().addAll(IntStream.range(0, fetchedIndex.extensions().size())
-                        .mapToObj(i -> {
-                            try {
-                                ExtensionLine extensionLine = new ExtensionLine(
-                                        extensionIndexManager,
-                                        model,
-                                        savedIndex,
-                                        fetchedIndex.extensions().get(i)
-                                );
+                Platform.runLater(() -> {
+                    setExpanded(true);
 
-                                if (i % 2 == 0) {
-                                    extensionLine.getStyleClass().add(UiUtils.getClassName(UiUtils.CssClass.ODD_ROW));
+                    extensions.getChildren().addAll(IntStream.range(0, fetchedIndex.extensions().size())
+                            .mapToObj(i -> {
+                                try {
+                                    ExtensionLine extensionLine = new ExtensionLine(
+                                            extensionIndexManager,
+                                            model,
+                                            savedIndex,
+                                            fetchedIndex.extensions().get(i)
+                                    );
+
+                                    if (i % 2 == 0) {
+                                        extensionLine.getStyleClass().add(UiUtils.getClassName(UiUtils.CssClass.ODD_ROW));
+                                    }
+
+                                    return extensionLine;
+                                } catch (IOException e) {
+                                    logger.error("Error while creating extension line", e);
+                                    return null;
                                 }
-
-                                return extensionLine;
-                            } catch (IOException e) {
-                                logger.error("Error while creating extension line", e);
-                                return null;
-                            }
-                        })
-                        .filter(Objects::nonNull)
-                        .toList()
-                ));
+                            })
+                            .filter(Objects::nonNull)
+                            .toList()
+                    );
+                });
             } else {
                 logger.warn("Error when fetching index at {}", savedIndex.rawUri(), error);
             }
