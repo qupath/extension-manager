@@ -60,14 +60,17 @@ public class FileTools {
      */
     public static void moveDirectoryToTrashOrDeleteRecursively(File directoryToBeDeleted) throws IOException {
         if (!directoryToBeDeleted.exists()) {
+            logger.debug("Can't delete {}: the path does not exist", directoryToBeDeleted);
             return;
         }
 
         Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
 
         if (desktop != null && desktop.isSupported(Desktop.Action.MOVE_TO_TRASH)) {
+            logger.debug("Moving {} to trash", directoryToBeDeleted);
             desktop.moveToTrash(directoryToBeDeleted);
         } else {
+            logger.debug("Moving to trash not supported. Deleting {}", directoryToBeDeleted);
             deleteDirectoryRecursively(directoryToBeDeleted);
         }
     }
