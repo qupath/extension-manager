@@ -9,6 +9,9 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.controlsfx)
     implementation(libs.qupath.fxtras)
+
+    testImplementation(libs.junit)
+    testImplementation(libs.logback)
 }
 
 java {
@@ -20,4 +23,8 @@ java {
 javafx {
     version = libs.versions.javafx.get()
     modules = listOf("javafx.controls", "javafx.fxml")
+}
+
+tasks.named<Test>("test") {
+    useJUnitPlatform()
 }

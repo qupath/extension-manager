@@ -33,6 +33,10 @@ public class CatalogFetcher {
      * a valid catalog
      */
     public static CompletableFuture<Catalog> getCatalog(URI uri) {
+        if (uri == null) {
+            return CompletableFuture.failedFuture(new NullPointerException("The provided URI is null"));
+        }
+
         if (!"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme())) {
             return CompletableFuture.failedFuture(new IllegalArgumentException(
                     String.format("Unknown scheme %s in %s", uri.getScheme(), uri)
@@ -60,14 +64,6 @@ public class CatalogFetcher {
                     Catalog catalog = gson.fromJson(response.body(), Catalog.class);
                     if (catalog == null) {
                         throw new RuntimeException(String.format("The response to %s is empty.", uri));
-                    }
-                    try {
-                        catalog.checkValidity();
-                    } catch (IllegalStateException e) {
-                        throw new RuntimeException(
-                                String.format(String.format("The response to %s doesn't contain a valid Catalog", uri)),
-                                e
-                        );
                     }
 
                     return catalog;
