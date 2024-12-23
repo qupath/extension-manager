@@ -6,7 +6,8 @@ import java.util.regex.Pattern;
 
 /**
  * A version that follows the semantic versions "v[MAJOR].[MINOR].[PATCH]", although trailing release candidate qualifiers
- * (eg, "-rc1") are also allowed.
+ * (eg, "-rc1") are also allowed. Other types of qualifiers (like "-SNAPSHOT") are also accepted but won't be retained (so
+ * they won't be taken into account in {@link #compareTo(Version)} for example).
  * <p>
  * This class is thread-safe.
  */
@@ -23,8 +24,9 @@ public class Version implements Comparable<Version> {
      *
      * @param version the text containing the release to parse. It must correspond to the
      *                specifications of this class.
-     * @throws IllegalArgumentException when the provided text doesn't correspond to the
+     * @throws IllegalArgumentException if the provided text doesn't correspond to the
      * specifications of this class
+     * @throws NullPointerException if the provided version is null
      */
     public Version(String version) {
         Matcher matcher = VERSION_PATTERN.matcher(version);
@@ -94,6 +96,7 @@ public class Version implements Comparable<Version> {
      * @param version the text containing the release to parse
      * @throws IllegalArgumentException when the provided text doesn't correspond
      * to the specifications of this class
+     * @throws NullPointerException if the provided version is null
      */
     public static void isValid(String version) {
         new Version(version);

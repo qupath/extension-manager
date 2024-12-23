@@ -35,8 +35,8 @@ public record VersionRange(String min, String max, List<String> excludes) {
      * </ul>
      *
      * @param min the minimum/lowest version that this extension is known to be compatible with
-     * @param max the maximum/highest version that this extension is known to be compatible with
-     * @param excludes any specific versions that are not compatible
+     * @param max the maximum/highest version that this extension is known to be compatible with. Can be null
+     * @param excludes any specific versions that are not compatible. Can be null
      * @throws IllegalArgumentException when the created version range is not valid (see the requirements above)
      */
     public VersionRange(String min, String max, List<String> excludes) {

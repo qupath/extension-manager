@@ -38,6 +38,7 @@ class ExtensionLine extends HBox {
     private final ExtensionCatalogModel model;
     private final SavedCatalog savedCatalog;
     private final Extension extension;
+    private final Runnable onInvalidExtensionDirectory;
     @FXML
     private Label name;
     @FXML
@@ -58,18 +59,26 @@ class ExtensionLine extends HBox {
      * @param model the model to use when accessing data
      * @param savedCatalog the catalog owning the extension to display
      * @param extension the extension to display
+     * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectoryPath()})
+     *                                    but this directory is currently invalid. It lets the possibility to the user to
+     *                                    define and create a valid directory before performing the operation (which would
+     *                                    fail if the directory is invalid). This function is guaranteed to be called from
+     *                                    the JavaFX Application Thread
      * @throws IOException when an error occurs while creating the container
      */
     public ExtensionLine(
             ExtensionCatalogManager extensionCatalogManager,
             ExtensionCatalogModel model,
             SavedCatalog savedCatalog,
-            Extension extension
+            Extension extension,
+            Runnable onInvalidExtensionDirectory
     ) throws IOException {
         this.extensionCatalogManager = extensionCatalogManager;
         this.model = model;
         this.savedCatalog = savedCatalog;
         this.extension = extension;
+        this.onInvalidExtensionDirectory = onInvalidExtensionDirectory;
 
         UiUtils.loadFXML(this, ExtensionLine.class.getResource("extension_line.fxml"));
 
@@ -127,12 +136,15 @@ class ExtensionLine extends HBox {
     @FXML
     private void onAddClicked(ActionEvent ignored) {
         try {
-            new ExtensionModificationWindow(
+            ExtensionModificationWindow extensionModificationWindow = new ExtensionModificationWindow(
                     extensionCatalogManager,
                     savedCatalog,
                     extension,
-                    model.getInstalledExtension(savedCatalog, extension).get().orElse(null)
-            ).show();
+                    model.getInstalledExtension(savedCatalog, extension).get().orElse(null),
+                    onInvalidExtensionDirectory
+            );
+            extensionModificationWindow.initOwner(getScene().getWindow());
+            extensionModificationWindow.show();
         } catch (IOException e) {
             logger.error("Error when creating extension modification window", e);
         }
@@ -141,12 +153,15 @@ class ExtensionLine extends HBox {
     @FXML
     private void onSettingsClicked(ActionEvent ignored) {
         try {
-            new ExtensionModificationWindow(
+            ExtensionModificationWindow extensionModificationWindow = new ExtensionModificationWindow(
                     extensionCatalogManager,
                     savedCatalog,
                     extension,
-                    model.getInstalledExtension(savedCatalog, extension).get().orElse(null)
-            ).show();
+                    model.getInstalledExtension(savedCatalog, extension).get().orElse(null),
+                    onInvalidExtensionDirectory
+            );
+            extensionModificationWindow.initOwner(getScene().getWindow());
+            extensionModificationWindow.show();
         } catch (IOException e) {
             logger.error("Error when creating extension modification window", e);
         }
@@ -157,8 +172,16 @@ class ExtensionLine extends HBox {
         Path directoryToDelete;
         try {
             directoryToDelete = extensionCatalogManager.getExtensionDirectory(savedCatalog, extension);
-        } catch (IOException | InvalidPathException | SecurityException e) {
+        } catch (IOException | InvalidPathException | SecurityException | NullPointerException e) {
             logger.error("Cannot retrieve directory containing the files of the extension to delete", e);
+
+            Dialogs.showErrorMessage(
+                    resources.getString("Catalog.ExtensionLine.error"),
+                    MessageFormat.format(
+                            resources.getString("Catalog.ExtensionLine.cannotDeleteExtension"),
+                            e.getLocalizedMessage()
+                    )
+            );
             return;
         }
 
@@ -207,7 +230,9 @@ class ExtensionLine extends HBox {
     @FXML
     private void onInfoClicked(ActionEvent ignored) {
         try {
-            new ExtensionDetails(extension).show();
+            ExtensionDetails extensionDetails = new ExtensionDetails(extension);
+            extensionDetails.initOwner(getScene().getWindow());
+            extensionDetails.show();
         } catch (IOException e) {
             logger.error("Error when creating extension detail pane", e);
         }

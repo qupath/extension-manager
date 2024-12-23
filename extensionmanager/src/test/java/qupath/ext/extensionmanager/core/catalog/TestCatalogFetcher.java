@@ -1,25 +1,20 @@
 package qupath.ext.extensionmanager.core.catalog;
 
-import com.sun.net.httpserver.HttpServer;
-import com.sun.net.httpserver.SimpleFileServer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import qupath.ext.extensionmanager.SimpleServer;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.URI;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutionException;
 
 public class TestCatalogFetcher {
 
-    private static final String HOSTNAME = "localhost";
-    private static final int PORT = 8080;
     private static final Catalog VALID_CATALOG = new Catalog(
             "Some catalog",
             "Some description",
@@ -48,7 +43,7 @@ public class TestCatalogFetcher {
                     )
             ))
     );
-    private static HttpServer server;
+    private static SimpleServer server;
     private enum JsonCatalog {
         VALID_CATALOG("valid_catalog"),
         INVALID_CATALOG("invalid_catalog");
@@ -59,10 +54,6 @@ public class TestCatalogFetcher {
             this.name = name;
         }
 
-        public URI getURI() {
-            return URI.create(String.format("http://%s:%d/%s", HOSTNAME, PORT, getFileName()));
-        }
-
         public String getFileName() {
             return String.format("%s.json", name);
         }
@@ -70,26 +61,19 @@ public class TestCatalogFetcher {
 
     @BeforeAll
     static void setupServer() throws IOException {
-        Path serverFilesPath = Files.createTempDirectory("").toFile().toPath();
-        for (JsonCatalog jsonCatalog: JsonCatalog.values()) {
-            Files.copy(
-                    Objects.requireNonNull(TestCatalogFetcher.class.getResourceAsStream(jsonCatalog.getFileName())),
-                    serverFilesPath.resolve(jsonCatalog.getFileName())
-            );
-        }
-
-        server = SimpleFileServer.createFileServer(
-                new InetSocketAddress(HOSTNAME, PORT),
-                serverFilesPath,
-                SimpleFileServer.OutputLevel.INFO
+        server = new SimpleServer(Arrays.stream(JsonCatalog.values())
+                .map(jsonCatalog -> new SimpleServer.FileToServe(
+                        jsonCatalog.getFileName(),
+                        Objects.requireNonNull(TestCatalogFetcher.class.getResourceAsStream(jsonCatalog.getFileName()))
+                ))
+                .toList()
         );
-        server.start();
     }
 
     @AfterAll
     static void stopServer() {
         if (server != null) {
-            server.stop(0);
+            server.close();
         }
     }
 
@@ -111,12 +95,14 @@ public class TestCatalogFetcher {
 
     @Test
     void Check_Valid_Catalog_Retrievable() {
-        Assertions.assertDoesNotThrow(() -> CatalogFetcher.getCatalog(JsonCatalog.VALID_CATALOG.getURI()).get());
+        Assertions.assertDoesNotThrow(() -> CatalogFetcher.getCatalog(
+                server.getURI(JsonCatalog.VALID_CATALOG.getFileName())).get()
+        );
     }
 
     @Test
     void Check_Valid_Catalog_Values() throws ExecutionException, InterruptedException {
-        Catalog catalog = CatalogFetcher.getCatalog(JsonCatalog.VALID_CATALOG.getURI()).get();
+        Catalog catalog = CatalogFetcher.getCatalog(server.getURI(JsonCatalog.VALID_CATALOG.getFileName())).get();
 
         Assertions.assertEquals(VALID_CATALOG, catalog);
     }
@@ -125,7 +111,7 @@ public class TestCatalogFetcher {
     void Check_Invalid_Catalog() {
         Assertions.assertThrows(
                 ExecutionException.class,
-                () -> CatalogFetcher.getCatalog(JsonCatalog.INVALID_CATALOG.getURI()).get()
+                () -> CatalogFetcher.getCatalog(server.getURI(JsonCatalog.INVALID_CATALOG.getFileName())).get()
         );
     }
 }

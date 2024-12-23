@@ -11,6 +11,7 @@ import java.io.IOException;
 
 /**
  * A window that displays the progress of a long-running and cancellable operation.
+ * It is modal to its owning window.
  */
 public class ProgressWindow extends Stage {
 
@@ -33,7 +34,7 @@ public class ProgressWindow extends Stage {
 
         UiUtils.loadFXML(this, ProgressWindow.class.getResource("progress_window.fxml"));
 
-        initModality(Modality.APPLICATION_MODAL);
+        initModality(Modality.WINDOW_MODAL);
 
         setTitle(label);
     }

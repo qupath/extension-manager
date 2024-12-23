@@ -32,7 +32,7 @@ import java.util.function.Predicate;
  * <p>
  * This watcher must be {@link #close() closed} once no longer used.
  */
-public class RecursiveDirectoryWatcher implements AutoCloseable {
+class RecursiveDirectoryWatcher implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(RecursiveDirectoryWatcher.class);
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
@@ -47,6 +47,8 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
     /**
      * Set up some listeners to be called when files are added or removed
      * from the provided directory or one of its children.
+     * The listeners may be called only a few seconds after a file was added
+     * or removed.
      *
      * @param directoryToWatch the path of the root directory to watch
      * @param depth the maximum number of directory levels to watch
@@ -62,10 +64,10 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
      *                      from any thread. If a folder containing a file to consider is deleted, this function will be
      *                      called on this file
      * @throws IOException if an I/O error occurs
-     * @throws UnsupportedOperationException if watching file system is not supported by
-     * this system
+     * @throws UnsupportedOperationException if watching file system is not supported by this system
      * @throws java.nio.file.NotDirectoryException if there is no directory on the provided path
      * @throws SecurityException if the user doesn't have enough rights to read the provided directory
+     * @throws NullPointerException if one of the parameter is used and null
      */
     public RecursiveDirectoryWatcher(
             Path directoryToWatch,
@@ -143,7 +145,7 @@ public class RecursiveDirectoryWatcher implements AutoCloseable {
             } catch (ClosedWatchServiceException e) {
                 logger.debug("Service watching {} closed", directoryToWatch, e);
             } catch (IOException | NullPointerException | SecurityException e) {
-                logger.error(String.format("Error when watching directory %s", directoryToWatch), e);
+                logger.error("Error when watching directory {}", directoryToWatch, e);
             }
         });
     }

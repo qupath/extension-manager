@@ -32,6 +32,7 @@ import qupath.fx.dialogs.Dialogs;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.nio.file.InvalidPathException;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.Objects;
@@ -116,6 +117,7 @@ class CatalogManager extends Stage {
             executor.shutdown();
             return;
         }
+        progressWindow.initOwner(this);
         progressWindow.show();
 
         executor.execute(() -> {
@@ -164,7 +166,7 @@ class CatalogManager extends Stage {
                             true
                     )));
                 } catch (URISyntaxException | SecurityException | NullPointerException | IOException e) {
-                    logger.error("Error when saving catalog {}", catalog.name(), e);
+                    logger.error("Error when saving {}", catalog.name(), e);
 
                     Platform.runLater(() -> new Alert(
                             Alert.AlertType.ERROR,
@@ -259,6 +261,8 @@ class CatalogManager extends Stage {
 
         MenuItem removeItem = new MenuItem(resources.getString("CatalogManager.remove"));
         removeItem.setOnAction(ignored -> {
+            UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+
             List<String> nonDeletableCatalogs = catalogTable.getSelectionModel().getSelectedItems().stream()
                     .filter(savedCatalog -> !savedCatalog.deletable())
                     .map(SavedCatalog::name)
@@ -289,8 +293,8 @@ class CatalogManager extends Stage {
                                     .map(savedCatalog -> {
                                         try {
                                             return String.format("\"%s\"", extensionCatalogManager.getCatalogDirectory(savedCatalog));
-                                        } catch (IOException e) {
-                                            logger.error("Cannot retrieve path of {}", savedCatalog, e);
+                                        } catch (IOException | InvalidPathException | SecurityException | NullPointerException e) {
+                                            logger.error("Cannot retrieve path of {}", savedCatalog.name(), e);
                                             return null;
                                         }
                                     })

@@ -8,21 +8,26 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Path;
+import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 
 /**
  * A class that returns an ObservableList of paths to certain files that
- * are contained within a specific directory (recursively).
+ * are contained within a specific directory (recursively but with a maximal
+ * depth of 8).
  * The list is automatically updated based on changes to the specified directory
  * (or one of its descendant).
+ * Note that changes may take a few seconds to be detected.
  * <p>
  * This watcher must be {@link #close() closed} once no longer used.
+ * <p>
+ * This class is thread-safe.
  */
 public class FilesWatcher implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(FilesWatcher.class);
     private static final int MAX_SEARCH_DEPTH = 8;
-    private final ObservableList<Path> files = FXCollections.observableArrayList();
+    private final ObservableList<Path> files = FXCollections.observableList(new CopyOnWriteArrayList<>());
     private final ObservableList<Path> filesImmutable = FXCollections.unmodifiableObservableList(files);
     private final ObservableValue<Path> directoryToWatch;
     private final Predicate<Path> filesToFind;
@@ -32,16 +37,25 @@ public class FilesWatcher implements AutoCloseable {
     /**
      * Create the watcher.
      *
-     * @param directoryToWatch the root directory to watch
+     * @param directoryToWatch the root directory to watch. Already existing files of this root directory
+     *                         will also be detected
      * @param filesToFind a predicate indicating if a Path corresponds to a file that should be considered
      * @param directoriesToSkip a predicate indicating if a Path corresponding to a directory must be ignored
      *                          (including its children)
+     * @throws NullPointerException if one of the parameter is null
      */
     public FilesWatcher(
             ObservableValue<Path> directoryToWatch,
             Predicate<Path> filesToFind,
             Predicate<Path> directoriesToSkip
     ) {
+        if (filesToFind == null) {
+            throw new NullPointerException("The files to find predicate is null");
+        }
+        if (directoriesToSkip == null) {
+            throw new NullPointerException("The directories to skip predicate is null");
+        }
+
         this.directoryToWatch = directoryToWatch;
         this.filesToFind = filesToFind;
         this.directoriesToSkip = directoriesToSkip;
@@ -93,23 +107,20 @@ public class FilesWatcher implements AutoCloseable {
                     addedFile -> {
                         logger.debug("File {} added", addedFile);
 
-                        synchronized (this) {
-                            files.add(addedFile);
-                        }
+                        files.add(addedFile);
                     },
                     removedFile -> {
                         logger.debug("File {} removed", removedFile);
 
-                        synchronized (this) {
-                            files.remove(removedFile);
-                        }
+                        files.remove(removedFile);
                     }
             );
         } catch (IOException | UnsupportedOperationException | SecurityException e) {
-            logger.debug(String.format(
-                    "Error when creating files watcher for %s. Files added to this directory won't be detected.",
-                    directory
-            ), e);
+            logger.debug(
+                    "Error when creating files watcher for {}. Files added to this directory won't be detected.",
+                    directory,
+                    e
+            );
         }
     }
 }

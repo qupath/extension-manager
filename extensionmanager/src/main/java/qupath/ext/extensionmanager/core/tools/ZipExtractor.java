@@ -30,25 +30,28 @@ public class ZipExtractor {
 
     /**
      * Extract files from the provided ZIP file path and place them in the provided output folder.
-     * This function may take a lot of time depending on the ZIP file size.
+     * This function may take a lot of time depending on the ZIP file size, but is cancellable.
      *
-     * @param inputZipPath the path to the ZIP file to extract
-     * @param outputFolderPath the path to a folder that should contain the extracted files
+     * @param inputZipPath the path of the ZIP file to extract
+     * @param outputFolderPath the path of a folder that should contain the extracted files
      * @param onProgress a function that will be called at different steps during the extraction. Its parameter
      *                   will be a float between 0 and 1 indicating the progress of the extraction (0: beginning,
      *                   1: finished). This function will be called from the calling thread
-     * @throws IOException if an I/O error has occurred while opening the ZIP file or extracting the files
+     * @throws IOException if an I/O error has occurred while opening the ZIP file or extracting the files,
+     * or if the output directory cannot be created
+     * @throws InterruptedException if the running thread is interrupted
      * @throws java.util.zip.ZipException if a ZIP format error has occurred when opening the ZIP file
      * @throws SecurityException if the user doesn't have sufficient rights to open the ZIP file or
      * write files to the output folder
+     * @throws NullPointerException if one of the provided parameter is null
      */
-    public static void extractZipToFolder(Path inputZipPath, Path outputFolderPath, Consumer<Float> onProgress) throws IOException {
+    public static void extractZipToFolder(Path inputZipPath, Path outputFolderPath, Consumer<Float> onProgress) throws IOException, InterruptedException {
         File outputFolder = outputFolderPath.toFile();
 
         byte[] buffer = new byte[BUFFER_SIZE];
         int numberOfZipFiles = getNumberOfFilesInZip(inputZipPath);
 
-        logger.debug("Starting extracting {} files {} to {}", numberOfZipFiles, inputZipPath, outputFolderPath);
+        logger.debug("Starting extracting {} files from {} to {}", numberOfZipFiles, inputZipPath, outputFolderPath);
         try (
                 InputStream inputStream = Files.newInputStream(inputZipPath);
                 ZipInputStream zipInputStream = new ZipInputStream(inputStream)
@@ -75,6 +78,10 @@ public class ZipExtractor {
                         int len;
                         while ((len = zipInputStream.read(buffer)) > 0) {
                             outputStream.write(buffer, 0, len);
+
+                            if (Thread.interrupted()) {
+                                throw new InterruptedException(String.format("Extraction of %s interrupted", inputZipPath));
+                            }
                         }
                     }
                     logger.debug("File {} extracted to {}", zipEntry, newFile);

@@ -9,7 +9,6 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
-import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
@@ -27,6 +26,7 @@ import qupath.ext.extensionmanager.gui.UiUtils;
 import qupath.fx.dialogs.Dialogs;
 
 import java.io.IOException;
+import java.net.URI;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.text.MessageFormat;
@@ -34,10 +34,12 @@ import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
  * A window that provide choices to install or modify the installation of an extension.
+ * It is modal to its owning window.
  */
 class ExtensionModificationWindow extends Stage {
 
@@ -47,6 +49,7 @@ class ExtensionModificationWindow extends Stage {
     private final SavedCatalog savedCatalog;
     private final Extension extension;
     private final InstalledExtension installedExtension;
+    private final Runnable onInvalidExtensionDirectory;
     @FXML
     private Label name;
     @FXML
@@ -54,7 +57,7 @@ class ExtensionModificationWindow extends Stage {
     @FXML
     private CheckBox optionalDependencies;
     @FXML
-    private HBox warningContainer;
+    private Label filesToDownload;
     @FXML
     private Label deleteDirectory;
     @FXML
@@ -68,22 +71,32 @@ class ExtensionModificationWindow extends Stage {
      * @param extension the extension to modify
      * @param installedExtension information on the already installed extension if this window should allow modifying it,
      *                           or null if the extension is to be installed by this window
+     * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectoryPath()})
+     *                                    but this directory is currently invalid. It lets the possibility to the user to
+     *                                    define and create a valid directory before performing the operation (which would
+     *                                    fail if the directory is invalid). This function is guaranteed to be called from
+     *                                    the JavaFX Application Thread
      * @throws IOException when an error occurs while creating the window
      */
     public ExtensionModificationWindow(
             ExtensionCatalogManager extensionCatalogManager,
             SavedCatalog savedCatalog,
             Extension extension,
-            InstalledExtension installedExtension
+            InstalledExtension installedExtension,
+            Runnable onInvalidExtensionDirectory
     ) throws IOException {
         this.extensionCatalogManager = extensionCatalogManager;
         this.savedCatalog = savedCatalog;
         this.extension = extension;
         this.installedExtension = installedExtension;
+        this.onInvalidExtensionDirectory = onInvalidExtensionDirectory;
 
         UiUtils.loadFXML(this, ExtensionModificationWindow.class.getResource("extension_modification_window.fxml"));
 
-        initModality(Modality.APPLICATION_MODAL);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+
+        initModality(Modality.WINDOW_MODAL);
 
         setTitle(resources.getString(installedExtension == null ?
                 "Catalog.ExtensionModificationWindow.installExtension" :
@@ -122,6 +135,37 @@ class ExtensionModificationWindow extends Stage {
         optionalDependencies.managedProperty().bind(optionalDependencies.visibleProperty());
         optionalDependencies.setSelected(installedExtension != null && installedExtension.optionalDependenciesInstalled());
 
+        filesToDownload.textProperty().bind(Bindings.createStringBinding(
+                () -> {
+                    try {
+                        return MessageFormat.format(
+                                resources.getString("Catalog.ExtensionModificationWindow.followingFilesDownloaded"),
+                                extensionCatalogManager.getDownloadLinks(
+                                        savedCatalog,
+                                        extension,
+                                        new InstalledExtension(
+                                                release.getSelectionModel().getSelectedItem().name(),
+                                                optionalDependencies.isSelected()
+                                        )
+                                )
+                                        .stream()
+                                        .map(URI::toString)
+                                        .collect(Collectors.joining("\n"))
+                        );
+                    } catch (NullPointerException | SecurityException | IllegalArgumentException e) {
+                        logger.error("Error while retrieving download links", e);
+                        return resources.getString("Catalog.ExtensionModificationWindow.cannotRetrieveLinks");
+                    }
+                },
+                release.getSelectionModel().selectedItemProperty(),
+                optionalDependencies.selectedProperty()
+        ));
+        filesToDownload.textProperty().addListener((p, o, n) ->
+                // Platform.runLater() is used to delay resizing after the size of filesToDownload actually changes
+                // This doesn't directly happen when the label text changes
+                Platform.runLater(this::sizeToScene)
+        );
+
         try {
             Path extensionDirectory = extensionCatalogManager.getExtensionDirectory(
                     savedCatalog,
@@ -134,10 +178,10 @@ class ExtensionModificationWindow extends Stage {
                         extensionDirectory.toString()
                 ));
             } else {
-                warningContainer.setVisible(false);
-                warningContainer.setManaged(false);
+                deleteDirectory.setVisible(false);
+                deleteDirectory.setManaged(false);
             }
-        } catch (IOException | InvalidPathException | SecurityException e) {
+        } catch (IOException | InvalidPathException | SecurityException | NullPointerException e) {
             logger.error("Cannot see if extension directory is not empty", e);
 
             deleteDirectory.setText(resources.getString("Catalog.ExtensionModificationWindow.extensionDirectoryNotRetrieved"));
@@ -156,6 +200,8 @@ class ExtensionModificationWindow extends Stage {
         }
         Release selectedRelease = release.getSelectionModel().getSelectedItem();
 
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+
         try {
             if (installedExtension == null && isJarAlreadyDownloaded(selectedRelease)) {
                 var confirmation = Dialogs.showConfirmDialog(
@@ -171,8 +217,8 @@ class ExtensionModificationWindow extends Stage {
             logger.debug(
                     "Cannot get file name from {}. Assuming {} with release {} is not already installed",
                     selectedRelease.mainUrl(),
-                    extension,
-                    selectedRelease
+                    extension.name(),
+                    selectedRelease.name()
             );
         }
 
@@ -195,53 +241,55 @@ class ExtensionModificationWindow extends Stage {
             executor.shutdown();
             return;
         }
-
+        progressWindow.initOwner(this);
         progressWindow.show();
-        executor.execute(() -> extensionCatalogManager.installOrUpdateExtension(
-                savedCatalog,
-                extension,
-                new InstalledExtension(
-                        selectedRelease.name(),
-                        optionalDependencies.isSelected()
-                ),
-                progress -> Platform.runLater(() -> progressWindow.setProgress(progress)),
-                (step, resource) -> Platform.runLater(() -> progressWindow.setStatus(MessageFormat.format(
-                        resources.getString(switch (step) {
-                            case DOWNLOADING -> "Catalog.ExtensionModificationWindow.downloading";
-                            case EXTRACTING_ZIP -> "Catalog.ExtensionModificationWindow.extracting";
-                        }),
-                        resource
-                ))),
-                error -> {
-                    if (error == null) {
-                        Dialogs.showInfoNotification(
-                                resources.getString("Catalog.ExtensionModificationWindow.extensionManager"),
-                                MessageFormat.format(
-                                        resources.getString("Catalog.ExtensionModificationWindow.installed"),
-                                        extension.name(),
-                                        release.getSelectionModel().getSelectedItem().name()
-                                )
-                        );
-                    } else {
-                        logger.error("Error while installing extension", error);
 
-                        Platform.runLater(() -> new Alert(
-                                Alert.AlertType.ERROR,
-                                MessageFormat.format(
-                                        resources.getString("Catalog.ExtensionModificationWindow.notInstalled"),
-                                        extension.name(),
-                                        release.getSelectionModel().getSelectedItem().name(),
-                                        error.getLocalizedMessage()
-                                )
-                        ).show());
-                    }
+        executor.execute(() -> {
+            try {
+                extensionCatalogManager.installOrUpdateExtension(
+                        savedCatalog,
+                        extension,
+                        new InstalledExtension(
+                                selectedRelease.name(),
+                                optionalDependencies.isSelected()
+                        ),
+                        progress -> Platform.runLater(() -> progressWindow.setProgress(progress)),
+                        (step, resource) -> Platform.runLater(() -> progressWindow.setStatus(MessageFormat.format(
+                                resources.getString(switch (step) {
+                                    case DOWNLOADING -> "Catalog.ExtensionModificationWindow.downloading";
+                                    case EXTRACTING_ZIP -> "Catalog.ExtensionModificationWindow.extracting";
+                                }),
+                                resource
+                        )))
+                );
 
-                    Platform.runLater(() -> {
-                        progressWindow.close();
-                        close();
-                    });
-                }
-        ));
+                Dialogs.showInfoNotification(
+                        resources.getString("Catalog.ExtensionModificationWindow.extensionManager"),
+                        MessageFormat.format(
+                                resources.getString("Catalog.ExtensionModificationWindow.installed"),
+                                extension.name(),
+                                release.getSelectionModel().getSelectedItem().name()
+                        )
+                );
+            } catch (Exception e) {
+                logger.error("Error while installing extension", e);
+
+                Platform.runLater(() -> new Alert(
+                        Alert.AlertType.ERROR,
+                        MessageFormat.format(
+                                resources.getString("Catalog.ExtensionModificationWindow.notInstalled"),
+                                extension.name(),
+                                release.getSelectionModel().getSelectedItem().name(),
+                                e.getLocalizedMessage()
+                        )
+                ).show());
+            }
+
+            Platform.runLater(() -> {
+                progressWindow.close();
+                close();
+            });
+        });
         executor.shutdown();
     }
 
