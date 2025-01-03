@@ -3,6 +3,7 @@ package qupath.ext.extensionmanager.core.catalog;
 import qupath.ext.extensionmanager.core.Version;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -10,10 +11,12 @@ import java.util.List;
  *
  * @param name the name of this release in the form "v[MAJOR].[MINOR].[PATCH]" or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
  * @param mainUrl the GitHub URL where the main extension jar can be downloaded
- * @param requiredDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where required dependency jars can be downloaded
- * @param optionalDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be downloaded
+ * @param requiredDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where required dependency jars can be downloaded.
+ *                               This list is immutable and won't be null
+ * @param optionalDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be downloaded.
+ *                               This list is immutable and won't be null
  * @param javadocsUrls SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension
- *                     jar and for dependencies can be downloaded
+ *                     jar and for dependencies can be downloaded. This list is immutable and won't be null
  * @param versionRange a specification of minimum and maximum compatible versions
  */
 public record Release(
@@ -62,36 +65,12 @@ public record Release(
     ) {
         this.name = name;
         this.mainUrl = mainUrl;
-        this.requiredDependencyUrls = requiredDependencyUrls;
-        this.optionalDependencyUrls = optionalDependencyUrls;
-        this.javadocsUrls = javadocsUrls;
+        this.requiredDependencyUrls = requiredDependencyUrls == null ? List.of() : Collections.unmodifiableList(requiredDependencyUrls);
+        this.optionalDependencyUrls = optionalDependencyUrls == null ? List.of() : Collections.unmodifiableList(optionalDependencyUrls);
+        this.javadocsUrls = javadocsUrls == null ? List.of() : Collections.unmodifiableList(javadocsUrls);
         this.versionRange = versionRange;
 
         checkValidity();
-    }
-
-    /**
-     * @return the list of required dependencies, or an empty list if there is none
-     */
-    @Override
-    public List<URI> requiredDependencyUrls() {
-        return requiredDependencyUrls == null ? List.of() : requiredDependencyUrls;
-    }
-
-    /**
-     * @return the list of optional dependencies, or an empty list if there is none
-     */
-    @Override
-    public List<URI> optionalDependencyUrls() {
-        return optionalDependencyUrls == null ? List.of() : optionalDependencyUrls;
-    }
-
-    /**
-     * @return the list of javadoc URLs, or an empty list if there is none
-     */
-    @Override
-    public List<URI> javadocsUrls() {
-        return javadocsUrls == null ? List.of() : javadocsUrls;
     }
 
     private void checkValidity() {

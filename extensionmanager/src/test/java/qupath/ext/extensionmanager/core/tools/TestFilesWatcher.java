@@ -4,6 +4,8 @@ import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.TestUtils;
 
 import java.nio.file.Files;
@@ -11,6 +13,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 public class TestFilesWatcher {
+
+    private static final Logger logger = LoggerFactory.getLogger(TestFilesWatcher.class);
 
     @Test
     void Check_Directory_To_Watch_Property_Null() {
@@ -111,6 +115,32 @@ public class TestFilesWatcher {
                 expectedFiles,
                 filesWatcher.getFiles()
         );
+
+        filesWatcher.close();
+    }
+
+    @Test
+    void Check_No_Error_When_File_Added_While_Iterating() throws Exception {
+        Path directoryToWatch = Files.createTempDirectory(null);
+
+        FilesWatcher filesWatcher = new FilesWatcher(
+                new SimpleObjectProperty<>(directoryToWatch),
+                path -> true,
+                path -> false
+        );
+        List<Path> expectedFiles = List.of(
+                Files.createFile(directoryToWatch.resolve("file1")),
+                Files.createFile(directoryToWatch.resolve("file2"))
+        );
+        List<Path> files = filesWatcher.getFiles();
+
+        Assertions.assertDoesNotThrow(() -> {
+            while (!files.containsAll(expectedFiles)) {
+                for (Path file: files) {
+                    logger.trace(file.toString());
+                }
+            }
+        });
 
         filesWatcher.close();
     }

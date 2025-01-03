@@ -392,7 +392,8 @@ class ExtensionFolderManager implements AutoCloseable {
 
     /**
      * @return a read-only observable list of paths pointing to JAR files that were
-     * manually added (i.e. not with a catalog) to the extension directory
+     * manually added (i.e. not with a catalog) to the extension directory. This list
+     * may be updated from any thread
      */
     public ObservableList<Path> getManuallyInstalledJars() {
         return manuallyInstalledExtensionsWatcher.getFiles();
@@ -400,7 +401,7 @@ class ExtensionFolderManager implements AutoCloseable {
 
     /**
      * @return a read-only observable list of paths pointing to JAR files that were
-     * added with catalogs to the extension directory
+     * added with catalogs to the extension directory. This list may be updated from any thread
      */
     public ObservableList<Path> getCatalogManagedInstalledJars() {
         return catalogManagedInstalledExtensionsWatcher.getFiles();

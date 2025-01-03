@@ -1,6 +1,7 @@
 package qupath.ext.extensionmanager.core.catalog;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -9,7 +10,7 @@ import java.util.stream.Collectors;
  *
  * @param name the name of the catalog
  * @param description a short (one sentence or so) description of what the catalog contains and what its purpose is
- * @param extensions the collection of extensions that the catalog describes
+ * @param extensions the collection of extensions that the catalog describes. This list is immutable
  */
 public record Catalog(String name, String description, List<Extension> extensions) {
 
@@ -34,7 +35,7 @@ public record Catalog(String name, String description, List<Extension> extension
     public Catalog(String name, String description, List<Extension> extensions) {
         this.name = name;
         this.description = description;
-        this.extensions = extensions;
+        this.extensions = extensions == null ? null : Collections.unmodifiableList(extensions);
 
         checkValidity();
     }

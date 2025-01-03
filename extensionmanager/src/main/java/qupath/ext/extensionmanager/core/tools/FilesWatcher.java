@@ -73,7 +73,8 @@ public class FilesWatcher implements AutoCloseable {
 
     /**
      * @return a read-only list of files that are currently present according to the parameters
-     * specified in {@link #FilesWatcher(ObservableValue, Predicate, Predicate)}
+     * specified in {@link #FilesWatcher(ObservableValue, Predicate, Predicate)}. This list may be
+     * updated from any thread
      */
     public ObservableList<Path> getFiles() {
         return filesImmutable;

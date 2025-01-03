@@ -3,6 +3,7 @@ package qupath.ext.extensionmanager.core.catalog;
 import qupath.ext.extensionmanager.core.Version;
 
 import java.net.URI;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
@@ -13,7 +14,7 @@ import java.util.Optional;
  * @param description a short (one sentence or so) description of what the extension is and what it does
  * @param author the author or group responsible for the extension
  * @param homepage a link to the GitHub repository associated with the extension
- * @param releases a list of available releases of the extension
+ * @param releases a list of available releases of the extension. This list is immutable
  */
 public record Extension(String name, String description, String author, URI homepage, List<Release> releases) {
 
@@ -42,7 +43,7 @@ public record Extension(String name, String description, String author, URI home
         this.description = description;
         this.author = author;
         this.homepage = homepage;
-        this.releases = releases;
+        this.releases = releases == null ? null : Collections.unmodifiableList(releases);
 
         checkValidity();
     }

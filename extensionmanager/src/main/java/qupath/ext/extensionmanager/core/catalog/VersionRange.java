@@ -4,6 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.Version;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
@@ -12,8 +13,8 @@ import java.util.List;
  * (eg, "-rc1") are also allowed.
  *
  * @param min the minimum/lowest version that this extension is known to be compatible with
- * @param max the maximum/highest version that this extension is known to be compatible with
- * @param excludes any specific versions that are not compatible
+ * @param max the maximum/highest version that this extension is known to be compatible with. Can be null
+ * @param excludes any specific versions that are not compatible. This list is immutable and won't be null
  */
 public record VersionRange(String min, String max, List<String> excludes) {
 
@@ -42,26 +43,9 @@ public record VersionRange(String min, String max, List<String> excludes) {
     public VersionRange(String min, String max, List<String> excludes) {
         this.min = min;
         this.max = max;
-        this.excludes = excludes;
+        this.excludes = excludes == null ? List.of() : Collections.unmodifiableList(excludes);
 
         checkValidity();
-    }
-
-    /**
-     * @return the maximum/highest release that this extension is known to be compatible with.
-     * Can be null
-     */
-    @Override
-    public String max() {
-        return max;
-    }
-
-    /**
-     * @return the excluded versions, or an empty list if there is none
-     */
-    @Override
-    public List<String> excludes() {
-        return excludes == null ? List.of() : excludes;
     }
 
     /**
