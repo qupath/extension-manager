@@ -115,7 +115,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
 
             synchronized (this) {
                 for (CatalogExtension catalogExtension : installedExtensions.keySet()) {
-                    installedExtensions.replace(catalogExtension, getInstalledExtension(catalogExtension));
+                    installedExtensions.get(catalogExtension).set(getInstalledExtension(catalogExtension));
                 }
             }
         });
@@ -412,7 +412,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
     public ReadOnlyObjectProperty<Optional<InstalledExtension>> getInstalledExtension(SavedCatalog savedCatalog, Extension extension) {
         return installedExtensions.computeIfAbsent(
                 new CatalogExtension(savedCatalog, extension),
-                this::getInstalledExtension
+                catalogExtension -> new SimpleObjectProperty<>(getInstalledExtension(catalogExtension))
         );
     }
 
@@ -525,18 +525,18 @@ public class ExtensionCatalogManager implements AutoCloseable{
         }
     }
 
-    private ObjectProperty<Optional<InstalledExtension>> getInstalledExtension(CatalogExtension catalogExtension) {
+    private Optional<InstalledExtension> getInstalledExtension(CatalogExtension catalogExtension) {
         try {
-            return new SimpleObjectProperty<>(extensionFolderManager.getInstalledExtension(
+            return extensionFolderManager.getInstalledExtension(
                     catalogExtension.savedCatalog,
                     catalogExtension.extension
-            ));
+            );
         } catch (IOException | InvalidPathException | SecurityException | NullPointerException e) {
             logger.debug(
                     String.format("Error while retrieving %s installation information", catalogExtension.extension.name()),
                     e
             );
-            return new SimpleObjectProperty<>(Optional.empty());
+            return Optional.empty();
         }
     }
 
@@ -690,7 +690,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
     private UpdateAvailable getUpdateAvailable(SavedCatalog savedCatalog, Extension extension) {
         Optional<InstalledExtension> installedExtension = getInstalledExtension(
                 new CatalogExtension(savedCatalog, extension)
-        ).get();
+        );
 
         if (installedExtension.isPresent()) {
             String installedRelease = installedExtension.get().releaseName();
