@@ -28,7 +28,7 @@ public class GitHubRawLinkFinder {
 
     private static final Logger logger = LoggerFactory.getLogger(GitHubRawLinkFinder.class);
     private static final String GITHUB_HOST = "github.com";
-    private static final Pattern REPOSITORY_PATTERN = Pattern.compile("^\\/([^\\/]+)\\/([^\\/]+)(?:\\/(?:[^\\/]+)\\/(?:[^\\/]+)\\/(.*))?");
+    private static final Pattern REPOSITORY_PATTERN = Pattern.compile("^/([^/]+)/([^/]+)(?:/[^/]+/[^/]+/(.*))?");
     private static final String GET_REPOSITORY_CONTENT_URL = "https://api.github.com/repos/%s/%s/contents/%s";
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final Gson gson = new GsonBuilder().create();
@@ -46,12 +46,18 @@ public class GitHubRawLinkFinder {
      * @param url the URL pointing to the GitHub repository containing the file to find. It can be a link
      *            to any directory or file within the repository. If it's a link to a directory, all direct
      *            children of this directory will be searched. If it's a link to a file, only this file will
-     *            be searched
+     *            be searched. It must contain "http" or "https"
      * @param filePredicate a predicate on the name of the file to find
      * @return a CompletableFuture with the link pointing to the raw content of the desired file, or a failed
      * CompletableFuture if it couldn't be retrieved
      */
     public static CompletableFuture<URI> getRawLinkOfFileInRepository(String url, Predicate<String> filePredicate) {
+        if (url == null) {
+            return CompletableFuture.failedFuture(new NullPointerException(
+                    "The provided URL is null"
+            ));
+        }
+
         GitHubRepository gitHubRepository;
         try {
             gitHubRepository = getGitHubRepository(url);
@@ -97,21 +103,9 @@ public class GitHubRawLinkFinder {
                         "Request to %s failed with status code %d.", uri, response.statusCode()
                 ));
             }
-            logger.debug("Got response with status 200 {} from {}", response, uri);
+            logger.debug("Got response from {} with status 200:\n{}", uri, response.body());
 
-            List<FileEntry> fileEntries;
-            try {
-                fileEntries = gson.fromJson(response.body(), new TypeToken<List<FileEntry>>(){}.getType());
-            } catch (JsonSyntaxException e) {
-                logger.debug("{} is not a list of file entries. Trying to see if it's a file entry", response.body(), e);
-                fileEntries = List.of(gson.fromJson(response.body(), FileEntry.class));
-                logger.debug("{} is a file entry", response.body());
-            }
-            if (fileEntries == null) {
-                throw new RuntimeException(String.format("The response to %s is empty.", uri));
-            }
-
-            return fileEntries.stream()
+            return getFileEntries(uri, response.body()).stream()
                     .filter(fileEntry -> {
                         if (fileEntry.name != null && fileEntry.download_url != null) {
                             logger.debug("File entry {} retained because it has a name and a download URL", fileEntry);
@@ -166,6 +160,25 @@ public class GitHubRawLinkFinder {
             );
         } else {
             throw new IllegalArgumentException(String.format("Username or repository not found in %s", uri));
+        }
+    }
+
+    private static List<FileEntry> getFileEntries(URI uri, String body) {
+        try {
+            return Objects.requireNonNull(
+                    gson.fromJson(body, new TypeToken<List<FileEntry>>(){}.getType()),
+                    String.format("The response to %s is empty.", uri)
+            );
+        } catch (JsonSyntaxException e) {
+            logger.debug("{} is not a list of file entries. Trying to see if it's a file entry", body, e);
+
+            FileEntry fileEntry = Objects.requireNonNull(
+                    gson.fromJson(body, FileEntry.class),
+                    String.format("The response to %s is empty.", uri)
+            );
+            logger.debug("{} is a file entry", body);
+
+            return List.of(fileEntry);
         }
     }
 }

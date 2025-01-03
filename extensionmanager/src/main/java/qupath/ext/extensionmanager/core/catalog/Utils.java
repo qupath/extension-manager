@@ -18,11 +18,11 @@ class Utils {
      * @param field the field to check
      * @param fieldName the name of the field (used for logging)
      * @param objectName the name of the object containing the provided field (used for logging)
-     * @throws IllegalStateException when the provided field is null
+     * @throws IllegalArgumentException when the provided field is null
      */
     public static void checkField(Object field, String fieldName, String objectName) {
         if (field == null) {
-            throw new IllegalStateException(String.format("'%s' field not found in %s", fieldName, objectName));
+            throw new IllegalArgumentException(String.format("'%s' field not found in %s", fieldName, objectName));
         }
     }
 
@@ -30,11 +30,11 @@ class Utils {
      * Check that a URI comes from GitHub.com.
      *
      * @param uri the URI to check
-     * @throws IllegalStateException when the provided URL is not coming from GitHub.com
+     * @throws IllegalArgumentException when the provided URL is not coming from GitHub.com
      */
     public static void checkGithubURI(URI uri) {
         if (!GITHUB_HOST.equals(uri.getHost())) {
-            throw new IllegalStateException(String.format(
+            throw new IllegalArgumentException(String.format(
                     "The %s URL is not a %s URL", uri, GITHUB_HOST
             ));
         }

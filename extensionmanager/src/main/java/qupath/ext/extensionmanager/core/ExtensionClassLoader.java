@@ -10,6 +10,7 @@ import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -42,6 +43,7 @@ class ExtensionClassLoader extends URLClassLoader {
      * provided path
      * @throws SecurityException if the user doesn't have read rights on the provided path
      * @throws MalformedURLException if an error occurred while converting the provided path to a URL
+     * @throws NullPointerException if the provided path is null
      */
     public synchronized void addJar(Path jarPath) throws MalformedURLException {
         addURL(jarPath.toUri().toURL());
@@ -73,6 +75,7 @@ class ExtensionClassLoader extends URLClassLoader {
      * loaded anymore. A future implementation may actually unload the JAR
      *
      * @param jarPath the path of the JAR file to unload
+     * @throws NullPointerException if the provided path is null
      */
     public synchronized void removeJar(Path jarPath) {
         filenamesAdded.remove(jarPath.getFileName().toString());
@@ -83,8 +86,9 @@ class ExtensionClassLoader extends URLClassLoader {
      * happen from any thread.
      *
      * @param runnable the runnable to run when a JAR file is loaded
+     * @throws NullPointerException if the provided path is null
      */
     public synchronized void addOnJarLoadedRunnable(Runnable runnable) {
-        runnables.add(runnable);
+        runnables.add(Objects.requireNonNull(runnable));
     }
 }

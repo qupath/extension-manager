@@ -132,11 +132,12 @@ public class ExtensionManager extends Stage {
                         extensionFolder.resolve(file.toPath().getFileName()).toFile()
                 );
             } catch (InvalidPathException | NullPointerException e) {
-                logger.debug(String.format(
-                        "Error while resolving path of %s in extension folder %s ",
+                logger.debug(
+                        "Error while resolving path of {} in extension folder {}",
                         file,
-                        extensionFolder
-                ), e);
+                        extensionFolder,
+                        e
+                );
             }
         }
 
@@ -242,7 +243,7 @@ public class ExtensionManager extends Stage {
         catalogs.getChildren().setAll(model.getCatalogs().stream()
                 .map(catalog -> {
                     try {
-                        return new CatalogPane(extensionCatalogManager, catalog, model);
+                        return new CatalogPane(extensionCatalogManager, catalog, model, onInvalidExtensionDirectory);
                     } catch (IOException e) {
                         logger.error("Error while creating catalog pane", e);
                         return null;

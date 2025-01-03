@@ -18,6 +18,7 @@ import java.util.stream.Stream;
 public class FileTools {
 
     private static final Logger logger = LoggerFactory.getLogger(FileTools.class);
+
     private FileTools() {
         throw new AssertionError("This class is not instantiable.");
     }
@@ -29,6 +30,7 @@ public class FileTools {
      * @return whether the provided path is a directory and is not empty
      * @throws IOException if an I/O error occurs
      * @throws SecurityException if the user doesn't have sufficient rights to read the file
+     * @throws NullPointerException if the provided path is null
      */
     public static boolean isDirectoryNotEmpty(Path path) throws IOException {
         if (Files.isDirectory(path)) {
@@ -53,45 +55,26 @@ public class FileTools {
      * files to trash.
      * This won't do anything if the provided file doesn't exist.
      *
-     * @param directoryToBeDeleted the file or directory to delete
+     * @param directoryToDelete the file or directory to delete
      * @throws IOException if an I/O error occurs
      * @throws SecurityException if the user doesn't have sufficient rights to move or
      * delete some files
+     * @throws NullPointerException if the provided directory is null
      */
-    public static void moveDirectoryToTrashOrDeleteRecursively(File directoryToBeDeleted) throws IOException {
-        if (!directoryToBeDeleted.exists()) {
+    public static void moveDirectoryToTrashOrDeleteRecursively(File directoryToDelete) throws IOException {
+        if (!directoryToDelete.exists()) {
+            logger.debug("Can't delete {}: the path does not exist", directoryToDelete);
             return;
         }
 
         Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
-
         if (desktop != null && desktop.isSupported(Desktop.Action.MOVE_TO_TRASH)) {
-            desktop.moveToTrash(directoryToBeDeleted);
+            logger.debug("Moving {} to trash", directoryToDelete);
+            desktop.moveToTrash(directoryToDelete);
         } else {
-            deleteDirectoryRecursively(directoryToBeDeleted);
+            logger.debug("Moving to trash not supported. Deleting {}", directoryToDelete);
+            deleteDirectoryRecursively(directoryToDelete);
         }
-    }
-
-    /**
-     * Delete the provided file or directory, and delete all its children
-     * recursively if it's a directory.
-     *
-     * @param directoryToBeDeleted the file or directory to delete
-     * @throws IOException if an I/O error occurs
-     * @throws SecurityException if the user doesn't have sufficient rights to delete
-     * some files
-     */
-    public static void deleteDirectoryRecursively(File directoryToBeDeleted) throws IOException {
-        logger.debug("Deleting children of {}", directoryToBeDeleted);
-        File[] childFiles = directoryToBeDeleted.listFiles();
-        if (childFiles != null) {
-            for (File file : childFiles) {
-                deleteDirectoryRecursively(file);
-            }
-        }
-
-        logger.debug("Deleting {}", directoryToBeDeleted);
-        Files.deleteIfExists(directoryToBeDeleted.toPath());
     }
 
     /**
@@ -100,6 +83,7 @@ public class FileTools {
      *
      * @param name the name to strip characters from
      * @return the provided name without characters that would be invalid in a file name
+     * @throws NullPointerException if the provided name is null
      */
     public static String stripInvalidFilenameCharacters(String name) {
         return name.replaceAll("[\\\\/:\"*?<>|\\n\\r]+", "");
@@ -120,12 +104,13 @@ public class FileTools {
     }
 
     /**
-     * Indicate whether a file is a parent of another file. The provided
+     * Indicate whether a file is a (direct or not) parent of another file. The provided
      * files don't have to exist.
      *
      * @param possibleParent the file that may be a parent of the other file
      * @param possibleChild the file that may be a child of the other file
      * @return a boolean indicating whether the possible parent is actually a parent of the other file
+     * @throws NullPointerException if the possible child is null
      */
     public static boolean isFileParentOfAnotherFile(File possibleParent, File possibleChild) {
         File parent = possibleChild.getParentFile();
@@ -137,5 +122,18 @@ public class FileTools {
             }
         }
         return false;
+    }
+
+    private static void deleteDirectoryRecursively(File directoryToBeDeleted) throws IOException {
+        logger.debug("Deleting children of {}", directoryToBeDeleted);
+        File[] childFiles = directoryToBeDeleted.listFiles();
+        if (childFiles != null) {
+            for (File file : childFiles) {
+                deleteDirectoryRecursively(file);
+            }
+        }
+
+        logger.debug("Deleting {}", directoryToBeDeleted);
+        Files.deleteIfExists(directoryToBeDeleted.toPath());
     }
 }

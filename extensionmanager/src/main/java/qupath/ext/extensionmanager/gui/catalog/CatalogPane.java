@@ -30,9 +30,21 @@ public class CatalogPane extends TitledPane {
      *
      * @param extensionCatalogManager the extension catalog manager this pane should use
      * @param savedCatalog the catalog to display
+     * @param model the model to use when accessing data
+     * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectoryPath()})
+     *                                    but this directory is currently invalid. It lets the possibility to the user to
+     *                                    define and create a valid directory before performing the operation (which would
+     *                                    fail if the directory is invalid). This function is guaranteed to be called from
+     *                                    the JavaFX Application Thread
      * @throws IOException when an error occurs while loading a FXML file
      */
-    public CatalogPane(ExtensionCatalogManager extensionCatalogManager, SavedCatalog savedCatalog, ExtensionCatalogModel model) throws IOException {
+    public CatalogPane(
+            ExtensionCatalogManager extensionCatalogManager,
+            SavedCatalog savedCatalog,
+            ExtensionCatalogModel model,
+            Runnable onInvalidExtensionDirectory
+    ) throws IOException {
         UiUtils.loadFXML(this, CatalogPane.class.getResource("catalog_pane.fxml"));
 
         setText(savedCatalog.name());
@@ -49,7 +61,8 @@ public class CatalogPane extends TitledPane {
                                             extensionCatalogManager,
                                             model,
                                             savedCatalog,
-                                            fetchedCatalog.extensions().get(i)
+                                            fetchedCatalog.extensions().get(i),
+                                            onInvalidExtensionDirectory
                                     );
 
                                     if (i % 2 == 0) {

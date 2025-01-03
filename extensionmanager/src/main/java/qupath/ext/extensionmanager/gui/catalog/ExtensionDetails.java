@@ -17,7 +17,8 @@ import java.text.MessageFormat;
 import java.util.ResourceBundle;
 
 /**
- * A window displaying the description and the clickable homepage of an extension.
+ * A window displaying the description and the clickable homepage of an extension..
+ * It is modal to its owning window.
  */
 class ExtensionDetails extends Stage {
 
@@ -37,7 +38,7 @@ class ExtensionDetails extends Stage {
     public ExtensionDetails(Extension extension) throws IOException {
         UiUtils.loadFXML(this, ExtensionDetails.class.getResource("extension_details.fxml"));
 
-        initModality(Modality.APPLICATION_MODAL);
+        initModality(Modality.WINDOW_MODAL);
 
         setTitle(extension.name());
         description.setText(extension.description());

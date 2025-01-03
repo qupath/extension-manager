@@ -4,18 +4,17 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.Version;
 
+import java.util.Collections;
 import java.util.List;
 
 /**
  * A specification of the minimum and maximum versions that an extension supports. Versions should be specified in the
  * form "v[MAJOR].[MINOR].[PATCH]" corresponding to semantic versions, although trailing release candidate qualifiers
  * (eg, "-rc1") are also allowed.
- * <p>
- * Functions of this object may return null or throw exceptions if this object is not valid (see {@link #checkValidity()}).
  *
  * @param min the minimum/lowest version that this extension is known to be compatible with
- * @param max the maximum/highest version that this extension is known to be compatible with
- * @param excludes any specific versions that are not compatible
+ * @param max the maximum/highest version that this extension is known to be compatible with. Can be null
+ * @param excludes any specific versions that are not compatible. This list is immutable and won't be null
  */
 public record VersionRange(String min, String max, List<String> excludes) {
 
@@ -23,36 +22,8 @@ public record VersionRange(String min, String max, List<String> excludes) {
 
     /**
      * Create a version range.
-     *
-     * @param min the minimum/lowest version that this extension is known to be compatible with
-     * @param max the maximum/highest version that this extension is known to be compatible with
-     * @param excludes any specific versions that are not compatible
-     * @throws IllegalStateException if the created object is not valid (see {@link #checkValidity()})
-     */
-    public VersionRange(String min, String max, List<String> excludes) {
-        this.min = min;
-        this.max = max;
-        this.excludes = excludes;
-
-        checkValidity();
-    }
-
-    /**
-     * @return the maximum/highest release that this extension is known to be compatible with.
-     * Can be null
-     */
-    @Override
-    public String max() {
-        return max;
-    }
-
-    @Override
-    public List<String> excludes() {
-        return excludes == null ? List.of() : excludes;
-    }
-
-    /**
-     * Check that this object is valid:
+     * <p>
+     * It must respect the following requirements:
      * <ul>
      *     <li>The 'min' field must be defined.</li>
      *     <li>If 'max' is specified, it must correspond to a version higher than or equal to 'min'.</li>
@@ -64,50 +35,17 @@ public record VersionRange(String min, String max, List<String> excludes) {
      *     </li>
      * </ul>
      *
-     * @throws IllegalStateException if this object is not valid
+     * @param min the minimum/lowest version that this extension is known to be compatible with
+     * @param max the maximum/highest version that this extension is known to be compatible with. Can be null
+     * @param excludes any specific versions that are not compatible. Can be null
+     * @throws IllegalArgumentException when the created version range is not valid (see the requirements above)
      */
-    public void checkValidity() {
-        Utils.checkField(min, "min", "VersionRange");
+    public VersionRange(String min, String max, List<String> excludes) {
+        this.min = min;
+        this.max = max;
+        this.excludes = excludes == null ? List.of() : Collections.unmodifiableList(excludes);
 
-        try {
-            Version.isValid(min);
-
-            if (max != null) {
-                if (new Version(min).compareTo(new Version(max)) > 0) {
-                    throw new IllegalStateException(String.format(
-                            "The min version '%s' must be lower than or equal to the max version '%s'",
-                            min,
-                            max
-                    ));
-                }
-            }
-
-            if (excludes != null) {
-                for (String version: excludes) {
-                    if (new Version(min).compareTo(new Version(version)) > 0) {
-                        throw new IllegalStateException(String.format(
-                                "The min version '%s' must be lower than or equal to the excluded version '%s'",
-                                min,
-                                version
-                        ));
-                    }
-                }
-            }
-
-            if (max != null && excludes != null) {
-                for (String version: excludes) {
-                    if (new Version(version).compareTo(new Version(max)) > 0) {
-                        throw new IllegalStateException(String.format(
-                                "The excluded version '%s' must be lower than or equal to the max version '%s'",
-                                version,
-                                max
-                        ));
-                    }
-                }
-            }
-        } catch (IllegalArgumentException e) {
-            throw new IllegalStateException(e);
-        }
+        checkValidity();
     }
 
     /**
@@ -119,6 +57,7 @@ public record VersionRange(String min, String max, List<String> excludes) {
      * @return a boolean indicating if the provided version is compatible with this release range
      * @throws IllegalArgumentException if the provided version doesn't match the required form
      * or if this release range is not valid
+     * @throws NullPointerException if the provided version is null
      */
     public boolean isCompatible(String version) {
         Version versionObject = new Version(version);
@@ -152,5 +91,44 @@ public record VersionRange(String min, String max, List<String> excludes) {
 
         return true;
     }
-}
 
+    private void checkValidity() {
+        Utils.checkField(min, "min", "VersionRange");
+
+        Version.isValid(min);
+
+        if (max != null) {
+            if (new Version(min).compareTo(new Version(max)) > 0) {
+                throw new IllegalArgumentException(String.format(
+                        "The min version '%s' must be lower than or equal to the max version '%s'",
+                        min,
+                        max
+                ));
+            }
+        }
+
+        if (excludes != null) {
+            for (String version: excludes) {
+                if (new Version(min).compareTo(new Version(version)) > 0) {
+                    throw new IllegalArgumentException(String.format(
+                            "The min version '%s' must be lower than or equal to the excluded version '%s'",
+                            min,
+                            version
+                    ));
+                }
+            }
+        }
+
+        if (max != null && excludes != null) {
+            for (String version: excludes) {
+                if (new Version(version).compareTo(new Version(max)) > 0) {
+                    throw new IllegalArgumentException(String.format(
+                            "The excluded version '%s' must be lower than or equal to the max version '%s'",
+                            version,
+                            max
+                    ));
+                }
+            }
+        }
+    }
+}

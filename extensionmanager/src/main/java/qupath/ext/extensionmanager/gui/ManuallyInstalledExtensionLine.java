@@ -73,7 +73,7 @@ class ManuallyInstalledExtensionLine extends HBox {
                     )
             );
         } catch (IOException | SecurityException e) {
-            logger.error(String.format("Cannot delete %s extension", jarPath), e);
+            logger.error("Cannot delete extension located at {}", jarPath, e);
 
             Dialogs.showErrorMessage(
                     resources.getString("ManuallyInstalledExtensionLine.deleteExtension"),
