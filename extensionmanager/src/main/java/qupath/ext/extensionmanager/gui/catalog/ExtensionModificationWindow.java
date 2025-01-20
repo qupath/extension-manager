@@ -9,6 +9,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
+import javafx.scene.control.TextArea;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
@@ -57,7 +58,7 @@ class ExtensionModificationWindow extends Stage {
     @FXML
     private CheckBox optionalDependencies;
     @FXML
-    private Label filesToDownload;
+    private TextArea filesToDownload;
     @FXML
     private Label deleteDirectory;
     @FXML
@@ -138,9 +139,7 @@ class ExtensionModificationWindow extends Stage {
         filesToDownload.textProperty().bind(Bindings.createStringBinding(
                 () -> {
                     try {
-                        return MessageFormat.format(
-                                resources.getString("Catalog.ExtensionModificationWindow.followingFilesDownloaded"),
-                                extensionCatalogManager.getDownloadLinks(
+                        return extensionCatalogManager.getDownloadLinks(
                                         savedCatalog,
                                         extension,
                                         new InstalledExtension(
@@ -148,10 +147,9 @@ class ExtensionModificationWindow extends Stage {
                                                 optionalDependencies.isSelected()
                                         )
                                 )
-                                        .stream()
-                                        .map(URI::toString)
-                                        .collect(Collectors.joining("\n"))
-                        );
+                                .stream()
+                                .map(URI::toString)
+                                .collect(Collectors.joining("\n"));
                     } catch (NullPointerException | SecurityException | IllegalArgumentException e) {
                         logger.error("Error while retrieving download links", e);
                         return resources.getString("Catalog.ExtensionModificationWindow.cannotRetrieveLinks");
@@ -160,11 +158,6 @@ class ExtensionModificationWindow extends Stage {
                 release.getSelectionModel().selectedItemProperty(),
                 optionalDependencies.selectedProperty()
         ));
-        filesToDownload.textProperty().addListener((p, o, n) ->
-                // Platform.runLater() is used to delay resizing after the size of filesToDownload actually changes
-                // This doesn't directly happen when the label text changes
-                Platform.runLater(this::sizeToScene)
-        );
 
         try {
             Path extensionDirectory = extensionCatalogManager.getExtensionDirectory(

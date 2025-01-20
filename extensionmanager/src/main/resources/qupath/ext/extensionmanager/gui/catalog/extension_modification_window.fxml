@@ -6,6 +6,7 @@
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ChoiceBox?>
 <?import javafx.scene.control.Label?>
+<?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.HBox?>
 <?import javafx.scene.layout.VBox?>
 <?import javafx.scene.text.Font?>
@@ -31,7 +32,16 @@
                </VBox.margin>
                 </HBox>
                 <CheckBox fx:id="optionalDependencies" mnemonicParsing="false" text="%Catalog.ExtensionModificationWindow.installOptionalDependencies" />
-            <Label fx:id="filesToDownload" maxWidth="1.7976931348623157E308" minHeight="-Infinity" />
+            <VBox>
+               <children>
+                  <HBox>
+                     <children>
+                        <Label text="%Catalog.ExtensionModificationWindow.followingFilesDownloaded" />
+                     </children>
+                  </HBox>
+                  <TextArea fx:id="filesToDownload" editable="false" prefHeight="100.0" />
+               </children>
+            </VBox>
             <Label fx:id="deleteDirectory" maxWidth="1.7976931348623157E308" minHeight="-Infinity" styleClass="warn-text" wrapText="true" />
                 <HBox alignment="CENTER">
                     <Button fx:id="submit" mnemonicParsing="false" onAction="#onSubmitClicked" />
