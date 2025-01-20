@@ -11,14 +11,15 @@ import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.catalog.Extension;
 import qupath.ext.extensionmanager.gui.UiUtils;
 import qupath.fx.dialogs.Dialogs;
+import qupath.fx.utils.FXUtils;
 
 import java.io.IOException;
 import java.text.MessageFormat;
 import java.util.ResourceBundle;
 
 /**
- * A window displaying the description and the clickable homepage of an extension..
- * It is modal to its owning window.
+ * A window displaying the description and the clickable homepage of an extension.
+ * It is modal to its owning window and can be easily closed with shortcuts.
  */
 class ExtensionDetails extends Stage {
 
@@ -38,6 +39,7 @@ class ExtensionDetails extends Stage {
     public ExtensionDetails(Extension extension) throws IOException {
         UiUtils.loadFXML(this, ExtensionDetails.class.getResource("extension_details.fxml"));
 
+        FXUtils.addCloseWindowShortcuts(this);
         initModality(Modality.WINDOW_MODAL);
 
         setTitle(extension.name());
@@ -63,5 +65,10 @@ class ExtensionDetails extends Stage {
 
             return null;
         });
+    }
+
+    @FXML
+    private void onCloseClicked(ActionEvent ignored) {
+        close();
     }
 }
