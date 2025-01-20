@@ -32,16 +32,12 @@
                </VBox.margin>
                 </HBox>
                 <CheckBox fx:id="optionalDependencies" mnemonicParsing="false" text="%Catalog.ExtensionModificationWindow.installOptionalDependencies" />
-            <VBox>
-               <children>
-                  <HBox>
-                     <children>
-                        <Label text="%Catalog.ExtensionModificationWindow.followingFilesDownloaded" />
-                     </children>
-                  </HBox>
-                  <TextArea fx:id="filesToDownload" editable="false" prefHeight="100.0" />
-               </children>
-            </VBox>
+                <VBox>
+                    <HBox>
+                        <Label text="%Catalog.ExtensionModificationWindow.followingFilesDownloaded"/>
+                    </HBox>
+                    <TextArea fx:id="filesToDownload" editable="false" prefHeight="100.0"/>
+                </VBox>
             <Label fx:id="deleteDirectory" maxWidth="1.7976931348623157E308" minHeight="-Infinity" styleClass="warn-text" wrapText="true" />
                 <HBox alignment="CENTER">
                     <Button fx:id="submit" mnemonicParsing="false" onAction="#onSubmitClicked" />
