@@ -23,7 +23,8 @@
                     <columns>
                         <TableColumn fx:id="nameColumn" editable="false" maxWidth="1.7976931348623157E308" prefWidth="100.0" text="%CatalogManager.name" />
                         <TableColumn fx:id="urlColumn" editable="false" maxWidth="1.7976931348623157E308" prefWidth="300.0" text="%CatalogManager.url" />
-                        <TableColumn fx:id="descriptionColumn" editable="false" maxWidth="1.7976931348623157E308" prefWidth="${catalogTable.width-nameColumn.width-urlColumn.width-2}" text="%CatalogManager.description" />
+                        <TableColumn fx:id="descriptionColumn" editable="false" maxWidth="1.7976931348623157E308" prefWidth="${catalogTable.width-nameColumn.width-urlColumn.width-102}" text="%CatalogManager.description" />
+                        <TableColumn fx:id="removeColumn" editable="false" maxWidth="1.7976931348623157E308" prefWidth="100" sortable="false" text="%CatalogManager.remove" />
                     </columns>
                 </TableView>
                 <HBox spacing="5.0">
