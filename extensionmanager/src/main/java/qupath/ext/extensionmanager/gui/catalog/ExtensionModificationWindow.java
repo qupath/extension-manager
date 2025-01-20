@@ -174,7 +174,7 @@ class ExtensionModificationWindow extends Stage {
 
             if (FileTools.isDirectoryNotEmpty(extensionDirectory)) {
                 deleteDirectory.setText(MessageFormat.format(
-                        resources.getString("Catalog.ExtensionModificationWindow.deleteDirectory"),
+                        resources.getString("Catalog.ExtensionModificationWindow.replaceDirectory"),
                         extensionDirectory.toString()
                 ));
             } else {
