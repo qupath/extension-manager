@@ -213,24 +213,28 @@ class CatalogManager extends Stage {
         });
 
         nameColumn.setCellFactory(getStringCellFactory());
-        urlColumn.setCellFactory(column -> new TableCell<>() {
-            @Override
-            protected void updateItem(URI item, boolean empty) {
-                super.updateItem(item, empty);
+        urlColumn.setCellFactory(column -> {
+            TableCell<SavedCatalog, URI> tableCell = new TableCell<>() {
+                @Override
+                protected void updateItem(URI item, boolean empty) {
+                    super.updateItem(item, empty);
 
-                if (empty || item == null) {
-                    setText(null);
-                    setTooltip(null);
-                } else {
-                    setTextOverrun(OverrunStyle.LEADING_ELLIPSIS);
-                    setText(item.toString());
-                    setTooltip(new Tooltip(item.toString()));
+                    if (empty || item == null) {
+                        setText(null);
+                        setTooltip(null);
+                    } else {
+                        setTextOverrun(OverrunStyle.LEADING_ELLIPSIS);
+                        setText(item.toString());
+                        setTooltip(new Tooltip(item.toString()));
+                    }
                 }
-            }
+            };
+            tableCell.setAlignment(Pos.CENTER_LEFT);
+            return tableCell;
         });
         descriptionColumn.setCellFactory(getStringCellFactory());
         removeColumn.setCellFactory(column -> {
-            TableCell<SavedCatalog, Button> g = new TableCell<>() {
+            TableCell<SavedCatalog, Button> tableCell = new TableCell<>() {
                 @Override
                 protected void updateItem(Button item, boolean empty) {
                     super.updateItem(item, empty);
@@ -242,8 +246,8 @@ class CatalogManager extends Stage {
                     }
                 }
             };
-            g.setAlignment(Pos.CENTER);
-            return g;
+            tableCell.setAlignment(Pos.CENTER);
+            return tableCell;
         });
     }
 
@@ -357,19 +361,23 @@ class CatalogManager extends Stage {
     }
 
     private static Callback<TableColumn<SavedCatalog, String>, TableCell<SavedCatalog, String>> getStringCellFactory() {
-        return column -> new TableCell<>() {
-            @Override
-            protected void updateItem(String item, boolean empty) {
-                super.updateItem(item, empty);
+        return column -> {
+            TableCell<SavedCatalog, String> tableCell = new TableCell<>() {
+                @Override
+                protected void updateItem(String item, boolean empty) {
+                    super.updateItem(item, empty);
 
-                if (empty || item == null) {
-                    setText(null);
-                    setTooltip(null);
-                } else {
-                    setText(item);
-                    setTooltip(new Tooltip(item));
+                    if (empty || item == null) {
+                        setText(null);
+                        setTooltip(null);
+                    } else {
+                        setText(item);
+                        setTooltip(new Tooltip(item));
+                    }
                 }
-            }
+            };
+            tableCell.setAlignment(Pos.CENTER_LEFT);
+            return tableCell;
         };
     }
 }
