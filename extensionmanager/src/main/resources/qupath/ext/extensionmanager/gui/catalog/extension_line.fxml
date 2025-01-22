@@ -25,7 +25,7 @@
       </tooltip></Button>
    <Button fx:id="info" contentDisplay="GRAPHIC_ONLY" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" onAction="#onInfoClicked">
       <tooltip>
-         <Tooltip text="%Catalog.ExtensionLine.getInformation" />
+         <Tooltip fx:id="infoTooltip" />
       </tooltip></Button>
    <padding>
       <Insets bottom="5.0" left="5.0" right="5.0" top="5.0" />

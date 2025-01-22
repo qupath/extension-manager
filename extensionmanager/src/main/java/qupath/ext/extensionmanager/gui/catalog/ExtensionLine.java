@@ -51,6 +51,8 @@ class ExtensionLine extends HBox {
     private Button delete;
     @FXML
     private Button info;
+    @FXML
+    private Tooltip infoTooltip;
 
     /**
      * Create the container.
@@ -131,6 +133,8 @@ class ExtensionLine extends HBox {
         add.setDisable(extension.releases().stream()
                 .noneMatch(release -> release.versionRange().isCompatible(extensionCatalogManager.getVersion()))
         );
+
+        infoTooltip.setText(String.format("%s\n%s", extension.description(), extension.homepage()));
     }
 
     @FXML
