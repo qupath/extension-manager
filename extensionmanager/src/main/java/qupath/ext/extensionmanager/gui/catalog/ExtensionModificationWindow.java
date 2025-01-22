@@ -6,6 +6,8 @@ import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
 import javafx.scene.control.Label;
@@ -197,10 +199,17 @@ class ExtensionModificationWindow extends Stage {
 
         try {
             if (installedExtension == null && isJarAlreadyDownloaded(selectedRelease)) {
-                var confirmation = Dialogs.showConfirmDialog(
-                        resources.getString("Catalog.ExtensionModificationWindow.extensionAlreadyInstalled"),
-                        resources.getString("Catalog.ExtensionModificationWindow.extensionAlreadyInstalledDetails")
-                );
+                var confirmation = new Dialogs.Builder()
+                        .alertType(Alert.AlertType.CONFIRMATION)
+                        .buttons(
+                                new ButtonType(resources.getString("Catalog.ExtensionModificationWindow.continueAnyway"), ButtonBar.ButtonData.OK_DONE),
+                                ButtonType.CANCEL
+                        )
+                        .title(resources.getString("Catalog.ExtensionModificationWindow.extensionAlreadyInstalled"))
+                        .content(new Label(resources.getString("Catalog.ExtensionModificationWindow.extensionAlreadyInstalledDetails")))
+                        .resizable()
+                        .showAndWait()
+                        .orElse(ButtonType.CANCEL).getButtonData() == ButtonBar.ButtonData.OK_DONE;
 
                 if (!confirmation) {
                     return;
