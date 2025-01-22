@@ -5,6 +5,7 @@
 <?import javafx.scene.control.Button?>
 <?import javafx.scene.control.CheckBox?>
 <?import javafx.scene.control.ChoiceBox?>
+<?import javafx.scene.control.Hyperlink?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.TextArea?>
 <?import javafx.scene.layout.HBox?>
@@ -34,11 +35,15 @@
                 <CheckBox fx:id="optionalDependencies" mnemonicParsing="false" text="%Catalog.ExtensionModificationWindow.installOptionalDependencies" />
                 <VBox>
                     <HBox>
-                        <Label text="%Catalog.ExtensionModificationWindow.followingFilesDownloaded"/>
+                        <Label text="%Catalog.ExtensionModificationWindow.followingFilesDownloaded" />
                     </HBox>
-                    <TextArea fx:id="filesToDownload" editable="false" prefHeight="100.0"/>
+                    <TextArea fx:id="filesToDownload" editable="false" prefHeight="100.0" />
                 </VBox>
-            <Label fx:id="deleteDirectory" maxWidth="1.7976931348623157E308" minHeight="-Infinity" styleClass="warn-text" wrapText="true" />
+                <VBox fx:id="replaceDirectory">
+                    <Label fx:id="replaceDirectoryLabel" maxWidth="1.7976931348623157E308" minHeight="-Infinity"
+                           styleClass="warn-text" wrapText="true"/>
+                    <Hyperlink fx:id="replaceDirectoryLink" onAction="#onReplacedDirectoryClicked"/>
+                </VBox>
                 <HBox alignment="CENTER">
                     <Button fx:id="submit" mnemonicParsing="false" onAction="#onSubmitClicked" />
                 </HBox>

@@ -10,8 +10,10 @@ import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.CheckBox;
 import javafx.scene.control.ChoiceBox;
+import javafx.scene.control.Hyperlink;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextArea;
+import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.StringConverter;
@@ -32,6 +34,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.text.MessageFormat;
 import java.util.Objects;
 import java.util.ResourceBundle;
@@ -62,7 +65,11 @@ class ExtensionModificationWindow extends Stage {
     @FXML
     private TextArea filesToDownload;
     @FXML
-    private Label deleteDirectory;
+    private VBox replaceDirectory;
+    @FXML
+    private Label replaceDirectoryLabel;
+    @FXML
+    private Hyperlink replaceDirectoryLink;
     @FXML
     private Button submit;
 
@@ -168,24 +175,29 @@ class ExtensionModificationWindow extends Stage {
             );
 
             if (FileTools.isDirectoryNotEmpty(extensionDirectory)) {
-                deleteDirectory.setText(MessageFormat.format(
-                        resources.getString("Catalog.ExtensionModificationWindow.replaceDirectory"),
-                        extensionDirectory.toString()
-                ));
+                replaceDirectoryLabel.setText(resources.getString("Catalog.ExtensionModificationWindow.replaceDirectory"));
+                replaceDirectoryLink.setText(extensionDirectory.toString());
             } else {
-                deleteDirectory.setVisible(false);
-                deleteDirectory.setManaged(false);
+                replaceDirectory.setVisible(false);
+                replaceDirectory.setManaged(false);
             }
         } catch (IOException | InvalidPathException | SecurityException | NullPointerException e) {
             logger.error("Cannot see if extension directory is not empty", e);
 
-            deleteDirectory.setText(resources.getString("Catalog.ExtensionModificationWindow.extensionDirectoryNotRetrieved"));
+            replaceDirectoryLabel.setText(resources.getString("Catalog.ExtensionModificationWindow.extensionDirectoryNotRetrieved"));
+            replaceDirectoryLink.setVisible(false);
+            replaceDirectoryLink.setManaged(false);
         }
 
         submit.textProperty().bind(Bindings.createStringBinding(
                 () -> resources.getString(getSubmitText()),
                 release.getSelectionModel().selectedItemProperty()
         ));
+    }
+
+    @FXML
+    private void onReplacedDirectoryClicked(ActionEvent ignored) {
+        UiUtils.openFolderInFileExplorer(Paths.get(replaceDirectoryLink.getText()));
     }
 
     @FXML
