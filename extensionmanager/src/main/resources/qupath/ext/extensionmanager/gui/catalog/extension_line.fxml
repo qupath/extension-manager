@@ -5,12 +5,15 @@
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.HBox?>
+<?import javafx.scene.layout.Region?>
 
 <fx:root alignment="CENTER_LEFT" spacing="5.0" styleClass="row" type="HBox" xmlns="http://javafx.com/javafx/21" xmlns:fx="http://javafx.com/fxml/1">
-   <Label fx:id="name" maxWidth="1.7976931348623157E308" HBox.hgrow="ALWAYS">
+   <Label fx:id="name">
       <tooltip>
-         <Tooltip fx:id="tooltip" />
+         <Tooltip fx:id="descriptionTooltip" />
       </tooltip></Label>
+   <Label fx:id="updateAvailable" styleClass="warn-text" text="%Catalog.ExtensionLine.updateAvailable" />
+   <Region fx:id="separator" HBox.hgrow="ALWAYS" />
    <Button fx:id="add" contentDisplay="GRAPHIC_ONLY" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" onAction="#onAddClicked">
       <tooltip>
          <Tooltip text="%Catalog.ExtensionLine.installExtension" />

@@ -8,6 +8,7 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import org.controlsfx.glyphfont.FontAwesome;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -42,7 +43,11 @@ class ExtensionLine extends HBox {
     @FXML
     private Label name;
     @FXML
-    private Tooltip tooltip;
+    private Tooltip descriptionTooltip;
+    @FXML
+    private Label updateAvailable;
+    @FXML
+    private Region separator;
     @FXML
     private Button add;
     @FXML
@@ -101,7 +106,12 @@ class ExtensionLine extends HBox {
             }
         });
 
-        tooltip.setText(extension.description());
+        descriptionTooltip.setText(extension.description());
+        Tooltip.install(separator, name.getTooltip());
+
+        updateAvailable.setVisible(true); //TODO: change
+        //TODO: add tooltip
+        updateAvailable.managedProperty().bind(updateAvailable.visibleProperty());
 
         add.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.PLUS_CIRCLE));
         settings.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.GEAR));
