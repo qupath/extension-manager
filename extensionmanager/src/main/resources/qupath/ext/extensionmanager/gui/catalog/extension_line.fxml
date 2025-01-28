@@ -12,7 +12,10 @@
       <tooltip>
          <Tooltip fx:id="descriptionTooltip" />
       </tooltip></Label>
-   <Label fx:id="updateAvailable" styleClass="warn-text" text="%Catalog.ExtensionLine.updateAvailable" />
+   <Label fx:id="updateAvailable" styleClass="warn-text" text="%Catalog.ExtensionLine.updateAvailable">
+      <tooltip>
+         <Tooltip fx:id="updateAvailableTooltip" />
+      </tooltip></Label>
    <Region fx:id="separator" HBox.hgrow="ALWAYS" />
    <Button fx:id="add" contentDisplay="GRAPHIC_ONLY" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" onAction="#onAddClicked">
       <tooltip>

@@ -26,7 +26,6 @@ import java.io.IOException;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.text.MessageFormat;
-import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
@@ -49,6 +48,8 @@ class ExtensionLine extends HBox {
     private Tooltip descriptionTooltip;
     @FXML
     private Label updateAvailable;
+    @FXML
+    private Tooltip updateAvailableTooltip;
     @FXML
     private Region separator;
     @FXML
@@ -112,7 +113,6 @@ class ExtensionLine extends HBox {
         descriptionTooltip.setText(extension.description());
         Tooltip.install(separator, descriptionTooltip);
 
-        //TODO: add tooltip
         updateAvailable.visibleProperty().bind(Bindings.createBooleanBinding(
                 () -> {
                     if (installedExtension.get().isEmpty()) {
@@ -120,14 +120,21 @@ class ExtensionLine extends HBox {
                     }
                     Version installedVersion = new Version(installedExtension.get().get().releaseName());
 
-                    return extension.releases().stream()
+                    Optional<String> availableVersion = extension.releases().stream()
                             .filter(release -> release.versionRange().isCompatible(extensionCatalogManager.getVersion()))
-                            .anyMatch(release -> new Version(release.name()).compareTo(installedVersion) > 0);
+                            .map(Release::name)
+                            .filter(named -> new Version(named).compareTo(installedVersion) > 0)
+                            .findAny();
+                    availableVersion.ifPresent(version -> updateAvailableTooltip.setText(MessageFormat.format(
+                            resources.getString("Catalog.ExtensionLine.updateAvailableDetails"),
+                            version
+                    )));
+
+                    return availableVersion.isPresent();
                 },
                 installedExtension
         ));
         updateAvailable.managedProperty().bind(updateAvailable.visibleProperty());
-
 
         add.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.PLUS_CIRCLE));
         settings.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.GEAR));
