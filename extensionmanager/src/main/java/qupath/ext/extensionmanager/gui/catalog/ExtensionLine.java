@@ -13,7 +13,9 @@ import org.controlsfx.glyphfont.FontAwesome;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
+import qupath.ext.extensionmanager.core.Version;
 import qupath.ext.extensionmanager.core.catalog.Extension;
+import qupath.ext.extensionmanager.core.catalog.Release;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
 import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
 import qupath.ext.extensionmanager.gui.ExtensionCatalogModel;
@@ -24,6 +26,7 @@ import java.io.IOException;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.text.MessageFormat;
+import java.util.List;
 import java.util.Optional;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
@@ -107,11 +110,24 @@ class ExtensionLine extends HBox {
         });
 
         descriptionTooltip.setText(extension.description());
-        Tooltip.install(separator, name.getTooltip());
+        Tooltip.install(separator, descriptionTooltip);
 
-        updateAvailable.setVisible(true); //TODO: change
         //TODO: add tooltip
+        updateAvailable.visibleProperty().bind(Bindings.createBooleanBinding(
+                () -> {
+                    if (installedExtension.get().isEmpty()) {
+                        return false;
+                    }
+                    Version installedVersion = new Version(installedExtension.get().get().releaseName());
+
+                    return extension.releases().stream()
+                            .filter(release -> release.versionRange().isCompatible(extensionCatalogManager.getVersion()))
+                            .anyMatch(release -> new Version(release.name()).compareTo(installedVersion) > 0);
+                },
+                installedExtension
+        ));
         updateAvailable.managedProperty().bind(updateAvailable.visibleProperty());
+
 
         add.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.PLUS_CIRCLE));
         settings.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.GEAR));
