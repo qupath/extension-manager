@@ -8,11 +8,14 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.Region;
 import org.controlsfx.glyphfont.FontAwesome;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
+import qupath.ext.extensionmanager.core.Version;
 import qupath.ext.extensionmanager.core.catalog.Extension;
+import qupath.ext.extensionmanager.core.catalog.Release;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
 import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
 import qupath.ext.extensionmanager.gui.ExtensionCatalogModel;
@@ -42,7 +45,13 @@ class ExtensionLine extends HBox {
     @FXML
     private Label name;
     @FXML
-    private Tooltip tooltip;
+    private Tooltip descriptionTooltip;
+    @FXML
+    private Label updateAvailable;
+    @FXML
+    private Tooltip updateAvailableTooltip;
+    @FXML
+    private Region separator;
     @FXML
     private Button add;
     @FXML
@@ -101,7 +110,31 @@ class ExtensionLine extends HBox {
             }
         });
 
-        tooltip.setText(extension.description());
+        descriptionTooltip.setText(extension.description());
+        Tooltip.install(separator, descriptionTooltip);
+
+        updateAvailable.visibleProperty().bind(Bindings.createBooleanBinding(
+                () -> {
+                    if (installedExtension.get().isEmpty()) {
+                        return false;
+                    }
+                    Version installedVersion = new Version(installedExtension.get().get().releaseName());
+
+                    Optional<String> availableVersion = extension.releases().stream()
+                            .filter(release -> release.versionRange().isCompatible(extensionCatalogManager.getVersion()))
+                            .map(Release::name)
+                            .filter(named -> new Version(named).compareTo(installedVersion) > 0)
+                            .findAny();
+                    availableVersion.ifPresent(version -> updateAvailableTooltip.setText(MessageFormat.format(
+                            resources.getString("Catalog.ExtensionLine.updateAvailableDetails"),
+                            version
+                    )));
+
+                    return availableVersion.isPresent();
+                },
+                installedExtension
+        ));
+        updateAvailable.managedProperty().bind(updateAvailable.visibleProperty());
 
         add.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.PLUS_CIRCLE));
         settings.setGraphic(UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.GEAR));
