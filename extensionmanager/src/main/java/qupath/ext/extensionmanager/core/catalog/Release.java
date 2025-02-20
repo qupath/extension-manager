@@ -15,7 +15,7 @@ import java.util.List;
  *                               This list is immutable and won't be null
  * @param optionalDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be downloaded.
  *                               This list is immutable and won't be null
- * @param javadocsUrls SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension
+ * @param javadocUrls SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension
  *                     jar and for dependencies can be downloaded. This list is immutable and won't be null
  * @param versionRange a specification of minimum and maximum compatible versions
  */
@@ -24,7 +24,7 @@ public record Release(
         URI mainUrl,
         List<URI> requiredDependencyUrls,
         List<URI> optionalDependencyUrls,
-        List<URI> javadocsUrls,
+        List<URI> javadocUrls,
         VersionRange versionRange
 ) {
     private static final List<String> VALID_HOSTS = List.of("github.com", "maven.scijava.org", "repo1.maven.org");
@@ -50,8 +50,8 @@ public record Release(
      *                               Can be null
      * @param optionalDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be downloaded.
      *                               Can be null
-     * @param javadocsUrls SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension
-     *                     jar and for dependencies can be downloaded. Can be null
+     * @param javadocUrls SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension
+     *                    jar and for dependencies can be downloaded. Can be null
      * @param versionRange a specification of minimum and maximum compatible versions
      * @throws IllegalArgumentException when the created release is not valid (see the requirements above)
      */
@@ -60,14 +60,14 @@ public record Release(
             URI mainUrl,
             List<URI> requiredDependencyUrls,
             List<URI> optionalDependencyUrls,
-            List<URI> javadocsUrls,
+            List<URI> javadocUrls,
             VersionRange versionRange
     ) {
         this.name = name;
         this.mainUrl = mainUrl;
         this.requiredDependencyUrls = requiredDependencyUrls == null ? List.of() : Collections.unmodifiableList(requiredDependencyUrls);
         this.optionalDependencyUrls = optionalDependencyUrls == null ? List.of() : Collections.unmodifiableList(optionalDependencyUrls);
-        this.javadocsUrls = javadocsUrls == null ? List.of() : Collections.unmodifiableList(javadocsUrls);
+        this.javadocUrls = javadocUrls == null ? List.of() : Collections.unmodifiableList(javadocUrls);
         this.versionRange = versionRange;
 
         checkValidity();
@@ -84,7 +84,7 @@ public record Release(
 
         checkURIHostValidity(requiredDependencyUrls);
         checkURIHostValidity(optionalDependencyUrls);
-        checkURIHostValidity(javadocsUrls);
+        checkURIHostValidity(javadocUrls);
     }
 
     private static void checkURIHostValidity(List<URI> uris) {
