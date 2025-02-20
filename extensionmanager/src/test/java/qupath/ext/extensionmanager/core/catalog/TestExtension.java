@@ -157,7 +157,22 @@ public class TestExtension {
 
         @Test
         void Check_Valid_Extension() {
-            Assertions.assertDoesNotThrow(() -> new Gson().fromJson("""
+            Extension expectedExtension = new Extension(
+                    "",
+                    "",
+                    "",
+                    URI.create("https://github.com/qupath/qupath"),
+                    List.of(new Release(
+                            "v1.0.0",
+                            URI.create("https://github.com/qupath/qupath"),
+                            null,
+                            null,
+                            null,
+                            new VersionRange("v1.0.0", null, null)
+                    ))
+            );
+
+            Extension extension = new Gson().fromJson("""
                     {
                         "name": "",
                         "description": "",
@@ -175,7 +190,9 @@ public class TestExtension {
                     }
                     """,
                     Extension.class
-            ));
+            );
+
+            Assertions.assertEquals(expectedExtension, extension);
         }
 
         @Test

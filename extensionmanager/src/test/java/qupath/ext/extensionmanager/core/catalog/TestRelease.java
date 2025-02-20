@@ -193,7 +193,16 @@ public class TestRelease {
 
         @Test
         void Check_Valid_Release() {
-            Assertions.assertDoesNotThrow(() -> new Gson().fromJson("""
+            Release expectedRelease = new Release(
+                    "v0.1.0",
+                    URI.create("https://github.com/qupath/qupath"),
+                    null,
+                    null,
+                    null,
+                    new VersionRange("v1.0.0", null, null)
+            );
+
+            Release release = new Gson().fromJson("""
                     {
                         "name": "v0.1.0",
                         "mainUrl": "https://github.com/qupath/qupath",
@@ -204,7 +213,9 @@ public class TestRelease {
                     """
                     ,
                     Release.class
-            ));
+            );
+
+            Assertions.assertEquals(expectedRelease, release);
         }
 
         @Test
@@ -310,7 +321,9 @@ public class TestRelease {
 
         @Test
         void Check_Valid_Required_Dependency_Url() {
-            Assertions.assertDoesNotThrow(() -> new Gson().fromJson("""
+            List<URI> expectedRequiredDependencyUrls = List.of(URI.create("https://maven.scijava.org/content"));
+
+            Release release = new Gson().fromJson("""
                     {
                         "name": "v0.1.0",
                         "mainUrl": "https://github.com/qupath/qupath",
@@ -322,7 +335,9 @@ public class TestRelease {
                     """
                     ,
                     Release.class
-            ));
+            );
+
+            Assertions.assertEquals(expectedRequiredDependencyUrls, release.requiredDependencyUrls());
         }
 
         @Test
@@ -346,7 +361,9 @@ public class TestRelease {
 
         @Test
         void Check_Valid_Optional_Dependency_Url() {
-            Assertions.assertDoesNotThrow(() -> new Gson().fromJson("""
+            List<URI> expectedOptionalDependencyUrls = List.of(URI.create("https://maven.scijava.org/content"));
+
+            Release release = new Gson().fromJson("""
                     {
                         "name": "v0.1.0",
                         "mainUrl": "https://github.com/qupath/qupath",
@@ -358,7 +375,9 @@ public class TestRelease {
                     """
                     ,
                     Release.class
-            ));
+            );
+
+            Assertions.assertEquals(expectedOptionalDependencyUrls, release.optionalDependencyUrls());
         }
 
         @Test
@@ -382,11 +401,13 @@ public class TestRelease {
 
         @Test
         void Check_Valid_Javadoc_Url() {
-            Assertions.assertDoesNotThrow(() -> new Gson().fromJson("""
+            List<URI> expectedJavadocUrls = List.of(URI.create("https://maven.scijava.org/content"));
+
+            Release release = new Gson().fromJson("""
                     {
                         "name": "v0.1.0",
                         "mainUrl": "https://github.com/qupath/qupath",
-                        "javadocsUrls": ["https://maven.scijava.org/content"],
+                        "javadocUrls": ["https://maven.scijava.org/content"],
                         "versionRange": {
                             "min": "v1.0.0"
                         }
@@ -394,7 +415,9 @@ public class TestRelease {
                     """
                     ,
                     Release.class
-            ));
+            );
+
+            Assertions.assertEquals(expectedJavadocUrls, release.javadocUrls());
         }
 
         @Test
@@ -405,7 +428,7 @@ public class TestRelease {
                             {
                                 "name": "v0.1.0",
                                 "mainUrl": "https://github.com/qupath/qupath/",
-                                "javadocsUrls": ["https://qupath.readthedocs.io/"],
+                                "javadocUrls": ["https://qupath.readthedocs.io/"],
                                 "versionRange": {
                                     "min": "v1.0.0"
                                 }
