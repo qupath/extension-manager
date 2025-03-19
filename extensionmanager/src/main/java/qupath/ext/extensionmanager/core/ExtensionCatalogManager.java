@@ -594,7 +594,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
                 )
         ));
 
-        for (URI javadocUri: release.get().javadocsUrls()) {
+        for (URI javadocUri: release.get().javadocUrls()) {
             downloadUrlToFilePaths.add(new UriFileName(
                     javadocUri,
                     Paths.get(

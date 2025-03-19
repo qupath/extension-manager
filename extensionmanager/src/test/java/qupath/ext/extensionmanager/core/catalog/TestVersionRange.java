@@ -129,13 +129,17 @@ public class TestVersionRange {
 
         @Test
         void Check_Valid_Version_Range() {
-            Assertions.assertDoesNotThrow(() -> new Gson().fromJson("""
+            VersionRange expectedVersionRange = new VersionRange("v1.1.0", null, null);
+
+            VersionRange versionRange = new Gson().fromJson("""
                     {
                         "min": "v1.1.0"
                     }
                     """,
                     VersionRange.class
-            ));
+            );
+
+            Assertions.assertEquals(expectedVersionRange, versionRange);
         }
 
         @Test
@@ -151,15 +155,19 @@ public class TestVersionRange {
         }
 
         @Test
-        void Check_Valid_With_Max() {
-            Assertions.assertDoesNotThrow(() -> new Gson().fromJson("""
+        void Check_Max() {
+            String expectedMax = "v2.0.0";
+
+            VersionRange versionRange = new Gson().fromJson("""
                     {
                         "min": "v1.1.0",
                         "max": "v2.0.0"
                     }
                     """,
                     VersionRange.class
-            ));
+            );
+
+            Assertions.assertEquals(expectedMax, versionRange.max());
         }
 
         @Test
@@ -178,15 +186,19 @@ public class TestVersionRange {
         }
 
         @Test
-        void Check_Valid_With_Excluded() {
-            Assertions.assertDoesNotThrow(() -> new Gson().fromJson("""
+        void Check_Excluded() {
+            List<String> expectedExcluded = List.of("v1.3.0", "v2.0.0");
+
+            VersionRange versionRange = new Gson().fromJson("""
                     {
                         "min": "v1.1.0",
                         "excludes": ["v1.3.0", "v2.0.0"]
                     }
                     """,
                     VersionRange.class
-            ));
+            );
+
+            Assertions.assertEquals(expectedExcluded, versionRange.excludes());
         }
 
         @Test

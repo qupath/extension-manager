@@ -66,7 +66,19 @@ public class TestCatalog {
 
         @Test
         void Check_Valid_Catalog() {
-            Assertions.assertDoesNotThrow(() -> new Gson().fromJson("""
+            Catalog expectedCatalog = new Catalog(
+                    "",
+                    "",
+                    List.of(new Extension(
+                            "",
+                            "",
+                            "",
+                            URI.create("https://github.com/qupath/qupath"),
+                            List.of()
+                    ))
+            );
+
+            Catalog catalog = new Gson().fromJson("""
                     {
                         "name": "",
                         "description": "",
@@ -82,7 +94,9 @@ public class TestCatalog {
                     }
                     """,
                     Catalog.class
-            ));
+            );
+
+            Assertions.assertEquals(expectedCatalog, catalog);
         }
 
         @Test
