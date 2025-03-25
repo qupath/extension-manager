@@ -35,9 +35,9 @@ import java.util.function.Predicate;
 class RecursiveDirectoryWatcher implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(RecursiveDirectoryWatcher.class);
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final Map<WatchKey, Path> keys = new HashMap<>();
     private final Set<Path> addedFiles = new HashSet<>();
+    private final ExecutorService executor;
     private final WatchService watchService;
     private final int depth;
     private final Predicate<Path> filesToFind;
@@ -77,6 +77,7 @@ class RecursiveDirectoryWatcher implements AutoCloseable {
             Consumer<Path> onFileAdded,
             Consumer<Path> onFileDeleted
     ) throws IOException {
+        this.executor = Executors.newSingleThreadExecutor(runnable -> new Thread(runnable, String.format("%s-directory-watcher", directoryToWatch.getFileName())));
         this.watchService = FileSystems.getDefault().newWatchService();
         this.depth = depth;
         this.filesToFind = filesToFind;
