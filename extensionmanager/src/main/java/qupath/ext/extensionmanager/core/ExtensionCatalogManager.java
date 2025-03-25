@@ -43,7 +43,7 @@ import java.util.stream.Collectors;
  * add or remove a catalog, get access to all installed extensions, and install or delete an extension.
  * Manually installed extensions are automatically detected.
  * <p>
- * It also automatically loads extension classes with a custom ClassLoader (see {@link #getClassLoader()}).
+ * It also automatically loads extension classes with a custom ClassLoader (see {@link #getExtensionClassLoader()}).
  * Note that removed extensions are not unloaded from the class loader.
  * <p>
  * The list of active catalogs and installed extensions is determined by this class. It is internally saved
@@ -432,12 +432,12 @@ public class ExtensionCatalogManager implements AutoCloseable{
      *
      * @return the class loader user to load extensions
      */
-    public ClassLoader getClassLoader() {
+    public ClassLoader getExtensionClassLoader() {
         return extensionClassLoader;
     }
 
     /**
-     * Set a runnable to be called each time a JAR file is loaded by {@link #getClassLoader()}. The call may
+     * Set a runnable to be called each time a JAR file is loaded by {@link #getExtensionClassLoader()}. The call may
      * happen from any thread.
      * Note that the runnable may be called a few seconds after a JAR is added.
      *
