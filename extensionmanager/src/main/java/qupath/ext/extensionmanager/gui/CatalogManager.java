@@ -9,6 +9,7 @@ import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ContextMenu;
+import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
 import javafx.scene.control.OverrunStyle;
 import javafx.scene.control.SelectionMode;
@@ -33,7 +34,6 @@ import qupath.fx.dialogs.Dialogs;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.URISyntaxException;
 import java.nio.file.InvalidPathException;
 import java.text.MessageFormat;
 import java.util.List;
@@ -151,45 +151,29 @@ class CatalogManager extends Stage {
                 Platform.runLater(() -> progressWindow.setProgress(1));
 
                 if (extensionCatalogManager.getCatalogs().stream().anyMatch(savedCatalog -> savedCatalog.name().equals(catalog.name()))) {
-                    Platform.runLater(() -> new Alert(
-                            Alert.AlertType.ERROR,
+                    displayErrorMessage(
+                            resources.getString("CatalogManager.cannotAddCatalog"),
                             MessageFormat.format(
                                     resources.getString("CatalogManager.catalogAlreadyExists"),
                                     catalog.name()
                             )
-                    ).show());
+                    );
                     return;
                 }
 
-                try {
-                    extensionCatalogManager.addCatalog(List.of(new SavedCatalog(
-                            catalog.name(),
-                            catalog.description(),
-                            new URI(catalogUrl),
-                            uri,
-                            true
-                    )));
-                } catch (URISyntaxException | SecurityException | NullPointerException | IOException e) {
-                    logger.error("Error when saving {}", catalog.name(), e);
-
-                    Platform.runLater(() -> new Alert(
-                            Alert.AlertType.ERROR,
-                            MessageFormat.format(
-                                    resources.getString("CatalogManager.cannotSaveCatalog"),
-                                    e.getLocalizedMessage()
-                            )
-                    ).show());
-                }
+                extensionCatalogManager.addCatalog(List.of(new SavedCatalog(
+                        catalog.name(),
+                        catalog.description(),
+                        new URI(catalogUrl),
+                        uri,
+                        true
+                )));
             } catch (Exception e) {
                 logger.debug("Error when fetching catalog at {}", catalogUrl, e);
-
-                Platform.runLater(() -> new Alert(
-                        Alert.AlertType.ERROR,
-                        MessageFormat.format(
-                                resources.getString("CatalogManager.cannotAddCatalog"),
-                                e.getLocalizedMessage()
-                        )
-                ).show());
+                displayErrorMessage(
+                        resources.getString("CatalogManager.cannotAddCatalog"),
+                        e.getLocalizedMessage()
+                );
             } finally {
                 Platform.runLater(progressWindow::close);
             }
@@ -301,8 +285,8 @@ class CatalogManager extends Stage {
                     .map(SavedCatalog::name)
                     .toList();
             if (!nonDeletableCatalogs.isEmpty()) {
-                Dialogs.showErrorMessage(
-                        resources.getString("CatalogManager.error"),
+                displayErrorMessage(
+                        resources.getString("CatalogManager.deleteCatalog"),
                         MessageFormat.format(
                                 resources.getString("CatalogManager.cannotBeDeleted"),
                                 nonDeletableCatalogs.size() == 1 ? nonDeletableCatalogs.getFirst() : nonDeletableCatalogs.toString()
@@ -314,6 +298,15 @@ class CatalogManager extends Stage {
             deleteCatalogs(catalogTable.getSelectionModel().getSelectedItems());
         });
         menu.getItems().add(removeItem);
+    }
+
+    private void displayErrorMessage(String title, String text) {
+        new Dialogs.Builder()
+                .alertType(Alert.AlertType.ERROR)
+                .title(title)
+                .content(new Label(text))
+                .owner(this)
+                .show();
     }
 
     private void deleteCatalogs(List<SavedCatalog> catalogs) {
@@ -350,8 +343,8 @@ class CatalogManager extends Stage {
         } catch (IOException | SecurityException | NullPointerException e) {
             logger.error("Error when removing {}", catalogsToDelete, e);
 
-            Dialogs.showErrorMessage(
-                    resources.getString("CatalogManager.error"),
+            displayErrorMessage(
+                    resources.getString("CatalogManager.deleteCatalog"),
                     MessageFormat.format(
                             resources.getString("CatalogManager.cannotRemoveSelectedCatalogs"),
                             e.getLocalizedMessage()

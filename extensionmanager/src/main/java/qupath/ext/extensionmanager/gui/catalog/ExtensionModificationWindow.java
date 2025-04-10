@@ -277,32 +277,34 @@ class ExtensionModificationWindow extends Stage {
                         )))
                 );
 
-                Dialogs.showInfoNotification(
-                        resources.getString("Catalog.ExtensionModificationWindow.extensionManager"),
-                        MessageFormat.format(
-                                resources.getString("Catalog.ExtensionModificationWindow.installed"),
-                                extension.name(),
-                                release.getSelectionModel().getSelectedItem().name()
-                        )
-                );
+                Platform.runLater(() -> {
+                    progressWindow.close();
+                    Dialogs.showInfoNotification(
+                            resources.getString("Catalog.ExtensionModificationWindow.extensionManager"),
+                            MessageFormat.format(
+                                    resources.getString("Catalog.ExtensionModificationWindow.installed"),
+                                    extension.name(),
+                                    release.getSelectionModel().getSelectedItem().name()
+                            )
+                    );
+                    close();
+                });
             } catch (Exception e) {
                 logger.error("Error while installing extension", e);
 
-                Platform.runLater(() -> new Alert(
-                        Alert.AlertType.ERROR,
-                        MessageFormat.format(
-                                resources.getString("Catalog.ExtensionModificationWindow.notInstalled"),
-                                extension.name(),
-                                release.getSelectionModel().getSelectedItem().name(),
-                                e.getLocalizedMessage()
-                        )
-                ).show());
+                Platform.runLater(() -> {
+                    progressWindow.close();
+                    Dialogs.showErrorMessage(
+                            resources.getString("Catalog.ExtensionModificationWindow.installationError"),
+                            MessageFormat.format(
+                                    resources.getString("Catalog.ExtensionModificationWindow.notInstalled"),
+                                    extension.name(),
+                                    release.getSelectionModel().getSelectedItem().name(),
+                                    e.getLocalizedMessage()
+                            )
+                    );
+                });
             }
-
-            Platform.runLater(() -> {
-                progressWindow.close();
-                close();
-            });
         });
         executor.shutdown();
     }
