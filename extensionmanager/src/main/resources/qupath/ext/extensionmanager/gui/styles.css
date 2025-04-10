@@ -23,3 +23,12 @@
 .warn-text {
     -fx-text-fill: darkorange;
 }
+
+.star {
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 4, 0, 1, 1);
+    -fx-text-fill: gold;
+}
+
+.invisible {
+    -fx-opacity: 0;
+}

@@ -18,7 +18,7 @@ public class TestCatalog {
             Assertions.assertDoesNotThrow(() -> new Catalog(
                     "",
                     "",
-                    List.of(new Extension("", "", "", URI.create("https://github.com/qupath/qupath"), List.of()))
+                    List.of(new Extension("", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of()))
             ));
         }
 
@@ -49,9 +49,9 @@ public class TestCatalog {
         @Test
         void Check_Extensions_With_Same_Name() {
             List<Extension> extensions = List.of(
-                    new Extension("name", "", "", URI.create("https://github.com/qupath/qupath"), List.of()),
-                    new Extension("name", "", "", URI.create("https://github.com/qupath/qupath"), List.of()),
-                    new Extension("other_name", "", "", URI.create("https://github.com/qupath/qupath"), List.of())
+                    new Extension("name", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of()),
+                    new Extension("name", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of()),
+                    new Extension("other_name", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of())
             );
 
             Assertions.assertThrows(
@@ -74,6 +74,7 @@ public class TestCatalog {
                             "",
                             "",
                             URI.create("https://github.com/qupath/qupath"),
+                            false,
                             List.of()
                     ))
             );

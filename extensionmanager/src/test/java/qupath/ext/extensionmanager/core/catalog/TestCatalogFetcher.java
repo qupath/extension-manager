@@ -23,6 +23,7 @@ public class TestCatalogFetcher {
                     "Some extension description",
                     "Some author",
                     URI.create("https://github.com/qupath/qupath"),
+                    false,
                     List.of(
                             new Release(
                                     "v0.1.0",

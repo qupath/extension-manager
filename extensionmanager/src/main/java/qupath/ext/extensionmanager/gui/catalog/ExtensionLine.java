@@ -5,11 +5,13 @@ import javafx.beans.property.ReadOnlyObjectProperty;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
+import javafx.scene.control.ContentDisplay;
 import javafx.scene.control.Label;
 import javafx.scene.control.Tooltip;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Region;
 import org.controlsfx.glyphfont.FontAwesome;
+import org.controlsfx.glyphfont.Glyph;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
@@ -109,6 +111,14 @@ class ExtensionLine extends HBox {
                 name.setText(extension.name());
             }
         });
+
+        Glyph star = UiUtils.getFontAwesomeIcon(FontAwesome.Glyph.STAR);
+        star.getStyleClass().add(extension.starred() ?
+                UiUtils.getClassName(UiUtils.CssClass.STAR) :
+                UiUtils.getClassName(UiUtils.CssClass.INVISIBLE)
+        );
+        name.setContentDisplay(ContentDisplay.LEFT);
+        name.setGraphic(star);
 
         descriptionTooltip.setText(extension.description());
         Tooltip.install(separator, descriptionTooltip);

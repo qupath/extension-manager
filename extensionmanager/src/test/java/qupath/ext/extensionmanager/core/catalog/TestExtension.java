@@ -21,6 +21,7 @@ public class TestExtension {
                     "",
                     "",
                     URI.create("https://github.com/qupath/qupath"),
+                    false,
                     List.of(new Release(
                             "v1.0.0",
                             URI.create("https://github.com/qupath/qupath"),
@@ -41,6 +42,7 @@ public class TestExtension {
                             "",
                             "",
                             URI.create("https://github.com/qupath/qupath"),
+                            false,
                             List.of(new Release(
                                     "v1.0.0",
                                     URI.create("https://github.com/qupath/qupath"),
@@ -62,6 +64,7 @@ public class TestExtension {
                             null,
                             "",
                             URI.create("https://github.com/qupath/qupath"),
+                            false,
                             List.of(new Release(
                                     "v1.0.0",
                                     URI.create("https://github.com/qupath/qupath"),
@@ -83,6 +86,7 @@ public class TestExtension {
                             "",
                             null,
                             URI.create("https://github.com/qupath/qupath"),
+                            false,
                             List.of(new Release(
                                     "v1.0.0",
                                     URI.create("https://github.com/qupath/qupath"),
@@ -104,6 +108,7 @@ public class TestExtension {
                             "",
                             "",
                             null,
+                            false,
                             List.of(new Release(
                                     "v1.0.0",
                                     URI.create("https://github.com/qupath/qupath"),
@@ -125,6 +130,7 @@ public class TestExtension {
                             "",
                             "",
                             URI.create("https://github.com/qupath/qupath"),
+                            false,
                             null
                     )
             );
@@ -139,6 +145,7 @@ public class TestExtension {
                         "",
                         "",
                         URI.create("https://qupath.readthedocs.io/"),
+                        false,
                         List.of(new Release(
                                 "v1.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
@@ -162,6 +169,7 @@ public class TestExtension {
                     "",
                     "",
                     URI.create("https://github.com/qupath/qupath"),
+                    false,
                     List.of(new Release(
                             "v1.0.0",
                             URI.create("https://github.com/qupath/qupath"),
@@ -371,6 +379,7 @@ public class TestExtension {
                 "",
                 "",
                 URI.create("https://github.com/qupath/qupath"),
+                false,
                 List.of(
                         new Release(
                                 "v1.0.0",
@@ -413,6 +422,7 @@ public class TestExtension {
                 "",
                 "",
                 URI.create("https://github.com/qupath/qupath"),
+                false,
                 List.of(
                         new Release(
                                 "v1.0.0",
@@ -447,6 +457,7 @@ public class TestExtension {
                 "",
                 "",
                 URI.create("https://github.com/qupath/qupath"),
+                false,
                 List.of(
                         new Release(
                                 "v1.0.0",
@@ -488,6 +499,7 @@ public class TestExtension {
                 "",
                 "",
                 URI.create("https://github.com/qupath/qupath"),
+                false,
                 List.of(
                         new Release(
                                 "v1.0.0",
@@ -530,6 +542,7 @@ public class TestExtension {
                 "",
                 "",
                 URI.create("https://github.com/qupath/qupath"),
+                false,
                 List.of(
                         new Release(
                                 "v1.0.0",

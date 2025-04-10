@@ -14,9 +14,10 @@ import java.util.Optional;
  * @param description a short (one sentence or so) description of what the extension is and what it does
  * @param author the author or group responsible for the extension
  * @param homepage a link to the GitHub repository associated with the extension
+ * @param starred whether the extension is generally useful or recommended for most users
  * @param releases a list of available releases of the extension. This list is immutable
  */
-public record Extension(String name, String description, String author, URI homepage, List<Release> releases) {
+public record Extension(String name, String description, String author, URI homepage, boolean starred, List<Release> releases) {
 
     /**
      * Create an Extension.
@@ -35,14 +36,16 @@ public record Extension(String name, String description, String author, URI home
      * @param description a short (one sentence or so) description of what the extension is and what it does
      * @param author the author or group responsible for the extension
      * @param homepage a link to the GitHub repository associated with the extension
+     * @param starred whether the extension is generally useful or recommended for most users
      * @param releases a list of available releases of the extension
      * @throws IllegalArgumentException when the created extension is not valid (see the requirements above)
      */
-    public Extension(String name, String description, String author, URI homepage, List<Release> releases) {
+    public Extension(String name, String description, String author, URI homepage, boolean starred, List<Release> releases) {
         this.name = name;
         this.description = description;
         this.author = author;
         this.homepage = homepage;
+        this.starred = starred;
         this.releases = releases == null ? null : Collections.unmodifiableList(releases);
 
         checkValidity();
