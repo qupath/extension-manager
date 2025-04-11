@@ -120,7 +120,10 @@ class ExtensionLine extends HBox {
         name.setContentDisplay(ContentDisplay.LEFT);
         name.setGraphic(star);
 
-        descriptionTooltip.setText(extension.description());
+        descriptionTooltip.setText(extension.starred() ?
+                String.format("%s\n%s", extension.description(), resources.getString("Catalog.ExtensionLine.starredExtension")):
+                extension.description()
+        );
         Tooltip.install(separator, descriptionTooltip);
 
         updateAvailable.visibleProperty().bind(Bindings.createBooleanBinding(
