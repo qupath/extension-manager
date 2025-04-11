@@ -169,7 +169,7 @@ public class TestExtension {
                     "",
                     "",
                     URI.create("https://github.com/qupath/qupath"),
-                    false,
+                    true,
                     List.of(new Release(
                             "v1.0.0",
                             URI.create("https://github.com/qupath/qupath"),
@@ -186,6 +186,7 @@ public class TestExtension {
                         "description": "",
                         "author": "",
                         "homepage": "https://github.com/qupath/qupath",
+                        "starred": true,
                         "releases": [
                             {
                                 "name": "v1.0.0",
