@@ -505,7 +505,7 @@ public class TestExtensionCatalogManager {
                     NullPointerException.class,
                     () -> extensionCatalogManager.getExtensionDirectory(
                             null,
-                            new Extension("", "", "", URI.create("http://github.com"), List.of())
+                            new Extension("", "", "", URI.create("http://github.com"), false, List.of())
                     )
             );
         }
@@ -551,7 +551,7 @@ public class TestExtensionCatalogManager {
                             URI.create("http://test"),
                             true
                     ),
-                    new Extension("", "", "", URI.create("http://github.com"), List.of())
+                    new Extension("", "", "", URI.create("http://github.com"), false, List.of())
             );
 
             Assertions.assertNotNull(extensionDirectory);
@@ -585,6 +585,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of(release)
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -617,6 +618,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of()
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -655,6 +657,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of(release)
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -693,6 +696,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of(release)
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -740,6 +744,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of(release)
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -785,6 +790,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of()
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -829,6 +835,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of(release)
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -873,6 +880,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of(release)
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -919,6 +927,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of(release)
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -988,6 +997,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of(release)
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -1035,6 +1045,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of(release)
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -1154,6 +1165,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of(release)
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -1198,6 +1210,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of(release)
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -1236,6 +1249,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of(release)
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
@@ -1348,6 +1362,7 @@ public class TestExtensionCatalogManager {
                 "description",
                 "author",
                 URI.create("https://github.com"),
+                false,
                 List.of(release)
         );
         Path extensionDirectory = Files.createTempDirectory(null);

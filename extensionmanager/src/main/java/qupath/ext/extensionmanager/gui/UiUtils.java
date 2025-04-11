@@ -40,7 +40,15 @@ public class UiUtils {
         /**
          * A class to apply to an odd element of a vertical list
          */
-        ODD_ROW("odd-row");
+        ODD_ROW("odd-row"),
+        /**
+         * A class to make an element yellow with a shadow
+         */
+        STAR("star"),
+        /**
+         * A class to make an element invisible
+         */
+        INVISIBLE("invisible");
 
         private final String className;
 

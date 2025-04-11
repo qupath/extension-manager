@@ -22,7 +22,7 @@ public record Catalog(String name, String description, List<Extension> extension
      *     <li>The 'name', 'description', and 'extensions' fields must be defined (but can be empty).</li>
      *     <li>
      *         Each extension of the 'extensions' list must be a valid object
-     *         (see {@link Extension#Extension(String, String, String, URI, List)}).
+     *         (see {@link Extension#Extension(String, String, String, URI, boolean, List)}).
      *     </li>
      *     <li>Two extensions of the 'extensions' list cannot have the same name.</li>
      * </ul>
