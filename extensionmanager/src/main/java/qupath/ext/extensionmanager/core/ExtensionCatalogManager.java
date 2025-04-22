@@ -102,7 +102,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
             String version,
             Registry defaultRegistry
     ) {
-        Version.isValid(version);
+        Version.isValid(version, true);
 
         this.extensionFolderManager = new ExtensionFolderManager(extensionDirectoryPath);
         this.extensionClassLoader = new ExtensionClassLoader(parentClassLoader);

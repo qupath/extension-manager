@@ -78,7 +78,7 @@ public record Release(
         Utils.checkField(mainUrl, "mainUrl", "Release");
         Utils.checkField(versionRange, "versionRange", "Release");
 
-        Version.isValid(name);
+        Version.isValid(name, true);
 
         Utils.checkGithubURI(mainUrl);
 
