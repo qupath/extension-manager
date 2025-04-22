@@ -2,6 +2,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.Button?>
+<?import javafx.scene.control.Hyperlink?>
 <?import javafx.scene.control.Label?>
 <?import javafx.scene.control.Tooltip?>
 <?import javafx.scene.layout.HBox?>
@@ -12,10 +13,11 @@
       <tooltip>
          <Tooltip fx:id="descriptionTooltip" />
       </tooltip></Label>
-   <Label fx:id="updateAvailable" styleClass="warn-text" text="%Catalog.ExtensionLine.updateAvailable">
+   <Hyperlink fx:id="updateAvailable" onAction="#onUpdateAvailableClicked" styleClass="warn-text" text="%Catalog.ExtensionLine.updateAvailable">
       <tooltip>
          <Tooltip fx:id="updateAvailableTooltip" />
-      </tooltip></Label>
+      </tooltip>
+   </Hyperlink>
    <Region fx:id="separator" HBox.hgrow="ALWAYS" />
    <Button fx:id="add" contentDisplay="GRAPHIC_ONLY" layoutX="10.0" layoutY="10.0" mnemonicParsing="false" onAction="#onAddClicked">
       <tooltip>
