@@ -321,6 +321,62 @@ public class TestVersionRange {
     }
 
     @Test
+    void Check_Compatible_Version_When_Minor_Not_Specified_For_Min() {
+        VersionRange versionRange = new VersionRange(
+                "v0.1",
+                "v1.0.0",
+                List.of("v0.1.1", "v0.2.0", "v1.0.0")
+        );
+        String version = "v0.1.4";
+
+        boolean isCompatible = versionRange.isCompatible(version);
+
+        Assertions.assertTrue(isCompatible);
+    }
+
+    @Test
+    void Check_Compatible_Version_When_Minor_And_Patch_Not_Specified_For_Min() {
+        VersionRange versionRange = new VersionRange(
+                "v0",
+                "v1.0.0",
+                List.of("v0.1.1", "v0.2.0", "v1.0.0")
+        );
+        String version = "v0.1.4";
+
+        boolean isCompatible = versionRange.isCompatible(version);
+
+        Assertions.assertTrue(isCompatible);
+    }
+
+    @Test
+    void Check_Compatible_Version_When_Minor_Not_Specified_For_Max() {
+        VersionRange versionRange = new VersionRange(
+                "v0.1.0",
+                "v1.0",
+                List.of("v0.1.1", "v0.2.0", "v1.0.0")
+        );
+        String version = "v1.0.4";
+
+        boolean isCompatible = versionRange.isCompatible(version);
+
+        Assertions.assertTrue(isCompatible);
+    }
+
+    @Test
+    void Check_Compatible_Version_When_Minor_And_Patch_Not_Specified_For_Max() {
+        VersionRange versionRange = new VersionRange(
+                "v0.1.0",
+                "v1",
+                List.of("v0.1.1", "v0.2.0", "v1.0.0")
+        );
+        String version = "v1.1.4";
+
+        boolean isCompatible = versionRange.isCompatible(version);
+
+        Assertions.assertTrue(isCompatible);
+    }
+
+    @Test
     void Check_Incompatible_Version_Because_Of_Min() {
         VersionRange versionRange = new VersionRange(
                 "v0.1.0",

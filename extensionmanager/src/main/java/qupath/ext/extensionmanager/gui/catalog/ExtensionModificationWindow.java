@@ -59,6 +59,8 @@ class ExtensionModificationWindow extends Stage {
     @FXML
     private Label name;
     @FXML
+    private Label currentVersion;
+    @FXML
     private ChoiceBox<Release> release;
     @FXML
     private CheckBox optionalDependencies;
@@ -115,6 +117,16 @@ class ExtensionModificationWindow extends Stage {
 
         name.setText(extension.name());
 
+        if (installedExtension == null) {
+            currentVersion.setVisible(false);
+            currentVersion.setManaged(false);
+        } else {
+            currentVersion.setText(MessageFormat.format(
+                    resources.getString("Catalog.ExtensionModificationWindow.currentVersion"),
+                    installedExtension.releaseName()
+            ));
+        }
+
         release.getItems().addAll(extension.releases().stream()
                 .filter(release -> release.versionRange().isCompatible(extensionCatalogManager.getVersion()))
                 .toList()
@@ -130,13 +142,7 @@ class ExtensionModificationWindow extends Stage {
                 return null;
             }
         });
-        release.getSelectionModel().select(installedExtension == null ?
-                release.getItems().isEmpty() ? null : release.getItems().getFirst() :
-                release.getItems().stream()
-                        .filter(release -> release.name().equals(installedExtension.releaseName()))
-                        .findAny()
-                        .orElse(release.getItems().isEmpty() ? null : release.getItems().getFirst())
-        );
+        release.getSelectionModel().select(release.getItems().isEmpty() ? null : release.getItems().getFirst());
 
         optionalDependencies.visibleProperty().bind(release.getSelectionModel()
                 .selectedItemProperty()

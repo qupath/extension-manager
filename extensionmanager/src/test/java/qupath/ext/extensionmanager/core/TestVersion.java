@@ -30,12 +30,22 @@ public class TestVersion {
     }
 
     @Test
-    void Check_Valid_Version() {
+    void Check_Version_Without_Patch() {
+        Assertions.assertDoesNotThrow(() -> new Version("v1.2"));
+    }
+
+    @Test
+    void Check_Version_Without_Patch_And_Minor() {
+        Assertions.assertDoesNotThrow(() -> new Version("v1"));
+    }
+
+    @Test
+    void Check_Fully_Specified_Version() {
         Assertions.assertDoesNotThrow(() -> new Version("v1.2.3"));
     }
 
     @Test
-    void Check_Valid_Version_With_Release_Candidate() {
+    void Check_Fully_Specified_Version_With_Release_Candidate() {
         Assertions.assertDoesNotThrow(() -> new Version("v1.2.3-rc4"));
     }
 
@@ -78,6 +88,26 @@ public class TestVersion {
     void Check_Version_Inequality_With_Same_Major_Minor_And_Patch() {
         Version lowerVersion = new Version("v1.2.4");
         Version upperVersion = new Version("v1.2.4");
+
+        int comparison = lowerVersion.compareTo(upperVersion);
+
+        Assertions.assertEquals(0, comparison);
+    }
+
+    @Test
+    void Check_Version_Inequality_With_No_Patch() {
+        Version lowerVersion = new Version("v1.2.4");
+        Version upperVersion = new Version("v1.2");
+
+        int comparison = lowerVersion.compareTo(upperVersion);
+
+        Assertions.assertEquals(0, comparison);
+    }
+
+    @Test
+    void Check_Version_Inequality_With_No_Patch_And_Minor() {
+        Version lowerVersion = new Version("v1.2.4");
+        Version upperVersion = new Version("v1");
 
         int comparison = lowerVersion.compareTo(upperVersion);
 

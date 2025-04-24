@@ -8,9 +8,8 @@ import java.util.Collections;
 import java.util.List;
 
 /**
- * A specification of the minimum and maximum versions that an extension supports. Versions should be specified in the
- * form "v[MAJOR].[MINOR].[PATCH]" corresponding to semantic versions, although trailing release candidate qualifiers
- * (eg, "-rc1") are also allowed.
+ * A specification of the minimum and maximum versions that an extension supports. Versions should follow the
+ * specifications of {@link Version}.
  *
  * @param min the minimum/lowest version that this extension is known to be compatible with
  * @param max the maximum/highest version that this extension is known to be compatible with. Can be null
@@ -95,7 +94,7 @@ public record VersionRange(String min, String max, List<String> excludes) {
     private void checkValidity() {
         Utils.checkField(min, "min", "VersionRange");
 
-        Version.isValid(min);
+        Version.isValid(min, false);
 
         if (max != null) {
             if (new Version(min).compareTo(new Version(max)) > 0) {
