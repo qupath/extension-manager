@@ -388,11 +388,17 @@ public class ExtensionCatalogManager implements AutoCloseable{
             extensionProperty.set(Optional.empty());
         }
 
-        downloadAndExtractLinks(
-                getDownloadUrlsToFilePaths(savedCatalog, extension, installationInformation, true),
-                onProgress,
-                onStatusChanged
-        );
+        try {
+            downloadAndExtractLinks(
+                    getDownloadUrlsToFilePaths(savedCatalog, extension, installationInformation, true),
+                    onProgress,
+                    onStatusChanged
+            );
+        } catch (Exception e) {
+            logger.debug("Installation of {} failed. Clearing extension files", extension);
+            extensionFolderManager.deleteExtension(savedCatalog, extension);
+            throw e;
+        }
 
         synchronized (this) {
             extensionProperty.set(Optional.of(installationInformation));
