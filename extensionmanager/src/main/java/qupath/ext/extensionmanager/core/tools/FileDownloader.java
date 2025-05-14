@@ -41,7 +41,8 @@ public class FileDownloader {
      *                   will be a float between 0 and 1 indicating the progress of the download (0: beginning,
      *                   1: finished). This function will be called from the calling thread
      * @throws NullPointerException if one of the provided parameter is null
-     * @throws IOException if an I/O error occurs when sending the request or receiving the file
+     * @throws IOException if an I/O error occurs when sending the request or receiving the file. It can also occur
+     * when this function is interrupted, in which case its {@link Exception#getCause() cause} will be an {@link InterruptedException}
      * @throws InterruptedException if this function is interrupted
      * @throws IllegalArgumentException if the provided URI does not contain a valid scheme ("http" or "https")
      * @throws java.io.FileNotFoundException if the downloaded file already exists but is a directory rather than a regular
