@@ -45,19 +45,26 @@ class ExtensionClassLoader extends URLClassLoader {
      * @throws MalformedURLException if an error occurred while converting the provided path to a URL
      * @throws NullPointerException if the provided path is null
      */
-    public synchronized void addJar(Path jarPath) throws MalformedURLException {
-        addURL(jarPath.toUri().toURL());
-        logger.debug("File {} loaded by extension class loader", jarPath);
+    public void addJar(Path jarPath) throws MalformedURLException {
+        synchronized (this) {
+            addURL(jarPath.toUri().toURL());
+            logger.debug("File {} loaded by extension class loader", jarPath);
 
-        String filename = jarPath.getFileName().toString();
-        if (filenamesAdded.contains(filename)) {
-            logger.warn(
-                    "A JAR file with the same file name ({}) was already added to this class loader. {} will probably not be loaded",
-                    filename,
-                    jarPath
-            );
+            String filename = jarPath.getFileName().toString();
+            if (filenamesAdded.contains(filename)) {
+                logger.warn(
+                        "A JAR file with the same file name ({}) was already added to this class loader. {} will probably not be loaded",
+                        filename,
+                        jarPath
+                );
+            }
+            filenamesAdded.add(filename);
         }
-        filenamesAdded.add(filename);
+
+        List<Runnable> runnables;
+        synchronized (this) {
+            runnables = new ArrayList<>(this.runnables);
+        }
 
         for (Runnable runnable: runnables) {
             try {
