@@ -141,7 +141,8 @@ public class FileDownloader {
                     "The {} header {} cannot be converted to a number. Cannot indicate progress of {} download",
                     CONTENT_LENGTH_ATTRIBUTE,
                     contentLengthText,
-                    response.uri()
+                    response.uri(),
+                    e
             );
             return OptionalInt.empty();
         }

@@ -299,9 +299,9 @@ class ExtensionModificationWindow extends Stage {
                 Platform.runLater(progressWindow::close);
 
                 if (e instanceof InterruptedException || e.getCause() instanceof InterruptedException) {
-                    logger.debug("Installation of {} interrupted", extension, e);
+                    logger.debug("Installation of {} interrupted", extension.name(), e);
                 } else {
-                    logger.error("Error while installing {}", extension, e);
+                    logger.error("Error while installing {}", extension.name(), e);
 
                     Platform.runLater(() -> Dialogs.showErrorMessage(
                             resources.getString("Catalog.ExtensionModificationWindow.installationError"),
