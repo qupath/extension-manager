@@ -132,7 +132,7 @@ class RecursiveDirectoryWatcher implements AutoCloseable {
                                 onFileDeleted.accept(filePath);
                                 addedFiles.remove(filePath);
                             } else {
-                                logger.debug("Unexpected event: {}", kind);
+                                logger.debug("Unexpected event {} with file {}. Ignoring it", kind, filePath);
                             }
                         } else {
                             logger.debug("The file or directory {} doesn't match the predicate, so it won't be reported", filePath);

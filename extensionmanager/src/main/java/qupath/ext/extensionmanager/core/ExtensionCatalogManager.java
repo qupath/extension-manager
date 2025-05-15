@@ -287,7 +287,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
                 try {
                     extensionFolderManager.deleteExtensionsFromCatalog(savedCatalog);
                 } catch (IOException | SecurityException | InvalidPathException | NullPointerException e) {
-                    logger.debug(String.format("Could not delete %s", savedCatalog.name()), e);
+                    logger.debug("Could not delete {}", savedCatalog.name(), e);
                 }
             }
 
@@ -388,11 +388,17 @@ public class ExtensionCatalogManager implements AutoCloseable{
             extensionProperty.set(Optional.empty());
         }
 
-        downloadAndExtractLinks(
-                getDownloadUrlsToFilePaths(savedCatalog, extension, installationInformation, true),
-                onProgress,
-                onStatusChanged
-        );
+        try {
+            downloadAndExtractLinks(
+                    getDownloadUrlsToFilePaths(savedCatalog, extension, installationInformation, true),
+                    onProgress,
+                    onStatusChanged
+            );
+        } catch (Exception e) {
+            logger.debug("Installation of {} failed. Clearing extension files", extension.name());
+            extensionFolderManager.deleteExtension(savedCatalog, extension);
+            throw e;
+        }
 
         synchronized (this) {
             extensionProperty.set(Optional.of(installationInformation));
@@ -532,10 +538,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
                     catalogExtension.extension
             );
         } catch (IOException | InvalidPathException | SecurityException | NullPointerException e) {
-            logger.debug(
-                    String.format("Error while retrieving %s installation information", catalogExtension.extension.name()),
-                    e
-            );
+            logger.debug("Error while retrieving {} installation information", catalogExtension.extension.name(), e);
             return Optional.empty();
         }
     }

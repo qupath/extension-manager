@@ -341,7 +341,7 @@ class CatalogManager extends Stage {
                     deleteExtensions
             );
         } catch (IOException | SecurityException | NullPointerException e) {
-            logger.error("Error when removing {}", catalogsToDelete, e);
+            logger.error("Error when removing {}", catalogsToDelete.stream().map(SavedCatalog::name).toList(), e);
 
             displayErrorMessage(
                     resources.getString("CatalogManager.deleteCatalog"),

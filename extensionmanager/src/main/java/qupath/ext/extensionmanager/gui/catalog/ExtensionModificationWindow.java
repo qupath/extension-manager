@@ -296,11 +296,14 @@ class ExtensionModificationWindow extends Stage {
                     close();
                 });
             } catch (Exception e) {
-                logger.error("Error while installing extension", e);
+                Platform.runLater(progressWindow::close);
 
-                Platform.runLater(() -> {
-                    progressWindow.close();
-                    Dialogs.showErrorMessage(
+                if (e instanceof InterruptedException || e.getCause() instanceof InterruptedException) {
+                    logger.debug("Installation of {} interrupted", extension.name(), e);
+                } else {
+                    logger.error("Error while installing {}", extension.name(), e);
+
+                    Platform.runLater(() -> Dialogs.showErrorMessage(
                             resources.getString("Catalog.ExtensionModificationWindow.installationError"),
                             MessageFormat.format(
                                     resources.getString("Catalog.ExtensionModificationWindow.notInstalled"),
@@ -308,8 +311,8 @@ class ExtensionModificationWindow extends Stage {
                                     release.getSelectionModel().getSelectedItem().name(),
                                     e.getLocalizedMessage()
                             )
-                    );
-                });
+                    ));
+                }
             }
         });
         executor.shutdown();
