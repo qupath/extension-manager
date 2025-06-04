@@ -121,10 +121,16 @@ class ExtensionLine extends HBox {
         name.setContentDisplay(ContentDisplay.LEFT);
         name.setGraphic(star);
 
-        descriptionTooltip.setText(extension.starred() ?
-                String.format("%s\n%s", extension.description(), resources.getString("Catalog.ExtensionLine.starredExtension")):
-                extension.description()
-        );
+        StringBuilder descriptionText = new StringBuilder(extension.description());
+        if (extension.starred()) {
+            descriptionText.append("\n");
+            descriptionText.append(resources.getString("Catalog.ExtensionLine.starredExtension"));
+        }
+        if (noAvailableRelease()) {
+            descriptionText.append("\n");
+            descriptionText.append(resources.getString("Catalog.ExtensionLine.extensionNotCompatible"));
+        }
+        descriptionTooltip.setText(descriptionText.toString());
         Tooltip.install(separator, descriptionTooltip);
 
         updateAvailable.visibleProperty().bind(Bindings.createBooleanBinding(
@@ -177,9 +183,7 @@ class ExtensionLine extends HBox {
         settings.managedProperty().bind(settings.visibleProperty());
         delete.managedProperty().bind(delete.visibleProperty());
 
-        add.setDisable(extension.releases().stream()
-                .noneMatch(release -> release.versionRange().isCompatible(extensionCatalogManager.getVersion()))
-        );
+        add.setDisable(noAvailableRelease());
 
         infoTooltip.setText(String.format("%s\n%s", extension.description(), extension.homepage()));
     }
@@ -286,11 +290,16 @@ class ExtensionLine extends HBox {
     @FXML
     private void onInfoClicked(ActionEvent ignored) {
         try {
-            ExtensionDetails extensionDetails = new ExtensionDetails(extension);
+            ExtensionDetails extensionDetails = new ExtensionDetails(extension, noAvailableRelease());
             extensionDetails.initOwner(getScene().getWindow());
             extensionDetails.show();
         } catch (IOException e) {
             logger.error("Error when creating extension detail pane", e);
         }
+    }
+
+    private boolean noAvailableRelease() {
+        return extension.releases().stream()
+                .noneMatch(release -> release.versionRange().isCompatible(extensionCatalogManager.getVersion()));
     }
 }
