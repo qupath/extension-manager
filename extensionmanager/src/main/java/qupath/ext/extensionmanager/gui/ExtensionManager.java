@@ -204,7 +204,7 @@ public class ExtensionManager extends Stage {
         }
 
         UiUtils.openFolderInFileExplorer(extensionDirectory).exceptionally(error -> {
-            logger.error("Error while opening QuPath extension directory {}", extensionDirectory, error);
+            logger.error("Error while opening extension directory {}", extensionDirectory, error);
 
             Dialogs.showErrorMessage(
                     resources.getString("ExtensionManager.error"),
