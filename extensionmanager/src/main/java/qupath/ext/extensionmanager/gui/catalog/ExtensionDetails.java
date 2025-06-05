@@ -29,6 +29,8 @@ class ExtensionDetails extends Stage {
     private Label description;
     @FXML
     private Hyperlink homepage;
+    @FXML
+    private Label notCompatible;
 
     /**
      * Create the window.
@@ -45,14 +47,12 @@ class ExtensionDetails extends Stage {
 
         setTitle(extension.name());
 
-        String descriptionText = extension.description();
-        if (noAvailableRelease) {
-            descriptionText += "\n";
-            descriptionText += resources.getString("Catalog.ExtensionDetails.extensionNotCompatible");
-        }
-        description.setText(descriptionText);
+        description.setText(extension.description());
 
         homepage.setText(extension.homepage().toString());
+
+        notCompatible.setVisible(noAvailableRelease);
+        notCompatible.setManaged(notCompatible.isVisible());
     }
 
     @FXML
