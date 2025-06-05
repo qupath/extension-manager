@@ -29,22 +29,30 @@ class ExtensionDetails extends Stage {
     private Label description;
     @FXML
     private Hyperlink homepage;
+    @FXML
+    private Label notCompatible;
 
     /**
      * Create the window.
      *
      * @param extension the extension whose information should be displayed
+     * @param noAvailableRelease whether no release of this extension can be installed
      * @throws IOException when an error occurs while creating the container
      */
-    public ExtensionDetails(Extension extension) throws IOException {
+    public ExtensionDetails(Extension extension, boolean noAvailableRelease) throws IOException {
         UiUtils.loadFXML(this, ExtensionDetails.class.getResource("extension_details.fxml"));
 
         FXUtils.addCloseWindowShortcuts(this);
         initModality(Modality.WINDOW_MODAL);
 
         setTitle(extension.name());
+
         description.setText(extension.description());
+
         homepage.setText(extension.homepage().toString());
+
+        notCompatible.setVisible(noAvailableRelease);
+        notCompatible.setManaged(notCompatible.isVisible());
     }
 
     @FXML
