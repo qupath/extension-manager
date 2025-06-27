@@ -301,10 +301,17 @@ class CatalogManager extends Stage {
     }
 
     private void displayErrorMessage(String title, String text) {
+        Label label = new Label(text);
+        label.setMaxWidth(Double.MAX_VALUE);
+        label.setMaxHeight(Double.MAX_VALUE);
+        label.setMinSize(Label.USE_PREF_SIZE, Label.USE_PREF_SIZE);
+        label.setWrapText(true);
+        label.setPrefWidth(360);
+
         new Dialogs.Builder()
                 .alertType(Alert.AlertType.ERROR)
                 .title(title)
-                .content(new Label(text))
+                .content(label)
                 .owner(this)
                 .show();
     }
