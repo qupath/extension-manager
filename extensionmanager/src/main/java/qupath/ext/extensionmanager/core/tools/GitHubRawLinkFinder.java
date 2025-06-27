@@ -130,7 +130,7 @@ public class GitHubRawLinkFinder {
                             "The response to %s doesn't contain any file name matching the required name",
                             uri
                     )));
-        }).whenComplete((rawLink, error) -> client.close());
+        }).whenComplete((rawLink, error) -> client.shutdown());
     }
 
     private static GitHubRepository getGitHubRepository(String url) {

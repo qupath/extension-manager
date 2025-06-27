@@ -57,55 +57,59 @@ public class FileDownloader {
         }
 
         logger.debug("Sending request to {}", uri);
+        HttpClient client = HttpClient
+                .newBuilder()
+                .followRedirects(HttpClient.Redirect.ALWAYS)
+                .build();
+
+        HttpResponse<InputStream> response = client.send(
+                HttpRequest.newBuilder()
+                        .uri(uri)
+                        .timeout(REQUEST_TIMEOUT)
+                        .GET()
+                        .build(),
+                HttpResponse.BodyHandlers.ofInputStream()
+        );
+
+        if (response.statusCode() != 200) {
+            client.shutdown();
+            throw new RuntimeException(String.format(
+                    "Request to %s failed with status code %d.", uri, response.statusCode()
+            ));
+        }
+        logger.debug("Got response from {} with status 200", uri);
+
+        OptionalInt contentLength = getContentLength(response);
+
         try (
-                HttpClient client = HttpClient
-                        .newBuilder()
-                        .followRedirects(HttpClient.Redirect.ALWAYS)
-                        .build()
+                InputStream inputStream = response.body();
+                FileOutputStream fileOutputStream = new FileOutputStream(outputPath.toFile())
         ) {
-            HttpResponse<InputStream> response = client.send(
-                    HttpRequest.newBuilder()
-                            .uri(uri)
-                            .timeout(REQUEST_TIMEOUT)
-                            .GET()
-                            .build(),
-                    HttpResponse.BodyHandlers.ofInputStream()
-            );
-            if (response.statusCode() != 200) {
-                throw new RuntimeException(String.format(
-                        "Request to %s failed with status code %d.", uri, response.statusCode()
-                ));
-            }
-            logger.debug("Got response from {} with status 200", uri);
+            byte[] buffer = new byte[BUFFER_SIZE];
+            long bytesDownloaded = 0L;
 
-            OptionalInt contentLength = getContentLength(response);
+            logger.debug("Starting downloading body of {}", uri);
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) > -1) {
+                logger.trace("{} bytes downloaded", bytesRead);
 
-            try (
-                    InputStream inputStream = response.body();
-                    FileOutputStream fileOutputStream = new FileOutputStream(outputPath.toFile())
-            ) {
-                byte[] buffer = new byte[BUFFER_SIZE];
-                long bytesDownloaded = 0L;
+                bytesDownloaded += bytesRead;
 
-                logger.debug("Starting downloading body of {}", uri);
-                int bytesRead;
-                while ((bytesRead = inputStream.read(buffer)) > -1) {
-                    logger.trace("{} bytes downloaded", bytesRead);
-
-                    bytesDownloaded += bytesRead;
-
-                    if (contentLength.isPresent()) {
-                        onProgress.accept((float) bytesDownloaded / contentLength.getAsInt());
-                    }
-
-                    fileOutputStream.write(buffer, 0, bytesRead);
-
-                    if (Thread.interrupted()) {
-                        throw new InterruptedException(String.format("Download of %s interrupted", uri));
-                    }
+                if (contentLength.isPresent()) {
+                    onProgress.accept((float) bytesDownloaded / contentLength.getAsInt());
                 }
-                logger.debug("Download of {} ended successfully", uri);
+
+                fileOutputStream.write(buffer, 0, bytesRead);
+
+                if (Thread.interrupted()) {
+                    throw new InterruptedException(String.format("Download of %s interrupted", uri));
+                }
             }
+            logger.debug("Download of {} ended successfully", uri);
+            client.shutdown();
+        } catch (Exception e) {
+            client.shutdown();
+            throw e;
         }
     }
 

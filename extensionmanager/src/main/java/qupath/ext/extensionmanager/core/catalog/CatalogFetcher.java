@@ -73,6 +73,6 @@ public class CatalogFetcher {
 
                     return catalog;
                 })
-                .whenComplete((i, e) -> httpClient.close());
+                .whenComplete((i, e) -> httpClient.shutdown());
     }
 }
