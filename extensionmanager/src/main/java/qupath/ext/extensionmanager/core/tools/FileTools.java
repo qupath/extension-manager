@@ -69,8 +69,11 @@ public class FileTools {
 
         Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
         if (desktop != null && desktop.isSupported(Desktop.Action.MOVE_TO_TRASH)) {
-            logger.debug("Moving {} to trash", directoryToDelete);
-            desktop.moveToTrash(directoryToDelete);
+            logger.debug("Attempting to move {} to trash", directoryToDelete);
+            if (!desktop.moveToTrash(directoryToDelete)) {
+                logger.debug("Failed to move {} to trash. Deleting it", directoryToDelete);
+                deleteDirectoryRecursively(directoryToDelete);
+            }
         } else {
             logger.debug("Moving to trash not supported. Deleting {}", directoryToDelete);
             deleteDirectoryRecursively(directoryToDelete);
