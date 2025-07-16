@@ -37,7 +37,7 @@ public class ExtensionManagerApp extends Application {
         extensionCatalogManager = new ExtensionCatalogManager(
                 new SimpleObjectProperty<>(createExtensionDirectory()),
                 ExtensionManagerApp.class.getClassLoader(),
-                "v0.6.0-rc3",
+                "v0.6.0",
                 new Registry(List.of(new SavedCatalog(
                         "QuPath catalog",
                         "Extensions maintained by the QuPath team",
