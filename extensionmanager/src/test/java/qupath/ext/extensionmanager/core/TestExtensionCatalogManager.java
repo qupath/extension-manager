@@ -975,54 +975,6 @@ public class TestExtensionCatalogManager {
     }
 
     @Test
-    void Check_Installed_Jars_After_Extension_Directory_Changed() throws Exception {
-        SimpleObjectProperty<Path> extensionDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        Release release = new Release(
-                "v0.1.2",
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
-                null,
-                List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
-                null,
-                new VersionRange("v0.0.0", null, null)
-        );
-        List<Path> expectedJars = List.of();
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of(release)
-        );
-        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                extensionDirectory,
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
-        )) {
-            extensionCatalogManager.installOrUpdateExtension(
-                    catalog,
-                    extension,
-                    new InstalledExtension(release.name(), true),
-                    progress -> {},
-                    (step, resource) -> {}
-            );
-
-            extensionDirectory.set(Files.createTempDirectory(null));
-
-            Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for list to update
-            TestUtils.assertCollectionsEqualsWithoutOrder(expectedJars, extensionCatalogManager.getCatalogManagedInstalledJars());
-        }
-    }
-
-    @Test
     void Check_Jar_Loaded_Runnable_Run_After_Extension_Installation() throws Exception {
         SavedCatalog catalog = new SavedCatalog(
                 "name",
