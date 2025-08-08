@@ -3,6 +3,7 @@ package qupath.ext.extensionmanager.core.tools;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.swing.SwingUtilities;
 import java.awt.Desktop;
 import java.io.File;
 import java.io.IOException;
@@ -70,7 +71,7 @@ public class FileTools {
         Desktop desktop = Desktop.isDesktopSupported() ? Desktop.getDesktop() : null;
         if (desktop != null && desktop.isSupported(Desktop.Action.MOVE_TO_TRASH)) {
             logger.debug("Attempting to move {} to trash", directoryToDelete);
-            if (!desktop.moveToTrash(directoryToDelete)) {
+            if (!moveToTrash(desktop, directoryToDelete)) {
                 logger.debug("Failed to move {} to trash. Deleting it", directoryToDelete);
                 deleteDirectoryRecursively(directoryToDelete);
             }
@@ -127,6 +128,25 @@ public class FileTools {
         return false;
     }
 
+    private static boolean moveToTrash(Desktop desktop, File fileToDelete) {
+        if (SwingUtilities.isEventDispatchThread() || !isWindows()) {
+            // It seems safe to call move to trash from any thread on macOS and Linux
+            // We can't use the EDT on macOS because of https://bugs.openjdk.org/browse/JDK-8087465
+            return desktop.moveToTrash(fileToDelete);
+        } else {
+            // EXCEPTION_ACCESS_VIOLATION associated with moveToTrash reported on Windows 11.
+            // https://github.com/qupath/qupath/issues/1738
+            // Could not be replicated (but we didn't have Windows 11...); taking a guess that this might help.
+            try {
+                SwingUtilities.invokeAndWait(() -> moveToTrash(desktop, fileToDelete));
+            } catch (Exception e) {
+                logger.warn("Cannot move file {} to trash", fileToDelete, e);
+                return false;
+            }
+            return !fileToDelete.exists();
+        }
+    }
+
     private static void deleteDirectoryRecursively(File directoryToBeDeleted) throws IOException {
         logger.debug("Deleting children of {}", directoryToBeDeleted);
         File[] childFiles = directoryToBeDeleted.listFiles();
@@ -138,5 +158,9 @@ public class FileTools {
 
         logger.debug("Deleting {}", directoryToBeDeleted);
         Files.deleteIfExists(directoryToBeDeleted.toPath());
+    }
+
+    private static boolean isWindows() {
+        return System.getProperty("os.name").toLowerCase().contains("win");
     }
 }
