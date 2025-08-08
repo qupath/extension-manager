@@ -15,6 +15,7 @@ import java.util.List;
 public class TestFilesWatcher {
 
     private static final Logger logger = LoggerFactory.getLogger(TestFilesWatcher.class);
+    private static final int CHANGE_WAITING_TIME_MS = 10000;
 
     @Test
     void Check_Directory_To_Watch_Property_Null() {
@@ -110,7 +111,7 @@ public class TestFilesWatcher {
                 Files.createFile(directoryToWatch.resolve("file2"))
         );
 
-        Thread.sleep(5000);     // wait for files to be detected
+        Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for files to be detected
         TestUtils.assertCollectionsEqualsWithoutOrder(
                 expectedFiles,
                 filesWatcher.getFiles()
@@ -161,7 +162,7 @@ public class TestFilesWatcher {
         );
         Files.delete(directoryToWatch.resolve("file1"));
 
-        Thread.sleep(5000);     // wait for files to be detected
+        Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for files to be detected
         TestUtils.assertCollectionsEqualsWithoutOrder(
                 expectedFiles,
                 filesWatcher.getFiles()
@@ -210,7 +211,7 @@ public class TestFilesWatcher {
         );
         Files.move(subFolder, Files.createTempDirectory(null).resolve("folder"));
 
-        Thread.sleep(5000);     // wait for files to be detected
+        Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for files to be detected
         TestUtils.assertCollectionsEqualsWithoutOrder(
                 expectedFiles,
                 filesWatcher.getFiles()

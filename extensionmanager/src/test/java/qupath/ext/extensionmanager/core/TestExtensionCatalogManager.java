@@ -36,6 +36,7 @@ import java.util.stream.Stream;
 public class TestExtensionCatalogManager {
 
     private static final String CATALOG_NAME = "catalog.json";
+    private static final int CHANGE_WAITING_TIME_MS = 10000;
     private static SimpleServer server;
 
     @BeforeAll
@@ -944,7 +945,7 @@ public class TestExtensionCatalogManager {
                     (step, resource) -> {}
             );
 
-            Thread.sleep(5000);     // wait for list to update
+            Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for list to update
             TestUtils.assertCollectionsEqualsWithoutOrder(
                     expectedJarNames,
                     extensionCatalogManager.getCatalogManagedInstalledJars().stream()
@@ -1016,7 +1017,7 @@ public class TestExtensionCatalogManager {
 
             extensionDirectory.set(Files.createTempDirectory(null));
 
-            Thread.sleep(5000);     // wait for list to update
+            Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for list to update
             TestUtils.assertCollectionsEqualsWithoutOrder(expectedJars, extensionCatalogManager.getCatalogManagedInstalledJars());
         }
     }
@@ -1064,7 +1065,7 @@ public class TestExtensionCatalogManager {
                     (step, resource) -> {}
             );
 
-            Thread.sleep(5000);     // wait for list to update
+            Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for list to update
             Assertions.assertEquals(expectedNumberOfCalls, numberOfJarLoaded.get());
         }
     }
@@ -1268,7 +1269,7 @@ public class TestExtensionCatalogManager {
 
             extensionCatalogManager.removeExtension(catalog, extension);
 
-            Thread.sleep(5000);     // wait for list to update
+            Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for list to update
             TestUtils.assertCollectionsEqualsWithoutOrder(
                     expectedJarNames,
                     extensionCatalogManager.getCatalogManagedInstalledJars().stream()
@@ -1314,7 +1315,7 @@ public class TestExtensionCatalogManager {
 
             List<Path> jars = extensionCatalogManager.getManuallyInstalledJars();
 
-            Thread.sleep(5000);     // wait for list to update
+            Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for list to update
             TestUtils.assertCollectionsEqualsWithoutOrder(expectedJars, jars);
         }
     }
