@@ -5,6 +5,7 @@ import com.google.gson.JsonIOException;
 import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
 import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -78,8 +79,8 @@ class ExtensionFolderManager implements AutoCloseable {
     private static final Predicate<Path> isJar = path -> path.toString().toLowerCase().endsWith(".jar");
     private static final Gson gson = new Gson();
     private final ReadOnlyObjectProperty<Path> extensionDirectoryPath;
+    private final ObservableValue<Path> catalogsDirectoryPath;
     private final FilesWatcher manuallyInstalledExtensionsWatcher;
-    private final FilesWatcher catalogManagedInstalledExtensionsWatcher;
     /**
      * A type of files to retrieve.
      */
@@ -121,6 +122,31 @@ class ExtensionFolderManager implements AutoCloseable {
      */
     public ExtensionFolderManager(ReadOnlyObjectProperty<Path> extensionDirectoryPath) {
         this.extensionDirectoryPath = extensionDirectoryPath;
+        this.catalogsDirectoryPath = extensionDirectoryPath.map(path -> {
+            if (path == null) {
+                return null;
+            }
+
+            Path catalogsFolder = null;
+            try {
+                catalogsFolder = path.resolve(CATALOGS_FOLDER);
+
+                if (Files.isRegularFile(catalogsFolder)) {
+                    logger.debug("Deleting {} because it should be a directory", catalogsFolder);
+                    Files.deleteIfExists(catalogsFolder);
+                }
+                Files.createDirectories(catalogsFolder);
+
+                return catalogsFolder;
+            } catch (IOException | InvalidPathException e) {
+                logger.debug(
+                        "Error while resolving path of catalogs directory or while creating a corresponding directory",
+                        e
+                );
+            }
+
+            return catalogsFolder;
+        });
 
         this.manuallyInstalledExtensionsWatcher = new FilesWatcher(
                 extensionDirectoryPath,
@@ -134,49 +160,38 @@ class ExtensionFolderManager implements AutoCloseable {
                     }
                 }
         );
-
-        this.catalogManagedInstalledExtensionsWatcher = new FilesWatcher(
-                extensionDirectoryPath.map(path -> {
-                    if (path == null) {
-                        return null;
-                    } else {
-                        try {
-                            return getAndCreateCatalogsDirectory();
-                        } catch (IOException | InvalidPathException | SecurityException | NullPointerException e) {
-                            logger.debug("Error when getting catalog path from {}", path, e);
-                            return null;
-                        }
-                    }
-                }),
-                isJar,
-                path -> false
-        );
     }
 
     @Override
     public void close() throws Exception {
         manuallyInstalledExtensionsWatcher.close();
-        catalogManagedInstalledExtensionsWatcher.close();
     }
 
     /**
-     * @return a read only property containing the path to the extension folder.
-     * It may be updated from any thread and the path (but not the property) can be null
-     * or invalid
+     * @return a read only property containing the path to the extension folder. It may be updated from any thread and
+     * the path (but not the property) can be null or invalid
      */
     public ReadOnlyObjectProperty<Path> getExtensionDirectoryPath() {
         return extensionDirectoryPath;
     }
 
     /**
-     * Save the provided registry to disk. It can later be retrieved with
-     * {@link #getSavedRegistry()}.
+     * @return an observable value containing the path to the "catalogs" directory in the extension folder. It may be
+     * updated from any thread and the path can be null or invalid. Note that if {@link #getExtensionDirectoryPath()}
+     * points to a valid directory, the path returned by this function should also point to a valid (i.e. existing) directory
+     */
+    public ObservableValue<Path> getCatalogsDirectoryPath() {
+        return catalogsDirectoryPath;
+    }
+
+    /**
+     * Save the provided registry to disk. It can later be retrieved with {@link #getSavedRegistry()}.
      *
      * @param registry the registry to save
      * @throws IOException if an I/O error occurs while writing the registry file
-     * @throws SecurityException if the user doesn't have sufficient rights to save the file
-     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
+     * @throws NullPointerException if the path contained in {@link #getCatalogsDirectoryPath()} is null
      * or if the provided registry is null
+     * @throws InvalidPathException if the path to the registry cannot be created
      */
     public synchronized void saveRegistry(Registry registry) throws IOException {
         try (
@@ -189,13 +204,14 @@ class ExtensionFolderManager implements AutoCloseable {
     }
 
     /**
+     * Read and return the registry that was last saved with {@link #saveRegistry(Registry)}.
+     *
      * @return the registry that was last saved with {@link #saveRegistry(Registry)}
      * @throws IOException if an I/O error occurs while reading the registry file
      * @throws java.io.FileNotFoundException if the registry file does not exist
      * @throws java.nio.file.InvalidPathException if the path to the registry cannot be created
-     * @throws SecurityException if the user doesn't have enough rights to read the registry
-     * @throws NullPointerException if the registry file exists but is empty or if the path contained
-     * in {@link #getExtensionDirectoryPath()} is null
+     * @throws NullPointerException if the registry file exists but is empty or if the path contained in
+     * {@link #getCatalogsDirectoryPath()} is null
      * @throws JsonSyntaxException if the registry file exists but contain a malformed JSON element
      * @throws JsonIOException if there was a problem reading from the registry file
      */
@@ -209,33 +225,28 @@ class ExtensionFolderManager implements AutoCloseable {
     }
 
     /**
-     * Get the path to the directory containing the provided catalog. This will create the
-     * "catalogs" directory (see the class description) if it doesn't already exist.
+     * Get the path to the directory containing the provided catalog.
      *
      * @param savedCatalog the catalog to retrieve
      * @return the path to the directory containing the provided catalog
-     * @throws IOException if an I/O error occurs while creating the directory
      * @throws InvalidPathException if the path cannot be created
-     * @throws SecurityException if the user doesn't have enough rights to create the directory
      * @throws NullPointerException if the provided catalog is null or if the path contained in
-     * {@link #getExtensionDirectoryPath()} is null
+     * {@link #getCatalogsDirectoryPath()} is null
      */
-    public synchronized Path getCatalogDirectoryPath(SavedCatalog savedCatalog) throws IOException {
-        return getAndCreateCatalogsDirectory().resolve(FileTools.stripInvalidFilenameCharacters(savedCatalog.name()));
+    public synchronized Path getCatalogDirectoryPath(SavedCatalog savedCatalog) {
+        return catalogsDirectoryPath.getValue().resolve(FileTools.stripInvalidFilenameCharacters(savedCatalog.name()));
     }
 
     /**
-     * Delete all extensions belonging to the provided catalog. This will move the directory
-     * returned by {@link #getCatalogDirectoryPath(SavedCatalog)} to trash or recursively delete
-     * it if moving to trash is not supported by this platform.
+     * Delete all extensions belonging to the provided catalog. This will move the directory returned by
+     * {@link #getCatalogDirectoryPath(SavedCatalog)} to trash or recursively delete it if moving to trash is not supported
+     * by this platform.
      *
      * @param savedCatalog the catalog owning the extensions to delete
      * @throws IOException if an I/O error occur while deleting the files
-     * @throws SecurityException if the user doesn't have sufficient rights to delete
-     * the catalog
-     * @throws java.nio.file.InvalidPathException if the path to the catalog directory cannot be created
-     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
-     * or if the provided catalog is null
+     * @throws InvalidPathException if the path to the catalog directory cannot be created
+     * @throws NullPointerException if the path contained in {@link #getCatalogsDirectoryPath()} is null or if the
+     * provided catalog is null
      */
     public synchronized void deleteExtensionsFromCatalog(SavedCatalog savedCatalog) throws IOException {
         File catalogDirectory = getCatalogDirectoryPath(savedCatalog).toFile();
@@ -244,37 +255,32 @@ class ExtensionFolderManager implements AutoCloseable {
     }
 
     /**
-     * Get the path to the directory containing the provided extension of the provided
-     * catalog. This will create the directory containing all extensions of the provided
-     * catalog if it doesn't already exist.
+     * Get the path to the directory containing the provided extension of the provided catalog.
      *
      * @param savedCatalog the catalog owning the extension
      * @param extension the extension to retrieve
      * @return the path to the folder containing the provided extension
-     * @throws IOException if an I/O error occurs while creating the directory
      * @throws InvalidPathException if the path cannot be created
-     * @throws SecurityException if the user doesn't have enough rights to create the directory
      * @throws NullPointerException if one of the provided parameter is null or if the path contained in
-     * {@link #getExtensionDirectoryPath()} is null
+     * {@link #getCatalogsDirectoryPath()} is null
      */
-    public synchronized Path getExtensionDirectoryPath(SavedCatalog savedCatalog, Extension extension) throws IOException {
+    public synchronized Path getExtensionDirectoryPath(SavedCatalog savedCatalog, Extension extension) {
         return getCatalogDirectoryPath(savedCatalog).resolve(FileTools.stripInvalidFilenameCharacters(extension.name()));
     }
 
     /**
-     * Indicate whether an extension belonging to a catalog is installed. If that's the
-     * case, installation information are returned.
+     * Indicate whether an extension belonging to a catalog is installed. If that's the case, installation information
+     * are returned.
      *
      * @param savedCatalog the catalog owning the extension to search
      * @param extension the extension to search
      * @return an empty Optional if the provided extension is not installed, or information
      * on the installed extension
      * @throws IOException if an I/O error occurs when searching for the extension
-     * @throws java.nio.file.InvalidPathException if the Path object of the extension cannot be created, for example
-     * because the extensions folder path contain invalid characters
-     * @throws SecurityException if the user doesn't have sufficient rights to search for extension files
-     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null or
-     * if one of the parameters is null
+     * @throws InvalidPathException if the Path object of the extension cannot be created, for example because the
+     * extensions folder path contain invalid characters
+     * @throws NullPointerException if the path contained in {@link #getCatalogsDirectoryPath()} is null or if one of
+     * the parameters is null
      */
     public synchronized Optional<InstalledExtension> getInstalledExtension(SavedCatalog savedCatalog, Extension extension) throws IOException {
         Path extensionPath = getExtensionDirectoryPath(savedCatalog, extension);
@@ -331,17 +337,16 @@ class ExtensionFolderManager implements AutoCloseable {
 
     /**
      * Delete all files of an extension belonging to a catalog. This will move the
-     * {@link #getExtensionDirectoryPath(SavedCatalog, Extension)} directory to trash or
-     * recursively delete it the platform doesn't support moving files to trash.
+     * {@link #getExtensionDirectoryPath(SavedCatalog, Extension)} directory to trash or recursively delete it the platform
+     * doesn't support moving files to trash.
      *
      * @param savedCatalog the catalog owning the extension to delete
      * @param extension the extension to delete
      * @throws IOException if an I/O error occurs while deleting the folder
-     * @throws java.nio.file.InvalidPathException if the Path object of the extension folder cannot be created, for example
-     * because the extensions folder path contain invalid characters
-     * @throws SecurityException if the user doesn't have sufficient rights to delete the folder
-     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
-     * or if one of the provided parameter is null
+     * @throws InvalidPathException if the Path object of the extension folder cannot be created, for example because the
+     * extensions folder path contain invalid characters
+     * @throws NullPointerException if the path contained in {@link #getCatalogsDirectoryPath()} is null or if one of the
+     * provided parameter is null
      */
     public synchronized void deleteExtension(SavedCatalog savedCatalog, Extension extension) throws IOException {
         FileTools.moveDirectoryToTrashOrDeleteRecursively(getExtensionDirectoryPath(savedCatalog, extension).toFile());
@@ -349,9 +354,8 @@ class ExtensionFolderManager implements AutoCloseable {
     }
 
     /**
-     * Get (and create if asked and if it doesn't already exist) the path to the folder
-     * containing the specified files of the provided extension at the specified
-     * version belonging to the provided catalog.
+     * Get (and create if asked and if it doesn't already exist) the path to the folder containing the specified files of
+     * the provided extension at the specified version belonging to the provided catalog.
      *
      * @param savedCatalog the catalog owning the extension
      * @param extension the extension to find the folder to
@@ -360,11 +364,10 @@ class ExtensionFolderManager implements AutoCloseable {
      * @param createDirectory whether to create a folder on the returned path
      * @return the path to the folder containing the specified files of the provided extension
      * @throws IOException if an I/O error occurs while creating the folder
-     * @throws java.nio.file.InvalidPathException if the Path object cannot be created, for example
-     * because the extensions folder path contain invalid characters
-     * @throws SecurityException if the user doesn't have sufficient rights to create the folder
-     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null
-     * or if one of the provided parameters is null
+     * @throws java.nio.file.InvalidPathException if the Path object cannot be created, for example because the extensions
+     * folder path contain invalid characters
+     * @throws NullPointerException if the path contained in {@link #getCatalogsDirectoryPath()} is null or if one of the
+     * provided parameters is null
      */
     public synchronized Path getExtensionPath(
             SavedCatalog savedCatalog,
@@ -391,35 +394,14 @@ class ExtensionFolderManager implements AutoCloseable {
     }
 
     /**
-     * @return a read-only observable list of paths pointing to JAR files that were
-     * manually added (i.e. not with a catalog) to the extension directory. This list
-     * may be updated from any thread
+     * @return a read-only observable list of paths pointing to JAR files that were manually added (i.e. not with a catalog)
+     * to the extension directory. This list may be updated from any thread
      */
     public ObservableList<Path> getManuallyInstalledJars() {
         return manuallyInstalledExtensionsWatcher.getFiles();
     }
 
-    /**
-     * @return a read-only observable list of paths pointing to JAR files that were
-     * added with catalogs to the extension directory. This list may be updated from any thread
-     */
-    public ObservableList<Path> getCatalogManagedInstalledJars() {
-        return catalogManagedInstalledExtensionsWatcher.getFiles();
-    }
-
-    private Path getRegistryPath() throws IOException {
-        return getAndCreateCatalogsDirectory().resolve(REGISTRY_NAME);
-    }
-
-    private Path getAndCreateCatalogsDirectory() throws IOException {
-        Path catalogsFolder = extensionDirectoryPath.get().resolve(CATALOGS_FOLDER);
-
-        if (Files.isRegularFile(catalogsFolder)) {
-            logger.debug("Deleting {} because it should be a directory", catalogsFolder);
-            Files.deleteIfExists(catalogsFolder);
-        }
-        Files.createDirectories(catalogsFolder);
-
-        return catalogsFolder;
+    private Path getRegistryPath() {
+        return catalogsDirectoryPath.getValue().resolve(REGISTRY_NAME);
     }
 }

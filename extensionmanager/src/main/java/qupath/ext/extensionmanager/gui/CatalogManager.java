@@ -332,7 +332,7 @@ class CatalogManager extends Stage {
                                 .map(savedCatalog -> {
                                     try {
                                         return String.format("\"%s\"", extensionCatalogManager.getCatalogDirectory(savedCatalog));
-                                    } catch (IOException | InvalidPathException | SecurityException | NullPointerException e) {
+                                    } catch (InvalidPathException | SecurityException | NullPointerException e) {
                                         logger.error("Cannot retrieve path of {}", savedCatalog.name(), e);
                                         return null;
                                     }
