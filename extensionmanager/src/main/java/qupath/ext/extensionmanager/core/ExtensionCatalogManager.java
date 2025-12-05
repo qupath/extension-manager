@@ -23,6 +23,7 @@ import java.io.IOError;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -37,6 +38,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * A manager for catalogs and extensions. It can be used to get access to all saved catalogs,
@@ -59,6 +61,8 @@ public class ExtensionCatalogManager implements AutoCloseable{
     private final ObservableList<SavedCatalog> savedCatalogs = FXCollections.observableList(new CopyOnWriteArrayList<>());
     private final ObservableList<SavedCatalog> savedCatalogsImmutable = FXCollections.unmodifiableObservableList(savedCatalogs);
     private final Map<CatalogExtension, ObjectProperty<Optional<InstalledExtension>>> installedExtensions = new ConcurrentHashMap<>();
+    private final ObservableList<Path> catalogManagedInstalledJars = FXCollections.observableList(new CopyOnWriteArrayList<>());
+    private final ObservableList<Path> catalogManagedInstalledJarsImmutable = FXCollections.unmodifiableObservableList(catalogManagedInstalledJars);
     private final ExtensionFolderManager extensionFolderManager;
     private final ExtensionClassLoader extensionClassLoader;
     private final String version;
@@ -77,6 +81,10 @@ public class ExtensionCatalogManager implements AutoCloseable{
          * Some files are being extracted
          */
         EXTRACTING_ZIP
+    }
+    private enum Operation {
+        ADD,
+        REMOVE
     }
 
     /**
@@ -120,6 +128,12 @@ public class ExtensionCatalogManager implements AutoCloseable{
             }
         });
 
+        updateCatalogManagedInstalledJarsOfDirectory(extensionFolderManager.getCatalogsDirectoryPath().getValue(), Operation.ADD);
+        extensionFolderManager.getCatalogsDirectoryPath().addListener((p, o, n) -> {
+            updateCatalogManagedInstalledJarsOfDirectory(o, Operation.REMOVE);
+            updateCatalogManagedInstalledJarsOfDirectory(n, Operation.ADD);
+        });
+
         loadJars();
     }
 
@@ -130,53 +144,47 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     /**
-     * @return a read only property containing the path to the extension folder.
-     * It may be updated from any thread and the path (but not the property) can
-     * be null or invalid
+     * @return a read only property containing the path to the extension folder. It may be updated from any thread and the
+     * path (but not the property) canvbe null or invalid
      */
     public ReadOnlyObjectProperty<Path> getExtensionDirectoryPath() {
         return extensionFolderManager.getExtensionDirectoryPath();
     }
 
     /**
-     * @return a text describing the release of the current software with the form "v[MAJOR].[MINOR].[PATCH]"
-     * or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
+     * @return a text describing the release of the current software with the form "v[MAJOR].[MINOR].[PATCH]" or
+     * "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
      */
     public String getVersion() {
         return version;
     }
 
     /**
-     * Get the path to the directory containing the provided catalog. This will also create the
-     * directory containing all catalogs and installed extensions if it doesn't already exist
-     * (but the returned directory is not guaranteed to exist).
+     * Get the path to the directory containing the provided catalog.
      *
      * @param savedCatalog the catalog to retrieve
      * @return the path of the directory containing the provided catalog
-     * @throws IOException if an I/O error occurs while creating the directory
      * @throws InvalidPathException if the path cannot be created
-     * @throws SecurityException if the user doesn't have enough rights to create the directory
      * @throws NullPointerException if the provided catalog is null or if the path contained in
-     * {@link #getExtensionDirectoryPath()} is null
+     * {@link ExtensionFolderManager#getCatalogsDirectoryPath()} is null
      */
-    public Path getCatalogDirectory(SavedCatalog savedCatalog) throws IOException {
+    public Path getCatalogDirectory(SavedCatalog savedCatalog) {
         return extensionFolderManager.getCatalogDirectoryPath(savedCatalog);
     }
 
     /**
-     * Add catalogs to the available list. This will save them to the registry.
-     * Catalogs with the same name as an already existing catalog will not be added.
-     * No check will be performed concerning whether the provided catalogs point to
+     * Add catalogs to the available list. This will save them to the registry. Catalogs with the same name as an already
+     * existing catalog will not be added. No check will be performed concerning whether the provided catalogs point to
      * valid catalogs.
      * <p>
      * If an exception occurs (see below), the provided catalogs are not added.
      *
      * @param savedCatalogs the catalogs to add. They must have different names
-     * @throws IOException if an I/O error occurs while saving the registry file. In that case,
-     * the provided catalogs are not added
+     * @throws IOException if an I/O error occurs while saving the registry file. In that case, the provided catalogs are
+     * not added
      * @throws SecurityException if the user doesn't have sufficient rights to save the registry file
-     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null,
-     * if the provided list of catalogs is null or if one of the provided catalog is null
+     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null, if the provided
+     * list of catalogs is null or if one of the provided catalog is null
      * @throws IllegalArgumentException if at least two of the provided catalogs have the same name
      */
     public void addCatalog(List<SavedCatalog> savedCatalogs) throws IOException {
@@ -213,7 +221,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
 
         try {
             extensionFolderManager.saveRegistry(new Registry(this.savedCatalogs));
-        } catch (IOException | SecurityException | NullPointerException e) {
+        } catch (Exception e) {
             this.savedCatalogs.removeAll(catalogsToAdd);
 
             throw e;
@@ -223,8 +231,8 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     /**
-     * Get the catalogs added or removed with {@link #addCatalog(List)} and {@link #removeCatalogs(List, boolean)}.
-     * This list may be updated from any thread and won't contain null elements.
+     * Get the catalogs added or removed with {@link #addCatalog(List)} and {@link #removeCatalogs(List, boolean)}. This
+     * list may be updated from any thread and won't contain null elements.
      *
      * @return a read-only observable list of all saved catalogs
      */
@@ -233,24 +241,23 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     /**
-     * Remove catalogs from the available list. This will remove them from the
-     * saved registry and may delete any installed extension belonging to these catalogs.
+     * Remove catalogs from the available list. This will remove them from the saved registry and may delete any installed
+     * extension belonging to these catalogs.
      * <p>
-     * Catalogs that are not deletable (see {@link SavedCatalog#deletable()}) won't be
-     * deleted.
+     * Catalogs that are not deletable (see {@link SavedCatalog#deletable()}) won't be deleted.
      * <p>
      * If an exception occurs (see below), the provided catalogs are not added.
      * <p>
-     * Warning: this will move the directory returned by {@link #getCatalogDirectory(SavedCatalog)} to
-     * trash if supported by this platform or recursively delete it if extension are asked to be removed.
+     * Warning: this will move the directory returned by {@link #getCatalogDirectory(SavedCatalog)} to trash if supported
+     * by this platform or recursively delete it if extension are asked to be removed.
      *
      * @param savedCatalogs the catalogs to remove
      * @param removeExtensions whether to remove extensions belonging to the catalogs to remove
-     * @throws IOException if an I/O error occurs while saving the registry file. In that case,
-     * the provided catalogs are not added
+     * @throws IOException if an I/O error occurs while saving the registry file. In that case, the provided catalogs are
+     * not added
      * @throws SecurityException if the user doesn't have sufficient rights to save the registry file
-     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null,
-     * if the provided list of catalogs is null or if one of the provided catalog is null
+     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null, if the provided
+     * list of catalogs is null or if one of the provided catalog is null
      */
     public void removeCatalogs(List<SavedCatalog> savedCatalogs, boolean removeExtensions) throws IOException {
         if (getExtensionDirectoryPath().get() == null) {
@@ -276,7 +283,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
 
         try {
             extensionFolderManager.saveRegistry(new Registry(this.savedCatalogs));
-        } catch (IOException | SecurityException | NullPointerException e) {
+        } catch (Exception e) {
             this.savedCatalogs.addAll(catalogsToRemove);
 
             throw e;
@@ -304,10 +311,9 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     /**
-     * Get the path to the directory containing the provided extension of the provided
-     * catalog. This will also create the directory containing all installed extensions
-     * of the provided catalog if it doesn't already exist (but the returned directory is
-     * not guaranteed to be created).
+     * Get the path to the directory containing the provided extension of the provided catalog. This will also create the
+     * directory containing all installed extensions of the provided catalog if it doesn't already exist (but the returned
+     * directory is not guaranteed to be created).
      *
      * @param savedCatalog the catalog owning the extension
      * @param extension the extension to retrieve
@@ -323,19 +329,21 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     /**
-     * Get the list of links the {@link #installOrUpdateExtension(SavedCatalog, Extension, InstalledExtension, Consumer, BiConsumer)} function
-     * will download to install the provided extension.
+     * Get the list of links the {@link #installOrUpdateExtension(SavedCatalog, Extension, InstalledExtension, Consumer, BiConsumer)}
+     * function will download to install the provided extension.
      *
      * @param savedCatalog the catalog owning the extension to install
      * @param extension the extension to install
      * @param installationInformation what to install on the extension
      * @return the list URIs that will be downloaded to install the extension with the provided parameters
-     * @throws NullPointerException if one of the parameters is null or if the path contained in {@link #getExtensionDirectoryPath()} is null
+     * @throws NullPointerException if one of the parameters is null or if the path contained in {@link #getExtensionDirectoryPath()}
+     * is null
      * @throws IOException if an I/O error occurred while deleting, downloading or installing the extension
-     * @throws InvalidPathException if a path cannot be created, for example because the extensions folder path contain invalid characters
+     * @throws InvalidPathException if a path cannot be created, for example because the extensions folder path contain
+     * invalid characters
      * @throws SecurityException if the user doesn't have sufficient rights to install or update the extension
-     * @throws IllegalArgumentException if the release name of the provided installation information cannot be found in the releases
-     * of the provided extension
+     * @throws IllegalArgumentException if the release name of the provided installation information cannot be found in
+     * the releases of the provided extension
      */
     public List<URI> getDownloadLinks(SavedCatalog savedCatalog, Extension extension, InstalledExtension installationInformation) throws IOException {
         return getDownloadUrlsToFilePaths(savedCatalog, extension, installationInformation, false).stream()
@@ -344,8 +352,8 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     /**
-     * Install (or update if it already exists) an extension. This may take a lot of time depending on the
-     * internet connection and the size of the extension, but this operation is cancellable.
+     * Install (or update if it already exists) an extension. This may take a lot of time depending on the internet connection
+     * and the size of the extension, but this operation is cancellable.
      * <p>
      * If the extension already exists, it will be deleted before downloading the provided version of the extension.
      * <p>
@@ -362,12 +370,14 @@ public class ExtensionCatalogManager implements AutoCloseable{
      *                        will be the step currently happening, and its second parameter a text describing the resource
      *                        on which the step is happening (for example, a link if the step is a download). This function
      *                        will be called from the calling thread
-     * @throws NullPointerException if one of the parameters is null or if the path contained in {@link #getExtensionDirectoryPath()} is null
+     * @throws NullPointerException if one of the parameters is null or if the path contained in {@link #getExtensionDirectoryPath()}
+     * is null
      * @throws IOException if an I/O error occurred while deleting, downloading or installing the extension
-     * @throws InvalidPathException if a path cannot be created, for example because the extensions folder path contain invalid characters
+     * @throws InvalidPathException if a path cannot be created, for example because the extensions folder path contain
+     * invalid characters
      * @throws SecurityException if the user doesn't have sufficient rights to install or update the extension
-     * @throws IllegalArgumentException if the release name of the provided installation information cannot be found in the releases
-     * of the provided extension
+     * @throws IllegalArgumentException if the release name of the provided installation information cannot be found in
+     * the releases of the provided extension
      * @throws InterruptedException if the calling thread is interrupted
      */
     public void installOrUpdateExtension(
@@ -383,6 +393,10 @@ public class ExtensionCatalogManager implements AutoCloseable{
         );
 
         logger.debug("Deleting files of {} before installing or updating it", extension.name());
+        updateCatalogManagedInstalledJarsOfDirectory(
+                extensionFolderManager.getExtensionDirectoryPath(savedCatalog, extension),
+                Operation.REMOVE
+        );
         extensionFolderManager.deleteExtension(savedCatalog, extension);
         synchronized (this) {
             extensionProperty.set(Optional.empty());
@@ -399,6 +413,10 @@ public class ExtensionCatalogManager implements AutoCloseable{
             extensionFolderManager.deleteExtension(savedCatalog, extension);
             throw e;
         }
+        updateCatalogManagedInstalledJarsOfDirectory(
+                extensionFolderManager.getExtensionDirectoryPath(savedCatalog, extension),
+                Operation.ADD
+        );
 
         synchronized (this) {
             extensionProperty.set(Optional.of(installationInformation));
@@ -412,8 +430,8 @@ public class ExtensionCatalogManager implements AutoCloseable{
      *
      * @param savedCatalog the catalog owning the extension to find
      * @param extension the extension to get installed information on
-     * @return a read-only object property containing an Optional of an installed extension. If the Optional
-     * is empty, then it means the extension is not installed. This property may be updated from any thread
+     * @return a read-only object property containing an Optional of an installed extension. If the Optional is empty,
+     * then it means the extension is not installed. This property may be updated from any thread
      */
     public ReadOnlyObjectProperty<Optional<InstalledExtension>> getInstalledExtension(SavedCatalog savedCatalog, Extension extension) {
         return installedExtensions.computeIfAbsent(
@@ -423,18 +441,16 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     /**
-     * @return a read-only observable list of paths pointing to JAR files that were
-     * added with catalogs to the extension directory. This list can be updated from
-     * any thread. Note that this list can take a few seconds to update when a JAR is
-     * added or removed
+     * @return a read-only observable list of paths pointing to JAR files that were added with catalogs to the extension
+     * directory. This list can be updated from any thread. Note that this list can take a few seconds to update when a
+     * JAR is added or removed
      */
     public ObservableList<Path> getCatalogManagedInstalledJars() {
-        return extensionFolderManager.getCatalogManagedInstalledJars();
+        return catalogManagedInstalledJarsImmutable;
     }
 
     /**
-     * Extension classes are automatically loaded with a custom class loader.
-     * This function returns it.
+     * Extension classes are automatically loaded with a custom class loader. This function returns it.
      *
      * @return the class loader user to load extensions
      */
@@ -444,8 +460,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
 
     /**
      * Set a runnable to be called each time a JAR file is loaded by {@link #getExtensionClassLoader()}. The call may
-     * happen from any thread.
-     * Note that the runnable may be called a few seconds after a JAR is added.
+     * happen from any thread. Note that the runnable may be called a few seconds after a JAR is added.
      *
      * @param runnable the runnable to run when a JAR file is loaded
      * @throws NullPointerException if the provided path is null
@@ -455,11 +470,11 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     /**
-     * Get a list of updates available on the currently installed extensions (with catalogs, extensions
-     * manually installed are not considered).
+     * Get a list of updates available on the currently installed extensions (with catalogs, extensions manually installed
+     * are not considered).
      *
-     * @return a CompletableFuture with a list of available updates, or a failed CompletableFuture
-     * if the update query failed
+     * @return a CompletableFuture with a list of available updates, or a failed CompletableFuture if the update query
+     * failed
      */
     public CompletableFuture<List<UpdateAvailable>> getAvailableUpdates() {
         return CompletableFuture.supplyAsync(() -> savedCatalogs.stream()
@@ -473,20 +488,20 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     /**
-     * Uninstall an extension by removing its files. This can take some time depending on the number
-     * of files to delete and the speed of the disk.
+     * Uninstall an extension by removing its files. This can take some time depending on the number of files to delete
+     * and the speed of the disk.
      * <p>
-     * Warning: this will move the directory returned by {@link #getExtensionDirectory(SavedCatalog, Extension)}
-     * to trash or recursively delete it if moving files to trash is not supported by this platform.
+     * Warning: this will move the directory returned by {@link #getExtensionDirectory(SavedCatalog, Extension)} to
+     * trash or recursively delete it if moving files to trash is not supported by this platform.
      *
      * @param savedCatalog the catalog owning the extension to uninstall
      * @param extension the extension to uninstall
      * @throws IOException if an I/O error occurs while deleting the folder
-     * @throws java.nio.file.InvalidPathException if the path of the extension folder cannot be created,
-     * for example because the extension name contain invalid characters
+     * @throws InvalidPathException if the path of the extension folder cannot be created, for example because the extension
+     * name contain invalid characters
      * @throws SecurityException if the user doesn't have sufficient rights to delete the extension files
-     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null,
-     * or if one of the parameters is null
+     * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null, or if one of
+     * the parameters is null
      */
     public void removeExtension(SavedCatalog savedCatalog, Extension extension) throws IOException {
         var extensionProperty = installedExtensions.computeIfAbsent(
@@ -494,6 +509,10 @@ public class ExtensionCatalogManager implements AutoCloseable{
                 e -> new SimpleObjectProperty<>()
         );
 
+        updateCatalogManagedInstalledJarsOfDirectory(
+                extensionFolderManager.getExtensionDirectoryPath(savedCatalog, extension),
+                Operation.REMOVE
+        );
         extensionFolderManager.deleteExtension(savedCatalog, extension);
         synchronized (this) {
             extensionProperty.set(Optional.empty());
@@ -503,10 +522,9 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     /**
-     * @return a read-only observable list of paths pointing to JAR files that were
-     * manually added (i.e. not with a catalog) to the extension directory. This list
-     * can be updated from any thread. Note that this list can take a few seconds to
-     * update when a JAR is added or removed
+     * @return a read-only observable list of paths pointing to JAR files that were manually added (i.e. not with a catalog)
+     * to the extension directory. This list can be updated from any thread. Note that this list can take a few seconds
+     * to update when a JAR is added or removed
      */
     public ObservableList<Path> getManuallyInstalledJars() {
         return extensionFolderManager.getManuallyInstalledJars();
@@ -526,6 +544,29 @@ public class ExtensionCatalogManager implements AutoCloseable{
                 logger.debug(
                         "Catalogs {} set from default registry",
                         defaultRegistry.catalogs().stream().map(SavedCatalog::name).toList()
+                );
+            }
+        }
+    }
+
+    private void updateCatalogManagedInstalledJarsOfDirectory(Path directory, Operation operation) {
+        if (directory != null) {
+            try (Stream<Path> files = Files.walk(directory)) {
+                List<Path> jars = files.filter(path -> path.toString().endsWith(".jar")).toList();
+
+                switch (operation) {
+                    case ADD -> catalogManagedInstalledJars.addAll(jars);
+                    case REMOVE -> catalogManagedInstalledJars.removeAll(jars);
+                }
+            } catch (IOException e) {
+                logger.debug(
+                        "Error while finding jars located in {}. None will be {}",
+                        directory,
+                        switch (operation) {
+                            case ADD -> "added";
+                            case REMOVE -> "removed";
+                        },
+                        e
                 );
             }
         }
@@ -553,8 +594,8 @@ public class ExtensionCatalogManager implements AutoCloseable{
             change.reset();
         });
 
-        addJars(extensionFolderManager.getCatalogManagedInstalledJars());
-        extensionFolderManager.getCatalogManagedInstalledJars().addListener((ListChangeListener<? super Path>) change -> {
+        addJars(catalogManagedInstalledJarsImmutable);
+        catalogManagedInstalledJarsImmutable.addListener((ListChangeListener<? super Path>) change -> {
             while (change.next()) {
                 addJars(change.getAddedSubList());
                 removeJars(change.getRemoved());
