@@ -36,7 +36,8 @@ import java.util.stream.Stream;
 public class TestExtensionCatalogManager {
 
     private static final String CATALOG_NAME = "catalog.json";
-    private static final int CHANGE_WAITING_TIME_MS = 10000;
+    private static final int CHANGE_WAITING_TIME_CATALOG_MS = 100;
+    private static final int CHANGE_WAITING_TIME_MANUAL_MS = 10000;
     private static SimpleServer server;
 
     @BeforeAll
@@ -945,7 +946,7 @@ public class TestExtensionCatalogManager {
                     (step, resource) -> {}
             );
 
-            Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for list to update
+            Thread.sleep(CHANGE_WAITING_TIME_CATALOG_MS);     // wait for list to update
             TestUtils.assertCollectionsEqualsWithoutOrder(
                     expectedJarNames,
                     extensionCatalogManager.getCatalogManagedInstalledJars().stream()
@@ -1017,7 +1018,7 @@ public class TestExtensionCatalogManager {
                     (step, resource) -> {}
             );
 
-            Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for list to update
+            Thread.sleep(CHANGE_WAITING_TIME_CATALOG_MS);     // wait for list to update
             Assertions.assertEquals(expectedNumberOfCalls, numberOfJarLoaded.get());
         }
     }
@@ -1221,7 +1222,7 @@ public class TestExtensionCatalogManager {
 
             extensionCatalogManager.removeExtension(catalog, extension);
 
-            Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for list to update
+            Thread.sleep(CHANGE_WAITING_TIME_CATALOG_MS);     // wait for list to update
             TestUtils.assertCollectionsEqualsWithoutOrder(
                     expectedJarNames,
                     extensionCatalogManager.getCatalogManagedInstalledJars().stream()
@@ -1267,7 +1268,7 @@ public class TestExtensionCatalogManager {
 
             List<Path> jars = extensionCatalogManager.getManuallyInstalledJars();
 
-            Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for list to update
+            Thread.sleep(CHANGE_WAITING_TIME_MANUAL_MS);     // wait for list to update
             TestUtils.assertCollectionsEqualsWithoutOrder(expectedJars, jars);
         }
     }
