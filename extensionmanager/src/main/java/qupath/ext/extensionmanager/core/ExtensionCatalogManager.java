@@ -41,15 +41,15 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * A manager for catalogs and extensions. It can be used to get access to all saved catalogs,
- * add or remove a catalog, get access to all installed extensions, and install or delete an extension.
- * Manually installed extensions are automatically detected.
+ * A manager for catalogs and extensions. It can be used to get access to all saved catalogs, add or remove a catalog, get
+ * access to all installed extensions, and install or delete an extension. Manually installed extensions are automatically
+ * detected.
  * <p>
- * It also automatically loads extension classes with a custom ClassLoader (see {@link #getExtensionClassLoader()}).
- * Note that removed extensions are not unloaded from the class loader.
+ * It also automatically loads extension classes with a custom ClassLoader (see {@link #getExtensionClassLoader()}). Note
+ * that removed extensions are not unloaded from the class loader.
  * <p>
- * The list of active catalogs and installed extensions is determined by this class. It is internally saved
- * in a registry JSON file located in the extension directory (see {@link Registry}).
+ * The list of active catalogs and installed extensions is determined by this class. It is internally saved in a registry
+ * JSON file located in the extension directory (see {@link Registry}).
  * <p>
  * This class is thread-safe.
  * <p>
@@ -96,9 +96,8 @@ public class ExtensionCatalogManager implements AutoCloseable{
      *                               (so will be reset if the new path is empty)
      * @param parentClassLoader the class loader that should be the parent of the extension class loader. Can be null to use
      *                          the bootstrap class loader
-     * @param version a text describing the release of the current software with the form "v[MAJOR].[MINOR].[PATCH]"
-     *                or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]". It will determine which extensions are
-     *                compatible
+     * @param version a text describing the release of the current software with the form "v[MAJOR].[MINOR].[PATCH]" or
+     *                "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]". It will determine which extensions are  compatible
      * @param defaultRegistry the default registry to use when the saved one cannot be used. Can be null
      * @throws IllegalArgumentException if the provided version doesn't meet the specified requirements
      * @throws SecurityException if the user doesn't have enough rights to create the extension class loader
@@ -145,7 +144,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
 
     /**
      * @return a read only property containing the path to the extension folder. It may be updated from any thread and the
-     * path (but not the property) canvbe null or invalid
+     * path (but not the property) can be null or invalid
      */
     public ReadOnlyObjectProperty<Path> getExtensionDirectoryPath() {
         return extensionFolderManager.getExtensionDirectoryPath();
@@ -187,6 +186,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
      * list of catalogs is null or if one of the provided catalog is null
      * @throws IllegalArgumentException if at least two of the provided catalogs have the same name
      */
+    //TODO: remove list, single catalog instead
     public void addCatalog(List<SavedCatalog> savedCatalogs) throws IOException {
         if (savedCatalogs.stream().map(SavedCatalog::name).collect(Collectors.toSet()).size() < savedCatalogs.size()) {
             throw new IllegalArgumentException(String.format(
@@ -259,6 +259,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectoryPath()} is null, if the provided
      * list of catalogs is null or if one of the provided catalog is null
      */
+    //TODO: remove list
     public void removeCatalogs(List<SavedCatalog> savedCatalogs, boolean removeExtensions) throws IOException {
         if (getExtensionDirectoryPath().get() == null) {
             throw new NullPointerException("The extension directory path is null");
