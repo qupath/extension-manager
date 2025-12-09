@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.catalog;
+package qupath.ext.extensionmanager.core.model;
 
 import qupath.ext.extensionmanager.core.Version;
 
@@ -19,13 +19,13 @@ import java.util.List;
  *                     jar and for dependencies can be downloaded. This list is immutable and won't be null
  * @param versionRange a specification of minimum and maximum compatible versions
  */
-public record Release(
+public record ReleaseModel(
         String name,
         URI mainUrl,
         List<URI> requiredDependencyUrls,
         List<URI> optionalDependencyUrls,
         List<URI> javadocUrls,
-        VersionRange versionRange
+        VersionRangeModel versionRange
 ) {
     private static final List<String> VALID_HOSTS = List.of("github.com", "maven.scijava.org", "repo1.maven.org");
     private static final String VALID_SCHEME = "https";
@@ -40,7 +40,7 @@ public record Release(
      *         'name' must be specified in the form "v[MAJOR].[MINOR].[PATCH]" corresponding to semantic versions,
      *         although trailing release candidate qualifiers (eg, "-rc1") are also allowed.
      *     </li>
-     *     <li>The 'versions' object must be valid (see {@link VersionRange#VersionRange(String, String, List)}).</li>
+     *     <li>The 'versions' object must be valid (see {@link VersionRangeModel#VersionRangeModel(String, String, List)}).</li>
      *     <li>The 'mainURL' field must be a GitHub URL. All other URLs must be SciJava Maven, Maven Central, or GitHub URLs.</li>
      * </ul>
      *
@@ -55,13 +55,13 @@ public record Release(
      * @param versionRange a specification of minimum and maximum compatible versions
      * @throws IllegalArgumentException when the created release is not valid (see the requirements above)
      */
-    public Release(
+    public ReleaseModel(
             String name,
             URI mainUrl,
             List<URI> requiredDependencyUrls,
             List<URI> optionalDependencyUrls,
             List<URI> javadocUrls,
-            VersionRange versionRange
+            VersionRangeModel versionRange
     ) {
         this.name = name;
         this.mainUrl = mainUrl;

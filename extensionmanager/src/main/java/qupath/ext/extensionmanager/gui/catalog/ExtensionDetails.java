@@ -8,7 +8,7 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import qupath.ext.extensionmanager.core.catalog.Extension;
+import qupath.ext.extensionmanager.core.model.ExtensionModel;
 import qupath.ext.extensionmanager.gui.UiUtils;
 import qupath.fx.dialogs.Dialogs;
 import qupath.fx.utils.FXUtils;
@@ -39,7 +39,7 @@ class ExtensionDetails extends Stage {
      * @param noAvailableRelease whether no release of this extension can be installed
      * @throws IOException when an error occurs while creating the container
      */
-    public ExtensionDetails(Extension extension, boolean noAvailableRelease) throws IOException {
+    public ExtensionDetails(ExtensionModel extension, boolean noAvailableRelease) throws IOException {
         UiUtils.loadFXML(this, ExtensionDetails.class.getResource("extension_details.fxml"));
 
         FXUtils.addCloseWindowShortcuts(this);

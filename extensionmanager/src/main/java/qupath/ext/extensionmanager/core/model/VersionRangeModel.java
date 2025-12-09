@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.catalog;
+package qupath.ext.extensionmanager.core.model;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,9 +15,9 @@ import java.util.List;
  * @param max the maximum/highest version that this extension is known to be compatible with. Can be null
  * @param excludes any specific versions that are not compatible. This list is immutable and won't be null
  */
-public record VersionRange(String min, String max, List<String> excludes) {
+public record VersionRangeModel(String min, String max, List<String> excludes) {
 
-    private static final Logger logger = LoggerFactory.getLogger(VersionRange.class);
+    private static final Logger logger = LoggerFactory.getLogger(VersionRangeModel.class);
 
     /**
      * Create a version range.
@@ -39,7 +39,7 @@ public record VersionRange(String min, String max, List<String> excludes) {
      * @param excludes any specific versions that are not compatible. Can be null
      * @throws IllegalArgumentException when the created version range is not valid (see the requirements above)
      */
-    public VersionRange(String min, String max, List<String> excludes) {
+    public VersionRangeModel(String min, String max, List<String> excludes) {
         this.min = min;
         this.max = max;
         this.excludes = excludes == null ? List.of() : Collections.unmodifiableList(excludes);
@@ -50,18 +50,14 @@ public record VersionRange(String min, String max, List<String> excludes) {
     /**
      * Indicate if this release range is compatible with the provided version.
      *
-     * @param version the version to check if this release range is compatible with. It
-     *                must be specified in the form "v[MAJOR].[MINOR].[PATCH]", although
-     *                trailing release candidate qualifiers (eg, "-rc1") are also allowed.
+     * @param version the version to check if this release range is compatible with
      * @return a boolean indicating if the provided version is compatible with this release range
-     * @throws IllegalArgumentException if the provided version doesn't match the required form
-     * or if this release range is not valid
+     * @throws IllegalArgumentException if the provided version doesn't match the required form or if this release range
+     * is not valid
      * @throws NullPointerException if the provided version is null
      */
-    public boolean isCompatible(String version) {
-        Version versionObject = new Version(version);
-
-        if (new Version(min).compareTo(versionObject) > 0) {
+    public boolean isCompatible(Version version) {
+        if (new Version(min).compareTo(version) > 0) {
             logger.debug(
                     "This version range {} is not compatible with {} because of the minimum compatible version",
                     this,
@@ -70,7 +66,7 @@ public record VersionRange(String min, String max, List<String> excludes) {
             return false;
         }
 
-        if (max != null && versionObject.compareTo(new Version(max)) > 0) {
+        if (max != null && version.compareTo(new Version(max)) > 0) {
             logger.debug(
                     "This version range {} is not compatible with {} because of the maximum compatible version",
                     this,
@@ -79,7 +75,7 @@ public record VersionRange(String min, String max, List<String> excludes) {
             return false;
         }
 
-        if (excludes != null && excludes.stream().map(Version::new).anyMatch(versionObject::equals)) {
+        if (excludes != null && excludes.stream().map(Version::new).anyMatch(version::equals)) {
             logger.debug(
                     "This version range {} is not compatible with {} because of the excluded versions",
                     this,

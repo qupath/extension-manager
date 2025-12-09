@@ -6,7 +6,7 @@ import javafx.beans.property.SimpleObjectProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
-import qupath.ext.extensionmanager.core.catalog.Extension;
+import qupath.ext.extensionmanager.core.model.ExtensionModel;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
 import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
 
@@ -21,13 +21,13 @@ import java.util.Optional;
  */
 public class ExtensionCatalogModel {
 
-    private final ObservableList<SavedCatalog> savedIndices = FXCollections.observableArrayList();
-    private final ObservableList<SavedCatalog> catalogsImmutable = FXCollections.unmodifiableObservableList(savedIndices);
+    private final ObservableList<SavedCatalog> catalogs = FXCollections.observableArrayList();
+    private final ObservableList<SavedCatalog> catalogsImmutable = FXCollections.unmodifiableObservableList(catalogs);
     private static final Map<CatalogExtension, ObjectProperty<Optional<InstalledExtension>>> installedExtensions = new HashMap<>();
     private final ObservableList<Path> manuallyInstalledJars = FXCollections.observableArrayList();
     private final ObservableList<Path> manuallyInstalledJarsImmutable = FXCollections.unmodifiableObservableList(manuallyInstalledJars);
     private final ExtensionCatalogManager extensionCatalogManager;
-    private record CatalogExtension(SavedCatalog savedCatalog, Extension extension) {}
+    private record CatalogExtension(SavedCatalog savedCatalog, ExtensionModel extension) {}
 
     /**
      * Create the model.
@@ -37,7 +37,7 @@ public class ExtensionCatalogModel {
     public ExtensionCatalogModel(ExtensionCatalogManager extensionCatalogManager) {
         this.extensionCatalogManager = extensionCatalogManager;
 
-        UiUtils.bindListInUIThread(savedIndices, extensionCatalogManager.getCatalogs());
+        UiUtils.bindListInUIThread(catalogs, extensionCatalogManager.getCatalogs());
         UiUtils.bindListInUIThread(manuallyInstalledJars, extensionCatalogManager.getManuallyInstalledJars());
     }
 
@@ -58,7 +58,7 @@ public class ExtensionCatalogModel {
      * If the Optional is empty, then it means the extension is not installed. This property
      * will always be updated from the JavaFX Application Thread
      */
-    public ReadOnlyObjectProperty<Optional<InstalledExtension>> getInstalledExtension(SavedCatalog savedCatalog, Extension extension) {
+    public ReadOnlyObjectProperty<Optional<InstalledExtension>> getInstalledExtension(SavedCatalog savedCatalog, ExtensionModel extension) {
         return installedExtensions.computeIfAbsent(
                 new CatalogExtension(savedCatalog, extension),
                 e -> {

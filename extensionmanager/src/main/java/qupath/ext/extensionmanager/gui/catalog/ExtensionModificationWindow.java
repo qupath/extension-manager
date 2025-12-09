@@ -21,8 +21,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
 import qupath.ext.extensionmanager.core.Version;
-import qupath.ext.extensionmanager.core.catalog.Extension;
-import qupath.ext.extensionmanager.core.catalog.Release;
+import qupath.ext.extensionmanager.core.model.ExtensionModel;
+import qupath.ext.extensionmanager.core.model.ReleaseModel;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
 import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
 import qupath.ext.extensionmanager.core.tools.FileTools;
@@ -53,7 +53,7 @@ class ExtensionModificationWindow extends Stage {
     private static final ResourceBundle resources = UiUtils.getResources();
     private final ExtensionCatalogManager extensionCatalogManager;
     private final SavedCatalog savedCatalog;
-    private final Extension extension;
+    private final ExtensionModel extension;
     private final InstalledExtension installedExtension;
     private final Runnable onInvalidExtensionDirectory;
     @FXML
@@ -61,7 +61,7 @@ class ExtensionModificationWindow extends Stage {
     @FXML
     private Label currentVersion;
     @FXML
-    private ChoiceBox<Release> release;
+    private ChoiceBox<ReleaseModel> release;
     @FXML
     private CheckBox optionalDependencies;
     @FXML
@@ -84,7 +84,7 @@ class ExtensionModificationWindow extends Stage {
      * @param installedExtension information on the already installed extension if this window should allow modifying it,
      *                           or null if the extension is to be installed by this window
      * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
-     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectoryPath()})
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectory()})
      *                                    but this directory is currently invalid. It lets the possibility to the user to
      *                                    define and create a valid directory before performing the operation (which would
      *                                    fail if the directory is invalid). This function is guaranteed to be called from
@@ -94,7 +94,7 @@ class ExtensionModificationWindow extends Stage {
     public ExtensionModificationWindow(
             ExtensionCatalogManager extensionCatalogManager,
             SavedCatalog savedCatalog,
-            Extension extension,
+            ExtensionModel extension,
             InstalledExtension installedExtension,
             Runnable onInvalidExtensionDirectory
     ) throws IOException {
@@ -106,7 +106,7 @@ class ExtensionModificationWindow extends Stage {
 
         UiUtils.loadFXML(this, ExtensionModificationWindow.class.getResource("extension_modification_window.fxml"));
 
-        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
 
         initModality(Modality.WINDOW_MODAL);
 
@@ -133,12 +133,12 @@ class ExtensionModificationWindow extends Stage {
         );
         release.setConverter(new StringConverter<>() {
             @Override
-            public String toString(Release object) {
+            public String toString(ReleaseModel object) {
                 return object == null ? null : object.name();
             }
 
             @Override
-            public Release fromString(String string) {
+            public ReleaseModel fromString(String string) {
                 return null;
             }
         });
@@ -211,9 +211,9 @@ class ExtensionModificationWindow extends Stage {
         if (release.getSelectionModel().isEmpty()) {
             return;
         }
-        Release selectedRelease = release.getSelectionModel().getSelectedItem();
+        ReleaseModel selectedRelease = release.getSelectionModel().getSelectedItem();
 
-        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
 
         try {
             if (installedExtension == null && isJarAlreadyDownloaded(selectedRelease)) {
@@ -342,7 +342,7 @@ class ExtensionModificationWindow extends Stage {
         }
     }
 
-    private boolean isJarAlreadyDownloaded(Release release) {
+    private boolean isJarAlreadyDownloaded(ReleaseModel release) {
         return Stream.concat(
                 extensionCatalogManager.getManuallyInstalledJars().stream(),
                 extensionCatalogManager.getCatalogManagedInstalledJars().stream()

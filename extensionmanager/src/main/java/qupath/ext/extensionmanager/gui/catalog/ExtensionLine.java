@@ -17,8 +17,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
 import qupath.ext.extensionmanager.core.Version;
-import qupath.ext.extensionmanager.core.catalog.Extension;
-import qupath.ext.extensionmanager.core.catalog.Release;
+import qupath.ext.extensionmanager.core.model.ExtensionModel;
+import qupath.ext.extensionmanager.core.model.ReleaseModel;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
 import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
 import qupath.ext.extensionmanager.gui.ExtensionCatalogModel;
@@ -43,7 +43,7 @@ class ExtensionLine extends HBox {
     private final ExtensionCatalogManager extensionCatalogManager;
     private final ExtensionCatalogModel model;
     private final SavedCatalog savedCatalog;
-    private final Extension extension;
+    private final ExtensionModel extension;
     private final Runnable onInvalidExtensionDirectory;
     @FXML
     private Label name;
@@ -74,7 +74,7 @@ class ExtensionLine extends HBox {
      * @param savedCatalog the catalog owning the extension to display
      * @param extension the extension to display
      * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
-     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectoryPath()})
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectory()})
      *                                    but this directory is currently invalid. It lets the possibility to the user to
      *                                    define and create a valid directory before performing the operation (which would
      *                                    fail if the directory is invalid). This function is guaranteed to be called from
@@ -85,7 +85,7 @@ class ExtensionLine extends HBox {
             ExtensionCatalogManager extensionCatalogManager,
             ExtensionCatalogModel model,
             SavedCatalog savedCatalog,
-            Extension extension,
+            ExtensionModel extension,
             Runnable onInvalidExtensionDirectory
     ) throws IOException {
         this.extensionCatalogManager = extensionCatalogManager;
@@ -142,7 +142,7 @@ class ExtensionLine extends HBox {
 
                     Optional<String> availableVersion = extension.releases().stream()
                             .filter(release -> release.versionRange().isCompatible(extensionCatalogManager.getVersion()))
-                            .map(Release::name)
+                            .map(ReleaseModel::name)
                             .filter(named -> new Version(named).compareTo(installedVersion) > 0)
                             .findAny();
                     availableVersion.ifPresent(version -> updateAvailableTooltip.setText(MessageFormat.format(

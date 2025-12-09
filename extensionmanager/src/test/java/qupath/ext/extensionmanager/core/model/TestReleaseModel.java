@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.catalog;
+package qupath.ext.extensionmanager.core.model;
 
 import com.google.gson.Gson;
 import org.junit.jupiter.api.Assertions;
@@ -8,20 +8,20 @@ import org.junit.jupiter.api.Test;
 import java.net.URI;
 import java.util.List;
 
-public class TestRelease {
+public class TestReleaseModel {
 
     @Nested
     public class ConstructorTests {
 
         @Test
         void Check_Valid_Release() {
-            Assertions.assertDoesNotThrow(() -> new Release(
+            Assertions.assertDoesNotThrow(() -> new ReleaseModel(
                     "v0.1.0",
                     URI.create("https://github.com/qupath/qupath"),
                     null,
                     null,
                     null,
-                    new VersionRange("v1.0.0", null, null)
+                    new VersionRangeModel("v1.0.0", null, null)
             ));
         }
 
@@ -29,13 +29,13 @@ public class TestRelease {
         void Check_Undefined_Name() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Release(
+                    () -> new ReleaseModel(
                             null,
                             URI.create("https://github.com/qupath/qupath"),
                             null,
                             null,
                             null,
-                            new VersionRange("v1.0.0", null, null)
+                            new VersionRangeModel("v1.0.0", null, null)
                     )
             );
         }
@@ -44,13 +44,13 @@ public class TestRelease {
         void Check_Undefined_Main_Url() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Release(
+                    () -> new ReleaseModel(
                             "v0.1.0",
                             null,
                             null,
                             null,
                             null,
-                            new VersionRange("v1.0.0", null, null)
+                            new VersionRangeModel("v1.0.0", null, null)
                     )
             );
         }
@@ -59,7 +59,7 @@ public class TestRelease {
         void Check_Undefined_Version_Range() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Release(
+                    () -> new ReleaseModel(
                             "v0.1.0",
                             URI.create("https://github.com/qupath/qupath"),
                             null,
@@ -74,13 +74,13 @@ public class TestRelease {
         void Check_Invalid_Name() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Release(
+                    () -> new ReleaseModel(
                             "invalid_version",
                             URI.create("https://github.com/qupath/qupath"),
                             null,
                             null,
                             null,
-                            new VersionRange("v1.0.0", null, null)
+                            new VersionRangeModel("v1.0.0", null, null)
                     )
             );
         }
@@ -89,13 +89,13 @@ public class TestRelease {
         void Check_Invalid_Main_Url() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Release(
+                    () -> new ReleaseModel(
                             "v0.1.0",
                             URI.create("https://qupath.readthedocs.io/"),
                             null,
                             null,
                             null,
-                            new VersionRange("v1.0.0", null, null)
+                            new VersionRangeModel("v1.0.0", null, null)
                     )
             );
         }
@@ -103,13 +103,13 @@ public class TestRelease {
         @Test
         void Check_Valid_Required_Dependency_Url() {
             Assertions.assertDoesNotThrow(
-                    () -> new Release(
+                    () -> new ReleaseModel(
                             "v0.1.0",
                             URI.create("https://github.com/qupath/qupath/"),
                             List.of(URI.create("https://maven.scijava.org/content")),
                             null,
                             null,
-                            new VersionRange("v1.0.0", null, null)
+                            new VersionRangeModel("v1.0.0", null, null)
                     )
             );
         }
@@ -118,13 +118,13 @@ public class TestRelease {
         void Check_Invalid_Required_Dependency_Url() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Release(
+                    () -> new ReleaseModel(
                             "v0.1.0",
                             URI.create("https://github.com/qupath/qupath/"),
                             List.of(URI.create("https://qupath.readthedocs.io/")),
                             null,
                             null,
-                            new VersionRange("v1.0.0", null, null)
+                            new VersionRangeModel("v1.0.0", null, null)
                     )
             );
         }
@@ -132,13 +132,13 @@ public class TestRelease {
         @Test
         void Check_Valid_Optional_Dependency_Url() {
             Assertions.assertDoesNotThrow(
-                    () -> new Release(
+                    () -> new ReleaseModel(
                             "v0.1.0",
                             URI.create("https://github.com/qupath/qupath/"),
                             null,
                             List.of(URI.create("https://maven.scijava.org/content")),
                             null,
-                            new VersionRange("v1.0.0", null, null)
+                            new VersionRangeModel("v1.0.0", null, null)
                     )
             );
         }
@@ -147,13 +147,13 @@ public class TestRelease {
         void Check_Invalid_Optional_Dependency_Url() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Release(
+                    () -> new ReleaseModel(
                             "v0.1.0",
                             URI.create("https://github.com/qupath/qupath/"),
                             null,
                             List.of(URI.create("https://qupath.readthedocs.io/")),
                             null,
-                            new VersionRange("v1.0.0", null, null)
+                            new VersionRangeModel("v1.0.0", null, null)
                     )
             );
         }
@@ -161,13 +161,13 @@ public class TestRelease {
         @Test
         void Check_Valid_Javadoc_Url() {
             Assertions.assertDoesNotThrow(
-                    () -> new Release(
+                    () -> new ReleaseModel(
                             "v0.1.0",
                             URI.create("https://github.com/qupath/qupath/"),
                             null,
                             null,
                             List.of(URI.create("https://maven.scijava.org/content")),
-                            new VersionRange("v1.0.0", null, null)
+                            new VersionRangeModel("v1.0.0", null, null)
                     )
             );
         }
@@ -176,13 +176,13 @@ public class TestRelease {
         void Check_Invalid_Javadoc_Url() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Release(
+                    () -> new ReleaseModel(
                             "v0.1.0",
                             URI.create("https://github.com/qupath/qupath/"),
                             null,
                             null,
                             List.of(URI.create("https://qupath.readthedocs.io/")),
-                            new VersionRange("v1.0.0", null, null)
+                            new VersionRangeModel("v1.0.0", null, null)
                     )
             );
         }
@@ -193,16 +193,16 @@ public class TestRelease {
 
         @Test
         void Check_Valid_Release() {
-            Release expectedRelease = new Release(
+            ReleaseModel expectedRelease = new ReleaseModel(
                     "v0.1.0",
                     URI.create("https://github.com/qupath/qupath"),
                     null,
                     null,
                     null,
-                    new VersionRange("v1.0.0", null, null)
+                    new VersionRangeModel("v1.0.0", null, null)
             );
 
-            Release release = new Gson().fromJson("""
+            ReleaseModel release = new Gson().fromJson("""
                     {
                         "name": "v0.1.0",
                         "mainUrl": "https://github.com/qupath/qupath",
@@ -212,7 +212,7 @@ public class TestRelease {
                     }
                     """
                     ,
-                    Release.class
+                    ReleaseModel.class
             );
 
             Assertions.assertEquals(expectedRelease, release);
@@ -230,7 +230,7 @@ public class TestRelease {
                                 }
                             }
                             """,
-                            Release.class
+                            ReleaseModel.class
                     )
             );
         }
@@ -247,7 +247,7 @@ public class TestRelease {
                                 }
                             }
                             """,
-                            Release.class
+                            ReleaseModel.class
                     )
             );
         }
@@ -262,7 +262,7 @@ public class TestRelease {
                                 "mainUrl": "https://github.com/qupath/qupath"
                             }
                             """,
-                            Release.class
+                            ReleaseModel.class
                     )
             );
         }
@@ -280,7 +280,7 @@ public class TestRelease {
                                 }
                             }
                             """,
-                            Release.class
+                            ReleaseModel.class
                     )
             );
         }
@@ -296,7 +296,7 @@ public class TestRelease {
                                 "versionRange": {}
                             }
                             """,
-                            Release.class
+                            ReleaseModel.class
                     )
             );
         }
@@ -314,7 +314,7 @@ public class TestRelease {
                                 }
                             }
                             """,
-                            Release.class
+                            ReleaseModel.class
                     )
             );
         }
@@ -323,7 +323,7 @@ public class TestRelease {
         void Check_Valid_Required_Dependency_Url() {
             List<URI> expectedRequiredDependencyUrls = List.of(URI.create("https://maven.scijava.org/content"));
 
-            Release release = new Gson().fromJson("""
+            ReleaseModel release = new Gson().fromJson("""
                     {
                         "name": "v0.1.0",
                         "mainUrl": "https://github.com/qupath/qupath",
@@ -334,7 +334,7 @@ public class TestRelease {
                     }
                     """
                     ,
-                    Release.class
+                    ReleaseModel.class
             );
 
             Assertions.assertEquals(expectedRequiredDependencyUrls, release.requiredDependencyUrls());
@@ -354,7 +354,7 @@ public class TestRelease {
                                 }
                             }
                             """,
-                            Release.class
+                            ReleaseModel.class
                     )
             );
         }
@@ -363,7 +363,7 @@ public class TestRelease {
         void Check_Valid_Optional_Dependency_Url() {
             List<URI> expectedOptionalDependencyUrls = List.of(URI.create("https://maven.scijava.org/content"));
 
-            Release release = new Gson().fromJson("""
+            ReleaseModel release = new Gson().fromJson("""
                     {
                         "name": "v0.1.0",
                         "mainUrl": "https://github.com/qupath/qupath",
@@ -374,7 +374,7 @@ public class TestRelease {
                     }
                     """
                     ,
-                    Release.class
+                    ReleaseModel.class
             );
 
             Assertions.assertEquals(expectedOptionalDependencyUrls, release.optionalDependencyUrls());
@@ -394,7 +394,7 @@ public class TestRelease {
                                 }
                             }
                             """,
-                            Release.class
+                            ReleaseModel.class
                     )
             );
         }
@@ -403,7 +403,7 @@ public class TestRelease {
         void Check_Valid_Javadoc_Url() {
             List<URI> expectedJavadocUrls = List.of(URI.create("https://maven.scijava.org/content"));
 
-            Release release = new Gson().fromJson("""
+            ReleaseModel release = new Gson().fromJson("""
                     {
                         "name": "v0.1.0",
                         "mainUrl": "https://github.com/qupath/qupath",
@@ -414,7 +414,7 @@ public class TestRelease {
                     }
                     """
                     ,
-                    Release.class
+                    ReleaseModel.class
             );
 
             Assertions.assertEquals(expectedJavadocUrls, release.javadocUrls());
@@ -434,7 +434,7 @@ public class TestRelease {
                                 }
                             }
                             """,
-                            Release.class
+                            ReleaseModel.class
                     )
             );
         }

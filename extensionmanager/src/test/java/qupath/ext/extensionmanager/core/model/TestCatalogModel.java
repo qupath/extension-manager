@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.catalog;
+package qupath.ext.extensionmanager.core.model;
 
 import com.google.gson.Gson;
 import org.junit.jupiter.api.Assertions;
@@ -8,17 +8,17 @@ import org.junit.jupiter.api.Test;
 import java.net.URI;
 import java.util.List;
 
-public class TestCatalog {
+public class TestCatalogModel {
 
     @Nested
     public class ConstructorTests {
 
         @Test
         void Check_Valid_Catalog() {
-            Assertions.assertDoesNotThrow(() -> new Catalog(
+            Assertions.assertDoesNotThrow(() -> new CatalogModel(
                     "",
                     "",
-                    List.of(new Extension("", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of()))
+                    List.of(new ExtensionModel("", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of()))
             ));
         }
 
@@ -26,7 +26,7 @@ public class TestCatalog {
         void Check_Undefined_Name() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Catalog(null, "", List.of())
+                    () -> new CatalogModel(null, "", List.of())
             );
         }
 
@@ -34,7 +34,7 @@ public class TestCatalog {
         void Check_Undefined_Description() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Catalog("", null, List.of())
+                    () -> new CatalogModel("", null, List.of())
             );
         }
 
@@ -42,21 +42,21 @@ public class TestCatalog {
         void Check_Undefined_Extensions() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Catalog("", "", null)
+                    () -> new CatalogModel("", "", null)
             );
         }
 
         @Test
         void Check_Extensions_With_Same_Name() {
-            List<Extension> extensions = List.of(
-                    new Extension("name", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of()),
-                    new Extension("name", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of()),
-                    new Extension("other_name", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of())
+            List<ExtensionModel> extensions = List.of(
+                    new ExtensionModel("name", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of()),
+                    new ExtensionModel("name", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of()),
+                    new ExtensionModel("other_name", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of())
             );
 
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Catalog("", "", extensions)
+                    () -> new CatalogModel("", "", extensions)
             );
         }
     }
@@ -66,10 +66,10 @@ public class TestCatalog {
 
         @Test
         void Check_Valid_Catalog() {
-            Catalog expectedCatalog = new Catalog(
+            CatalogModel expectedCatalog = new CatalogModel(
                     "",
                     "",
-                    List.of(new Extension(
+                    List.of(new ExtensionModel(
                             "",
                             "",
                             "",
@@ -79,7 +79,7 @@ public class TestCatalog {
                     ))
             );
 
-            Catalog catalog = new Gson().fromJson("""
+            CatalogModel catalog = new Gson().fromJson("""
                     {
                         "name": "",
                         "description": "",
@@ -94,7 +94,7 @@ public class TestCatalog {
                         ]
                     }
                     """,
-                    Catalog.class
+                    CatalogModel.class
             );
 
             Assertions.assertEquals(expectedCatalog, catalog);
@@ -110,7 +110,7 @@ public class TestCatalog {
                                 "extensions": []
                             }
                             """,
-                            Catalog.class
+                            CatalogModel.class
                     )
             );
         }
@@ -125,7 +125,7 @@ public class TestCatalog {
                                 "extensions": []
                             }
                             """,
-                            Catalog.class
+                            CatalogModel.class
                     )
             );
         }
@@ -140,7 +140,7 @@ public class TestCatalog {
                                 "description": ""
                             }
                             """,
-                            Catalog.class
+                            CatalogModel.class
                     )
             );
         }
@@ -156,7 +156,7 @@ public class TestCatalog {
                                 "extensions": [{}]
                             }
                             """,
-                            Catalog.class
+                            CatalogModel.class
                     )
             );
         }
@@ -194,7 +194,7 @@ public class TestCatalog {
                                 ]
                             }
                             """,
-                            Catalog.class
+                            CatalogModel.class
                     )
             );
         }

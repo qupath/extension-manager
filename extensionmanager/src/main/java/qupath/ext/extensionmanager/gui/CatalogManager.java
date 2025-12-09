@@ -26,8 +26,8 @@ import javafx.util.Callback;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
-import qupath.ext.extensionmanager.core.catalog.Catalog;
-import qupath.ext.extensionmanager.core.catalog.CatalogFetcher;
+import qupath.ext.extensionmanager.core.model.CatalogModel;
+import qupath.ext.extensionmanager.core.model.CatalogModelFetcher;
 import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
 import qupath.ext.extensionmanager.core.tools.GitHubRawLinkFinder;
 import qupath.fx.dialogs.Dialogs;
@@ -73,7 +73,7 @@ class CatalogManager extends Stage {
      * @param extensionCatalogManager the extension catalog manager this window should use
      * @param model the model to use when accessing data
      * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
-     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectoryPath()})
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectory()})
      *                                    but this directory is currently invalid. It lets the possibility to the user to
      *                                    define and create a valid directory before performing the operation (which would
      *                                    fail if the directory is invalid). This function is guaranteed to be called from
@@ -99,7 +99,7 @@ class CatalogManager extends Stage {
 
     @FXML
     private void onAddClicked(ActionEvent ignored) {
-        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
 
         String catalogUrl = this.catalogUrl.getText();
         if (catalogUrl == null || catalogUrl.isBlank()) {
@@ -147,7 +147,7 @@ class CatalogManager extends Stage {
                             finalUri.toString()
                     ));
                 });
-                Catalog catalog = CatalogFetcher.getCatalog(uri).get();
+                CatalogModel catalog = CatalogModelFetcher.getCatalog(uri).get();
                 Platform.runLater(() -> progressWindow.setProgress(1));
 
                 if (extensionCatalogManager.getCatalogs().stream().anyMatch(savedCatalog -> savedCatalog.name().equals(catalog.name()))) {
@@ -189,7 +189,7 @@ class CatalogManager extends Stage {
             Button button = new Button(resources.getString("CatalogManager.remove"));
             button.setDisable(!cellData.getValue().deletable());
             button.setOnAction(event -> {
-                UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+                UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
 
                 deleteCatalogs(List.of(cellData.getValue()));
             });
@@ -278,7 +278,7 @@ class CatalogManager extends Stage {
 
         MenuItem removeItem = new MenuItem(resources.getString("CatalogManager.remove"));
         removeItem.setOnAction(ignored -> {
-            UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+            UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
 
             List<String> nonDeletableCatalogs = catalogTable.getSelectionModel().getSelectedItems().stream()
                     .filter(savedCatalog -> !savedCatalog.deletable())
@@ -331,7 +331,7 @@ class CatalogManager extends Stage {
                         catalogsToDelete.stream()
                                 .map(savedCatalog -> {
                                     try {
-                                        return String.format("\"%s\"", extensionCatalogManager.getCatalogDirectory(savedCatalog));
+                                        return String.format("\"%s\"", extensionCatalogManager.getCatalogDirectory(savedCatalog.name()));
                                     } catch (InvalidPathException | SecurityException | NullPointerException e) {
                                         logger.error("Cannot retrieve path of {}", savedCatalog.name(), e);
                                         return null;

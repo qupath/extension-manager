@@ -7,7 +7,7 @@
  * classes of this package use the camel case naming convention while the Pydantic
  * model uses the snake case naming convention.
  * <p>
- * A class ({@link qupath.ext.extensionmanager.core.catalog.CatalogFetcher CatalogFetcher}) is
+ * A class ({@link qupath.ext.extensionmanager.core.model.CatalogModelFetcher CatalogFetcher}) is
  * also provided to fetch such catalog.
  */
-package qupath.ext.extensionmanager.core.catalog;
+package qupath.ext.extensionmanager.core.model;

@@ -7,7 +7,7 @@ import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
-import qupath.ext.extensionmanager.core.catalog.CatalogFetcher;
+import qupath.ext.extensionmanager.core.model.CatalogModelFetcher;
 import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
 import qupath.ext.extensionmanager.gui.ExtensionCatalogModel;
 import qupath.ext.extensionmanager.gui.UiUtils;
@@ -32,7 +32,7 @@ public class CatalogPane extends TitledPane {
      * @param savedCatalog the catalog to display
      * @param model the model to use when accessing data
      * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
-     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectoryPath()})
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectory()})
      *                                    but this directory is currently invalid. It lets the possibility to the user to
      *                                    define and create a valid directory before performing the operation (which would
      *                                    fail if the directory is invalid). This function is guaranteed to be called from
@@ -49,7 +49,7 @@ public class CatalogPane extends TitledPane {
 
         setText(savedCatalog.name());
 
-        CatalogFetcher.getCatalog(savedCatalog.rawUri()).handle((fetchedCatalog, error) -> {
+        CatalogModelFetcher.getCatalog(savedCatalog.rawUri()).handle((fetchedCatalog, error) -> {
             if (error == null) {
                 Platform.runLater(() -> {
                     setExpanded(true);

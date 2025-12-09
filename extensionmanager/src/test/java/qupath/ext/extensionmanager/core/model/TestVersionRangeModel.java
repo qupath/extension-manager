@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.catalog;
+package qupath.ext.extensionmanager.core.model;
 
 import com.google.gson.Gson;
 import org.junit.jupiter.api.Assertions;
@@ -7,14 +7,14 @@ import org.junit.jupiter.api.Test;
 
 import java.util.List;
 
-public class TestVersionRange {
+public class TestVersionRangeModel {
 
     @Nested
     public class ConstructorTests {
 
         @Test
         void Check_Valid_Version_Range() {
-            Assertions.assertDoesNotThrow(() -> new VersionRange(
+            Assertions.assertDoesNotThrow(() -> new VersionRangeModel(
                     "v1.1.0",
                     null,
                     null
@@ -25,7 +25,7 @@ public class TestVersionRange {
         void Check_Undefined_Name() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new VersionRange(
+                    () -> new VersionRangeModel(
                             null,
                             null,
                             null
@@ -35,7 +35,7 @@ public class TestVersionRange {
 
         @Test
         void Check_Valid_With_Max() {
-            Assertions.assertDoesNotThrow(() -> new VersionRange(
+            Assertions.assertDoesNotThrow(() -> new VersionRangeModel(
                     "v1.1.0",
                     "v2.0.0",
                     null
@@ -46,7 +46,7 @@ public class TestVersionRange {
         void Check_Invalid_When_Max_Lower_Than_Min() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new VersionRange(
+                    () -> new VersionRangeModel(
                             "v2.0.0",
                             "v1.1.0",
                             null
@@ -56,7 +56,7 @@ public class TestVersionRange {
 
         @Test
         void Check_Valid_With_Excluded() {
-            Assertions.assertDoesNotThrow(() -> new VersionRange(
+            Assertions.assertDoesNotThrow(() -> new VersionRangeModel(
                     "v1.1.0",
                     null,
                     List.of("v1.3.0", "v2.0.0")
@@ -67,7 +67,7 @@ public class TestVersionRange {
         void Check_Invalid_When_Excluded_Lower_Than_Min() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new VersionRange(
+                    () -> new VersionRangeModel(
                             "v2.0.0",
                             null,
                             List.of("v1.3.0", "v2.0.0")
@@ -79,7 +79,7 @@ public class TestVersionRange {
         void Check_Invalid_When_Excluded_Higher_Than_Max() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new VersionRange(
+                    () -> new VersionRangeModel(
                             "v1.0.0",
                             "v1.1.0",
                             List.of("v1.3.0", "v2.0.0")
@@ -91,7 +91,7 @@ public class TestVersionRange {
         void Check_Invalid_Min_Version() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new VersionRange(
+                    () -> new VersionRangeModel(
                             "invalid_version",
                             null,
                             null
@@ -103,7 +103,7 @@ public class TestVersionRange {
         void Check_Invalid_Max_Version() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new VersionRange(
+                    () -> new VersionRangeModel(
                             "v1.0.0",
                             "invalid_version",
                             null
@@ -115,7 +115,7 @@ public class TestVersionRange {
         void Check_Invalid_Excluded_Version() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new VersionRange(
+                    () -> new VersionRangeModel(
                             "v1.0.0",
                             null,
                             List.of("v1.3.0", "invalid_version")
@@ -129,14 +129,14 @@ public class TestVersionRange {
 
         @Test
         void Check_Valid_Version_Range() {
-            VersionRange expectedVersionRange = new VersionRange("v1.1.0", null, null);
+            VersionRangeModel expectedVersionRange = new VersionRangeModel("v1.1.0", null, null);
 
-            VersionRange versionRange = new Gson().fromJson("""
+            VersionRangeModel versionRange = new Gson().fromJson("""
                     {
                         "min": "v1.1.0"
                     }
                     """,
-                    VersionRange.class
+                    VersionRangeModel.class
             );
 
             Assertions.assertEquals(expectedVersionRange, versionRange);
@@ -149,7 +149,7 @@ public class TestVersionRange {
                     () -> new Gson().fromJson("""
                             {}
                             """,
-                            VersionRange.class
+                            VersionRangeModel.class
                     )
             );
         }
@@ -158,13 +158,13 @@ public class TestVersionRange {
         void Check_Max() {
             String expectedMax = "v2.0.0";
 
-            VersionRange versionRange = new Gson().fromJson("""
+            VersionRangeModel versionRange = new Gson().fromJson("""
                     {
                         "min": "v1.1.0",
                         "max": "v2.0.0"
                     }
                     """,
-                    VersionRange.class
+                    VersionRangeModel.class
             );
 
             Assertions.assertEquals(expectedMax, versionRange.max());
@@ -180,7 +180,7 @@ public class TestVersionRange {
                                 "max": "v1.1.0"
                             }
                             """,
-                            VersionRange.class
+                            VersionRangeModel.class
                     )
             );
         }
@@ -189,13 +189,13 @@ public class TestVersionRange {
         void Check_Excluded() {
             List<String> expectedExcluded = List.of("v1.3.0", "v2.0.0");
 
-            VersionRange versionRange = new Gson().fromJson("""
+            VersionRangeModel versionRange = new Gson().fromJson("""
                     {
                         "min": "v1.1.0",
                         "excludes": ["v1.3.0", "v2.0.0"]
                     }
                     """,
-                    VersionRange.class
+                    VersionRangeModel.class
             );
 
             Assertions.assertEquals(expectedExcluded, versionRange.excludes());
@@ -211,7 +211,7 @@ public class TestVersionRange {
                                 "excludes": ["v1.3.0", "v2.0.0"]
                             }
                             """,
-                            VersionRange.class
+                            VersionRangeModel.class
                     )
             );
         }
@@ -227,7 +227,7 @@ public class TestVersionRange {
                                 "excludes": ["v1.3.0", "v2.0.0"]
                             }
                             """,
-                            VersionRange.class
+                            VersionRangeModel.class
                     )
             );
         }
@@ -241,7 +241,7 @@ public class TestVersionRange {
                                 "min": "invalid_version"
                             }
                             """,
-                            VersionRange.class
+                            VersionRangeModel.class
                     )
             );
         }
@@ -256,7 +256,7 @@ public class TestVersionRange {
                                 "max": "invalid_version"
                             }
                             """,
-                            VersionRange.class
+                            VersionRangeModel.class
                     )
             );
         }
@@ -271,7 +271,7 @@ public class TestVersionRange {
                                 "excludes": ["v1.3.0", "invalid_version"]
                             }
                             """,
-                            VersionRange.class
+                            VersionRangeModel.class
                     )
             );
         }
@@ -279,7 +279,7 @@ public class TestVersionRange {
 
     @Test
     void Check_Version_Compatibility_When_Version_Null() {
-        VersionRange versionRange = new VersionRange(
+        VersionRangeModel versionRange = new VersionRangeModel(
                 "v0.1.0",
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
@@ -293,7 +293,7 @@ public class TestVersionRange {
 
     @Test
     void Check_Version_Compatibility_When_Invalid_Version() {
-        VersionRange versionRange = new VersionRange(
+        VersionRangeModel versionRange = new VersionRangeModel(
                 "v0.1.0",
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
@@ -308,7 +308,7 @@ public class TestVersionRange {
 
     @Test
     void Check_Compatible_Version() {
-        VersionRange versionRange = new VersionRange(
+        VersionRangeModel versionRange = new VersionRangeModel(
                 "v0.1.0",
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
@@ -322,7 +322,7 @@ public class TestVersionRange {
 
     @Test
     void Check_Compatible_Version_When_Minor_Not_Specified_For_Min() {
-        VersionRange versionRange = new VersionRange(
+        VersionRangeModel versionRange = new VersionRangeModel(
                 "v0.1",
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
@@ -336,7 +336,7 @@ public class TestVersionRange {
 
     @Test
     void Check_Compatible_Version_When_Minor_And_Patch_Not_Specified_For_Min() {
-        VersionRange versionRange = new VersionRange(
+        VersionRangeModel versionRange = new VersionRangeModel(
                 "v0",
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
@@ -350,7 +350,7 @@ public class TestVersionRange {
 
     @Test
     void Check_Compatible_Version_When_Minor_Not_Specified_For_Max() {
-        VersionRange versionRange = new VersionRange(
+        VersionRangeModel versionRange = new VersionRangeModel(
                 "v0.1.0",
                 "v1.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
@@ -364,7 +364,7 @@ public class TestVersionRange {
 
     @Test
     void Check_Compatible_Version_When_Minor_And_Patch_Not_Specified_For_Max() {
-        VersionRange versionRange = new VersionRange(
+        VersionRangeModel versionRange = new VersionRangeModel(
                 "v0.1.0",
                 "v1",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
@@ -378,7 +378,7 @@ public class TestVersionRange {
 
     @Test
     void Check_Incompatible_Version_Because_Of_Min() {
-        VersionRange versionRange = new VersionRange(
+        VersionRangeModel versionRange = new VersionRangeModel(
                 "v0.1.0",
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
@@ -392,7 +392,7 @@ public class TestVersionRange {
 
     @Test
     void Check_Incompatible_Version_Because_Of_Max() {
-        VersionRange versionRange = new VersionRange(
+        VersionRangeModel versionRange = new VersionRangeModel(
                 "v0.1.0",
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
@@ -406,7 +406,7 @@ public class TestVersionRange {
 
     @Test
     void Check_Incompatible_Version_Because_Of_Excluded() {
-        VersionRange versionRange = new VersionRange(
+        VersionRangeModel versionRange = new VersionRangeModel(
                 "v0.1.0",
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
