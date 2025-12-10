@@ -400,7 +400,7 @@ public class TestExtensionModelCatalogModelManager {
         )) {
             Assertions.assertThrows(
                     NullPointerException.class,
-                    () -> extensionCatalogManager.removeCatalogs(List.of(), true)
+                    () -> extensionCatalogManager.removeCatalog(List.of(), true)
             );
         }
     }
@@ -415,7 +415,7 @@ public class TestExtensionModelCatalogModelManager {
         )) {
             Assertions.assertThrows(
                     NullPointerException.class,
-                    () -> extensionCatalogManager.removeCatalogs(null, true)
+                    () -> extensionCatalogManager.removeCatalog(null, true)
             );
         }
     }
@@ -439,7 +439,7 @@ public class TestExtensionModelCatalogModelManager {
         )) {
             Assertions.assertThrows(
                     NullPointerException.class,
-                    () -> extensionCatalogManager.removeCatalogs(catalogsToRemove, true)
+                    () -> extensionCatalogManager.removeCatalog(catalogsToRemove, true)
             );
         }
     }
@@ -462,7 +462,7 @@ public class TestExtensionModelCatalogModelManager {
                 defaultRegistry
         )) {
             extensionCatalogManager.addCatalog(List.of(catalogToAdd));
-            extensionCatalogManager.removeCatalogs(List.of(catalogToAdd), true);
+            extensionCatalogManager.removeCatalog(List.of(catalogToAdd), true);
 
             TestUtils.assertCollectionsEqualsWithoutOrder(expectedCatalogs, extensionCatalogManager.getCatalogs());
         }
@@ -489,7 +489,7 @@ public class TestExtensionModelCatalogModelManager {
                 defaultRegistry
         )) {
             extensionCatalogManager.addCatalog(List.of(catalogToAdd));
-            extensionCatalogManager.removeCatalogs(List.of(catalogToAdd), true);
+            extensionCatalogManager.removeCatalog(List.of(catalogToAdd), true);
 
             TestUtils.assertCollectionsEqualsWithoutOrder(expectedCatalogs, extensionCatalogManager.getCatalogs());
         }

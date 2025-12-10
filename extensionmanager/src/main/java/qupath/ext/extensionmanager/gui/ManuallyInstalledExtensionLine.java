@@ -17,8 +17,7 @@ import java.text.MessageFormat;
 import java.util.ResourceBundle;
 
 /**
- * A container displaying the name of a manually installed extension as well as a
- * button to delete it.
+ * A container displaying the name of a manually installed extension as well as a button to delete it.
  */
 class ManuallyInstalledExtensionLine extends HBox {
 
@@ -34,7 +33,7 @@ class ManuallyInstalledExtensionLine extends HBox {
      * Create the container.
      *
      * @param jarPath the path of the manually installed extension to display
-     * @throws IOException when an error occurs while creating the container
+     * @throws IOException if an error occurs while creating the container
      */
     public ManuallyInstalledExtensionLine(Path jarPath) throws IOException {
         this.jarPath = jarPath;
@@ -51,14 +50,14 @@ class ManuallyInstalledExtensionLine extends HBox {
 
     @FXML
     private void onDeleteClicked(ActionEvent ignored) {
-        var confirmation = Dialogs.showConfirmDialog(
+        boolean confirmation = Dialogs.showConfirmDialog(
                 resources.getString("ManuallyInstalledExtensionLine.deleteExtension"),
                 MessageFormat.format(
                         resources.getString("ManuallyInstalledExtensionLine.remove"),
                         jarPath.getFileName()
                 )
         );
-        if(!confirmation) {
+        if (!confirmation) {
             return;
         }
 
@@ -72,7 +71,7 @@ class ManuallyInstalledExtensionLine extends HBox {
                             jarPath.getFileName()
                     )
             );
-        } catch (IOException | SecurityException e) {
+        } catch (IOException e) {
             logger.error("Cannot delete extension located at {}", jarPath, e);
 
             Dialogs.showErrorMessage(
