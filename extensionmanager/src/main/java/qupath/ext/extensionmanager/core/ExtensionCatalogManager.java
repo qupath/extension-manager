@@ -105,17 +105,10 @@ public class ExtensionCatalogManager implements AutoCloseable{
         this.extensionClassLoader = new ExtensionClassLoader(parentClassLoader);
         this.version = new Version(version);
 
-        resetCatalogs(defaultCatalogs);
+        resetCatalogsAndJars(defaultCatalogs);
         extensionFolderManager.getCatalogsDirectoryPath().addListener((p, o, n) ->
-                resetCatalogs(defaultCatalogs)
+                resetCatalogsAndJars(defaultCatalogs)
         );
-
-        updateCatalogManagedInstalledJarsOfDirectory(extensionFolderManager.getCatalogsDirectoryPath().getValue(), Operation.ADD);
-        extensionFolderManager.getCatalogsDirectoryPath().addListener((p, o, n) -> {
-            catalogManagedInstalledJars.clear();
-
-            updateCatalogManagedInstalledJarsOfDirectory(n, Operation.ADD);
-        });
 
         loadJars();
     }
@@ -354,7 +347,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
         }
 
         updateCatalogManagedInstalledJarsOfDirectory(
-                extensionFolderManager.getExtensionDirectoryPath(catalog.getName(), extension.getName()),
+                extensionFolderManager.getExtensionDirectoryPath(catalog.getName(), extension.getName(), release.getVersion().toString()),
                 Operation.ADD
         );
 
@@ -483,16 +476,52 @@ public class ExtensionCatalogManager implements AutoCloseable{
         return extensionFolderManager.getManuallyInstalledJars();
     }
 
-    private void resetCatalogs(List<Catalog> defaultCatalogs) {
+    private void resetCatalogsAndJars(List<Catalog> defaultCatalogs) {
         try {
-            this.catalogs.setAll(extensionFolderManager.getSavedRegistry().catalogs().stream()
+            List<RegistryCatalog> catalogs = extensionFolderManager.getSavedRegistry().catalogs();
+
+            this.catalogs.setAll(catalogs.stream()
                     .map(Catalog::new)
                     .toList()
             );
+
+            catalogManagedInstalledJars.clear();
+            List<Path> releasePaths = catalogs.stream()
+                    .flatMap(catalog -> catalog.extensions().stream()
+                            .map(extension -> extensionFolderManager.getExtensionDirectoryPath(
+                                    catalog.name(),
+                                    extension.name(),
+                                    extension.installedVersion()))
+                    )
+                    .toList();
+            for (Path releasePath: releasePaths) {
+                updateCatalogManagedInstalledJarsOfDirectory(releasePath, Operation.ADD);
+            }
+
         } catch (Exception e) {
             logger.debug("Cannot retrieve saved registry. Using default catalogs {}", defaultCatalogs, e);
             this.catalogs.setAll(defaultCatalogs);
         }
+    }
+
+    private void loadJars() {
+        addJars(extensionFolderManager.getManuallyInstalledJars());
+        extensionFolderManager.getManuallyInstalledJars().addListener((ListChangeListener<? super Path>) change -> {
+            while (change.next()) {
+                addJars(change.getAddedSubList());
+                removeJars(change.getRemoved());
+            }
+            change.reset();
+        });
+
+        addJars(catalogManagedInstalledJarsImmutable);
+        catalogManagedInstalledJarsImmutable.addListener((ListChangeListener<? super Path>) change -> {
+            while (change.next()) {
+                addJars(change.getAddedSubList());
+                removeJars(change.getRemoved());
+            }
+            change.reset();
+        });
     }
 
     private void updateCatalogManagedInstalledJarsOfDirectory(Path directory, Operation operation) {
@@ -516,26 +545,6 @@ public class ExtensionCatalogManager implements AutoCloseable{
                 );
             }
         }
-    }
-
-    private void loadJars() {
-        addJars(extensionFolderManager.getManuallyInstalledJars());
-        extensionFolderManager.getManuallyInstalledJars().addListener((ListChangeListener<? super Path>) change -> {
-            while (change.next()) {
-                addJars(change.getAddedSubList());
-                removeJars(change.getRemoved());
-            }
-            change.reset();
-        });
-
-        addJars(catalogManagedInstalledJarsImmutable);
-        catalogManagedInstalledJarsImmutable.addListener((ListChangeListener<? super Path>) change -> {
-            while (change.next()) {
-                addJars(change.getAddedSubList());
-                removeJars(change.getRemoved());
-            }
-            change.reset();
-        });
     }
 
     private List<UriFileName> getDownloadUrlsToFilePaths(

@@ -20,7 +20,6 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Objects;
 import java.util.function.Predicate;
 
@@ -261,6 +260,24 @@ class ExtensionFolderManager implements AutoCloseable {
     }
 
     /**
+     * Get the path to the directory containing the provided release of the provided extension of the provided catalog.
+     * It may not exist.
+     *
+     * @param catalogName the name of the catalog owning the extension
+     * @param extensionName the name of the extension to retrieve
+     * @param releaseName the name of the release to retrieve
+     * @return the path to the folder containing the provided extension
+     * @throws InvalidPathException if the path cannot be created
+     * @throws NullPointerException if one of the provided parameter is null or if the path contained in
+     * {@link #getCatalogsDirectoryPath()} is null
+     */
+    public synchronized Path getExtensionDirectoryPath(String catalogName, String extensionName, String releaseName) {
+        return getCatalogDirectoryPath(catalogName)
+                .resolve(FileTools.stripInvalidFilenameCharacters(extensionName))
+                .resolve(FileTools.stripInvalidFilenameCharacters(releaseName));
+    }
+
+    /**
      * Delete all files of an extension belonging to a catalog. This will move the
      * {@link #getExtensionDirectoryPath(String, String)} directory to trash or recursively delete it the platform
      * doesn't support moving files to trash.
@@ -301,11 +318,7 @@ class ExtensionFolderManager implements AutoCloseable {
             FileType fileType,
             boolean createDirectory
     ) throws IOException {
-        Path folderPath = Paths.get(
-                getExtensionDirectoryPath(catalogName, extensionName).toString(),
-                releaseName,
-                fileType.name
-        );
+        Path folderPath = getExtensionDirectoryPath(catalogName, extensionName, releaseName).resolve(fileType.name);
 
         if (createDirectory) {
             if (Files.isRegularFile(folderPath)) {
