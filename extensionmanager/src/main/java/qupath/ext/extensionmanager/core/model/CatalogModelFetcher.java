@@ -32,8 +32,8 @@ public class CatalogModelFetcher {
      * Attempt to get a catalog from the provided URL.
      *
      * @param uri the URI pointing to the raw content of the catalog. It must contain "http" or "https"
-     * @return a CompletableFuture with the catalog or a failed CompletableFuture if the provided URL doesn't point to
-     * a valid catalog
+     * @return a CompletableFuture with the catalog or a failed CompletableFuture if the provided URL doesn't point to a
+     * valid catalog
      */
     public static CompletableFuture<CatalogModel> getCatalog(URI uri) {
         if (uri == null) {

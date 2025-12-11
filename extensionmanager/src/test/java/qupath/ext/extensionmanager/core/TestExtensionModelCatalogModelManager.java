@@ -15,7 +15,7 @@ import qupath.ext.extensionmanager.core.model.VersionRangeModel;
 import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
 import qupath.ext.extensionmanager.core.savedentities.Registry;
 import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
-import qupath.ext.extensionmanager.core.savedentities.UpdateAvailable;
+import qupath.ext.extensionmanager.core.catalog.UpdateAvailable;
 
 import java.io.IOException;
 import java.net.URI;

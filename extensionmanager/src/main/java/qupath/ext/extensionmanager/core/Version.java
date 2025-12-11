@@ -26,10 +26,8 @@ public class Version implements Comparable<Version> {
     /**
      * Create a release from a text.
      *
-     * @param version the text containing the release to parse. It must correspond to the
-     *                specifications of this class.
-     * @throws IllegalArgumentException if the provided text doesn't correspond to the
-     * specifications of this class
+     * @param version the text containing the release to parse. It must correspond to the specifications of this class.
+     * @throws IllegalArgumentException if the provided text doesn't correspond to the specifications of this class
      * @throws NullPointerException if the provided version is null
      */
     public Version(String version) {

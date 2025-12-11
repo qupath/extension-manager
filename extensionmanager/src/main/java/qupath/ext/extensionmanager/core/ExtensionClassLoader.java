@@ -27,9 +27,7 @@ class ExtensionClassLoader extends URLClassLoader {
     /**
      * Create the extension class loader.
      *
-     * @param parent the class loader that should be the parent of this
-     *               class loader
-     * @throws SecurityException if the user doesn't have enough rights to create the class loader
+     * @param parent the class loader that should be the parent of this class loader
      */
     public ExtensionClassLoader(ClassLoader parent) {
         super(new URL[0], parent);
@@ -39,9 +37,7 @@ class ExtensionClassLoader extends URLClassLoader {
      * Load a JAR file located on the provided path.
      *
      * @param jarPath the path of the JAR file to load
-     * @throws java.io.IOError if an I/O error occurs while obtaining the absolute path of the
-     * provided path
-     * @throws SecurityException if the user doesn't have read rights on the provided path
+     * @throws java.io.IOError if an I/O error occurs while obtaining the absolute path of the provided path
      * @throws MalformedURLException if an error occurred while converting the provided path to a URL
      * @throws NullPointerException if the provided path is null
      */
@@ -77,9 +73,9 @@ class ExtensionClassLoader extends URLClassLoader {
 
     /**
      * Indicate that a JAR file should be unloaded.
-     * While this function doesn't currently unload the JAR, it is recommended
-     * to call it when a JAR file given to {@link #addJar(Path)} should not be
-     * loaded anymore. A future implementation may actually unload the JAR
+     * <p>
+     * While this function doesn't currently unload the JAR, it is recommended to call it when a JAR file given to
+     * {@link #addJar(Path)} should not be loaded anymore. A future implementation may actually unload the JAR.
      *
      * @param jarPath the path of the JAR file to unload
      * @throws NullPointerException if the provided path is null
@@ -89,8 +85,7 @@ class ExtensionClassLoader extends URLClassLoader {
     }
 
     /**
-     * Set a runnable to be called each time a JAR file is loaded by this class loader. The call may
-     * happen from any thread.
+     * Set a runnable to be called each time a JAR file is loaded by this class loader. The call may happen from any thread.
      *
      * @param runnable the runnable to run when a JAR file is loaded
      * @throws NullPointerException if the provided path is null

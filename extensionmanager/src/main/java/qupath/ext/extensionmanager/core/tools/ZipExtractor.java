@@ -16,8 +16,6 @@ import java.util.zip.ZipInputStream;
 
 /**
  * A class to extract a ZIP file and get information on the extraction progress.
- * <p>
- * This class was inspired by <a href="https://www.baeldung.com/java-compress-and-uncompress">this guide</a>.
  */
 public class ZipExtractor {
 
@@ -29,20 +27,18 @@ public class ZipExtractor {
     }
 
     /**
-     * Extract files from the provided ZIP file path and place them in the provided output folder.
-     * This function may take a lot of time depending on the ZIP file size, but is cancellable.
+     * Extract files from the provided ZIP file path and place them in the provided output folder. This function may take
+     * a lot of time depending on the ZIP file size, but is cancellable.
      *
      * @param inputZipPath the path of the ZIP file to extract
      * @param outputFolderPath the path of a folder that should contain the extracted files
-     * @param onProgress a function that will be called at different steps during the extraction. Its parameter
-     *                   will be a float between 0 and 1 indicating the progress of the extraction (0: beginning,
-     *                   1: finished). This function will be called from the calling thread
-     * @throws IOException if an I/O error has occurred while opening the ZIP file or extracting the files,
-     * or if the output directory cannot be created
+     * @param onProgress a function that will be called at different steps during the extraction. Its parameter will be a
+     *                   float between 0 and 1 indicating the progress of the extraction (0: beginning, 1: finished). This
+     *                   function will be called from the calling thread
+     * @throws IOException if an I/O error has occurred while opening the ZIP file or extracting the files, or if the
+     * output directory cannot be created
      * @throws InterruptedException if the running thread is interrupted
      * @throws java.util.zip.ZipException if a ZIP format error has occurred when opening the ZIP file
-     * @throws SecurityException if the user doesn't have sufficient rights to open the ZIP file or
-     * write files to the output folder
      * @throws NullPointerException if one of the provided parameter is null
      */
     public static void extractZipToFolder(Path inputZipPath, Path outputFolderPath, Consumer<Float> onProgress) throws IOException, InterruptedException {
@@ -100,16 +96,16 @@ public class ZipExtractor {
     }
 
     /**
-     * Create a file object by adding the name of the provided ZIP entry
-     * to the provided destination directory.
+     * Create a file object by adding the name of the provided ZIP entry to the provided destination directory.
+     * <p>
      * This method guards against writing files to the file system outside the target folder
      * (<a href="https://snyk.io/research/zip-slip-vulnerability">Zip Slip</a> vulnerability).
      *
      * @param destinationDirectory the parent directory of the file to create
      * @param zipEntry the zip entry containing the name of the file to create
      * @return the created file
-     * @throws IOException if an I/O error has occurred creating the file or when the created file
-     * was outside the target folder
+     * @throws IOException if an I/O error has occurred creating the file or when the created file was outside the target
+     * folder
      */
     private static File createFile(File destinationDirectory, ZipEntry zipEntry) throws IOException {
         File destFile = new File(destinationDirectory, zipEntry.getName());

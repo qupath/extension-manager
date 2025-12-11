@@ -172,7 +172,7 @@ class ExtensionFolderManager implements AutoCloseable {
      * @throws JsonSyntaxException if the registry file exists but contain a malformed JSON element
      * @throws JsonIOException if there was a problem reading from the registry file
      */
-    public Registry getSavedRegistry() throws IOException {
+    public synchronized Registry getSavedRegistry() throws IOException {
         try(
                 FileReader fileReader = new FileReader(catalogsDirectoryPath.getValue().resolve(REGISTRY_NAME).toFile());
                 JsonReader jsonReader = new JsonReader(fileReader)
@@ -190,7 +190,7 @@ class ExtensionFolderManager implements AutoCloseable {
      * registry is null
      * @throws java.nio.file.InvalidPathException if the path to the registry cannot be created
      */
-    public void saveRegistry(Registry registry) throws IOException {
+    public synchronized void saveRegistry(Registry registry) throws IOException {
         try (
                 FileWriter fileWriter = new FileWriter(catalogsDirectoryPath.getValue().resolve(REGISTRY_NAME).toFile());
                 BufferedWriter writer = new BufferedWriter(fileWriter)

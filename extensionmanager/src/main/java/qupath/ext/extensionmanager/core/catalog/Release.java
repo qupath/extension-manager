@@ -1,12 +1,15 @@
 package qupath.ext.extensionmanager.core.catalog;
 
 import qupath.ext.extensionmanager.core.Version;
+import qupath.ext.extensionmanager.core.model.ReleaseModel;
 import qupath.ext.extensionmanager.core.model.VersionRangeModel;
 
 import java.net.URI;
 import java.util.List;
-import java.util.Objects;
 
+/**
+ * An extension release hosted on GitHub.
+ */
 public class Release {
 
     private final Version version;
@@ -16,20 +19,18 @@ public class Release {
     private final List<URI> optionalDependencyUrls;
     private final VersionRangeModel versionRange;
 
-    public Release(
-            Version version,
-            URI mainUrl,
-            List<URI> javadocUrls,
-            List<URI> requiredDependencyUrls,
-            List<URI> optionalDependencyUrls,
-            VersionRangeModel versionRange
-    ) {
-        this.version = Objects.requireNonNull(version);
-        this.mainUrl = Objects.requireNonNull(mainUrl);
-        this.javadocUrls = Objects.requireNonNull(javadocUrls);
-        this.requiredDependencyUrls = Objects.requireNonNull(requiredDependencyUrls);
-        this.optionalDependencyUrls = Objects.requireNonNull(optionalDependencyUrls);
-        this.versionRange = Objects.requireNonNull(versionRange);
+    /**
+     * Create a release from a {@link ReleaseModel}.
+     *
+     * @param releaseModel information on the release
+     */
+    public Release(ReleaseModel releaseModel) {
+        this.version = new Version(releaseModel.name());
+        this.mainUrl = releaseModel.mainUrl();
+        this.javadocUrls = releaseModel.javadocUrls();
+        this.requiredDependencyUrls = releaseModel.requiredDependencyUrls();
+        this.optionalDependencyUrls = releaseModel.optionalDependencyUrls();
+        this.versionRange = releaseModel.versionRange();
     }
 
     @Override
@@ -58,26 +59,48 @@ public class Release {
         return result;
     }
 
+    /**
+     * @return the version of this release
+     */
     public Version getVersion() {
         return version;
     }
 
+    /**
+     * Indicate whether the provided version is compatible with this release.
+     *
+     * @param version the version that may be compatible with this release
+     * @return whether the provided version is compatible with this release
+     */
     public boolean isCompatible(Version version) {
         return versionRange.isCompatible(version);
     }
 
+    /**
+     * @return the GitHub URL where the main extension jar can be downloaded
+     */
     public URI getMainUrl() {
         return mainUrl;
     }
 
+    /**
+     * @return SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension jar and for dependencies
+     * can be downloaded
+     */
     public List<URI> getJavadocUrls() {
         return javadocUrls;
     }
 
+    /**
+     * @return SciJava Maven, Maven Central, or GitHub URLs where required dependency jars can be downloaded
+     */
     public List<URI> getRequiredDependencyUrls() {
         return requiredDependencyUrls;
     }
 
+    /**
+     * @return SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be downloaded
+     */
     public List<URI> getOptionalDependencyUrls() {
         return optionalDependencyUrls;
     }

@@ -10,7 +10,7 @@ import qupath.ext.extensionmanager.core.catalog.Catalog;
 import qupath.ext.extensionmanager.core.catalog.Extension;
 import qupath.ext.extensionmanager.core.catalog.Release;
 import qupath.ext.extensionmanager.core.registry.Registry;
-import qupath.ext.extensionmanager.core.savedentities.UpdateAvailable;
+import qupath.ext.extensionmanager.core.catalog.UpdateAvailable;
 import qupath.ext.extensionmanager.core.registry.RegistryCatalog;
 import qupath.ext.extensionmanager.core.tools.FileDownloader;
 import qupath.ext.extensionmanager.core.tools.FileTools;
@@ -27,6 +27,7 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutionException;
@@ -48,7 +49,6 @@ import java.util.stream.Stream;
  * This class is thread-safe.
  * <p>
  * This manager must be {@link #close() closed} once no longer used.
- * TODO: thread-safe
  */
 public class ExtensionCatalogManager implements AutoCloseable{
 
@@ -93,7 +93,6 @@ public class ExtensionCatalogManager implements AutoCloseable{
      * @param defaultCatalogs a list of catalogs this manager should use by default, i.e. when no catalog or extension is
      *                        installed
      * @throws IllegalArgumentException if the provided version doesn't meet the specified requirements
-     * @throws SecurityException if the user doesn't have enough rights to create the extension class loader
      * @throws NullPointerException if one of the parameters (except the class loader) is null
      */
     public ExtensionCatalogManager(
@@ -158,7 +157,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
     /**
      * Add and save a catalog.
      * <p>
-     * No check will be performed concerning whether the provided catalog points to a valid catalog.
+     * This operation may take some time, but can be interrupted.
      *
      * @param catalog the catalog to add. It must have a different name from the ones returned by {@link #getCatalogs()}
      * @throws IllegalArgumentException if a catalog with the same name already exists
@@ -166,8 +165,10 @@ public class ExtensionCatalogManager implements AutoCloseable{
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectory()} is null or if the provided
      * catalog is null
      * @throws InvalidPathException if the path to the registry containing the list of catalogs cannot be created
+     * @throws ExecutionException if an error occurred while saving the registry
+     * @throws InterruptedException if the calling thread is interrupted
      */
-    public void addCatalog(Catalog catalog) throws IOException {
+    public synchronized void addCatalog(Catalog catalog) throws IOException, ExecutionException, InterruptedException {
         Objects.requireNonNull(catalog);
 
         if (catalogs.stream().map(Catalog::getName).anyMatch(catalogName -> catalogName.equals(catalog.getName()))) {
@@ -179,7 +180,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
 
         catalogs.add(catalog);
         try {
-            extensionFolderManager.saveRegistry(Registry.createFromCatalogs(catalogs));
+            extensionFolderManager.saveRegistry(Registry.createFromCatalogs(catalogs).get());
         } catch (Exception e) {
             catalogs.remove(catalog);
             throw e;
@@ -204,6 +205,8 @@ public class ExtensionCatalogManager implements AutoCloseable{
      * Warning: this will attempt to move the directory returned by {@link #getCatalogDirectory(String)} to trash if supported
      * by this platform or recursively delete it if extension are asked to be removed. If this operation fails, no exception
      * is thrown.
+     * <p>
+     * This operation may take some time, but can be interrupted.
      *
      * @param catalog the catalog to remove
      * @throws IllegalArgumentException if the provided catalog is not {@link RegistryCatalog#deletable()}
@@ -211,15 +214,17 @@ public class ExtensionCatalogManager implements AutoCloseable{
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectory()} is null or if the provided
      * catalog is null
      * @throws InvalidPathException if the path to the registry containing the list of catalogs cannot be created
+     * @throws ExecutionException if an error occurred while saving the registry
+     * @throws InterruptedException if the calling thread is interrupted
      */
-    public void removeCatalog(Catalog catalog) throws IOException {
+    public synchronized void removeCatalog(Catalog catalog) throws IOException, ExecutionException, InterruptedException {
         if (!catalog.isDeletable()) {
             throw new IllegalArgumentException(String.format("Cannot delete %s: this catalog is not deletable", catalog));
         }
 
         catalogs.remove(catalog);
         try {
-            extensionFolderManager.saveRegistry(Registry.createFromCatalogs(catalogs));
+            extensionFolderManager.saveRegistry(Registry.createFromCatalogs(catalogs).get());
         } catch (Exception e) {
             catalogs.add(catalog);
             throw e;
@@ -232,7 +237,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
 
         try {
             extensionFolderManager.deleteExtensionsFromCatalog(catalog.getName());
-        } catch (IOException | SecurityException | InvalidPathException | NullPointerException e) {
+        } catch (IOException | InvalidPathException | NullPointerException e) {
             logger.debug("Could not delete {}", catalog, e);
         }
 
@@ -240,19 +245,16 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     /**
-     * Get the path to the directory containing the provided extension of the provided catalog. This will also create the
-     * directory containing all installed extensions of the provided catalog if it doesn't already exist (but the returned
-     * directory is not guaranteed to be created).
+     * Get the path to the directory containing the provided extension of the provided catalog.
      *
      * @param catalogName the name of the catalog owning the extension
      * @param extensionName the name of the extension to retrieve
      * @return the path to the folder containing the provided extension
-     * @throws IOException if an I/O error occurs while creating the directory
      * @throws InvalidPathException if the path cannot be created
      * @throws NullPointerException if one of the parameters is null or if the path contained in {@link #getExtensionDirectory()}
      * is null
      */
-    public Path getExtensionDirectory(String catalogName, String extensionName) throws IOException {
+    public Path getExtensionDirectory(String catalogName, String extensionName) {
         return extensionFolderManager.getExtensionDirectoryPath(catalogName, extensionName);
     }
 
@@ -283,7 +285,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
 
     /**
      * Install (or update if it already exists) an extension. This may take a lot of time depending on the internet connection
-     * and the size of the extension, but this operation is cancellable.
+     * and the size of the extension, but this operation can be interrupted.
      * <p>
      * If the extension already exists, it will be deleted before downloading the provided version of the extension.
      * <p>
@@ -293,7 +295,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
      *
      * @param catalog the catalog owning the extension to install/update. It must be one of {@link #getCatalogs()}
      * @param extension the extension to install/update. It must belong to the provided catalog
-     * @param release the release to install
+     * @param release the release to install. It must belong to the provided extension
      * @param installOptionalDependencies whether to install optional dependencies
      * @param onProgress a function that will be called at different steps during the installation. Its parameter will be
      *                   a float between 0 and 1 indicating the progress of the installation (0: beginning, 1: finished).
@@ -312,7 +314,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
      * @throws InterruptedException if the calling thread is interrupted
      * @throws ExecutionException if an error occurs while retrieving the extensions of the provided catalog
      */
-    public void installOrUpdateExtension(
+    public synchronized void installOrUpdateExtension(
             Catalog catalog,
             Extension extension,
             Release release,
@@ -342,9 +344,10 @@ public class ExtensionCatalogManager implements AutoCloseable{
                 onStatusChanged
         );
 
-        extension.installRelease(release);
+        extension.installRelease(release, installOptionalDependencies);
+
         try {
-            extensionFolderManager.saveRegistry(Registry.createFromCatalogs(catalogs));
+            extensionFolderManager.saveRegistry(Registry.createFromCatalogs(catalogs).get());
         } catch (Exception e) {
             extension.uninstallRelease();
             throw e;
@@ -394,11 +397,11 @@ public class ExtensionCatalogManager implements AutoCloseable{
      * @return a CompletableFuture with a list of available updates, or a failed CompletableFuture if the update query
      * failed
      */
-    public CompletableFuture<List<UpdateAvailable>> getAvailableUpdates() {
+    public synchronized CompletableFuture<List<UpdateAvailable>> getAvailableUpdates() {
         return CompletableFuture.supplyAsync(() -> catalogs.stream()
                 .map(catalog -> catalog.getExtensions().join().stream()
                         .map(extension -> extension.getUpdateAvailable(version))
-                        .filter(Objects::nonNull)
+                        .flatMap(Optional::stream)
                         .toList()
                 )
                 .flatMap(List::stream)
@@ -407,14 +410,14 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     /**
-     * Uninstall an extension and attempt to remove its files.
+     * Uninstall an extension and attempt to remove its files. This can take some time but the operation can be interrupted.
      * <p>
      * Warning: this will attempt to move the directory returned by {@link #getExtensionDirectory(String, String)} to
      * trash or recursively delete it if moving files to trash is not supported by this platform. If this operation fails,
      * the function doesn't throw any exceptions.
      *
-     * @param catalog the catalog owning the extension to uninstall
-     * @param extension the extension to uninstall
+     * @param catalog the catalog owning the extension to uninstall. It must be one of {@link #getCatalogs()}
+     * @param extension the extension to uninstall. It must belong to the provided catalog
      * @throws IllegalArgumentException if the provided catalog does not belong to {@link #getCatalogs()}, or if the provided
      * extension does not belong to the provided catalog
      * @throws NullPointerException if one of the parameters is null or if the path contained in {@link #getExtensionDirectory()}
@@ -425,7 +428,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
      * @throws InterruptedException if the calling thread is interrupted
      * @throws ExecutionException if an error occurs while retrieving the extensions of the provided catalog
      */
-    public void removeExtension(Catalog catalog, Extension extension) throws IOException, ExecutionException, InterruptedException {
+    public synchronized void removeExtension(Catalog catalog, Extension extension) throws IOException, ExecutionException, InterruptedException {
         if (catalogs.stream().noneMatch(catalog::equals)) {
             throw new IllegalArgumentException(String.format(
                     "The provided catalog %s is not among the internal list %s",
@@ -448,9 +451,12 @@ public class ExtensionCatalogManager implements AutoCloseable{
 
         extension.uninstallRelease();
         try {
-            extensionFolderManager.saveRegistry(Registry.createFromCatalogs(catalogs));
+            extensionFolderManager.saveRegistry(Registry.createFromCatalogs(catalogs).get());
         } catch (Exception e) {
-            extension.installRelease(extension.getInstalledRelease().getValue().get());
+            extension.installRelease(
+                    extension.getInstalledRelease().getValue().get(),
+                    extension.areOptionalDependenciesInstalled().get()
+            );
             throw e;
         }
 
@@ -480,13 +486,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
     private void resetCatalogs(List<Catalog> defaultCatalogs) {
         try {
             this.catalogs.setAll(extensionFolderManager.getSavedRegistry().catalogs().stream()
-                    .map(catalog -> new Catalog(
-                            catalog.name(),
-                            catalog.description(),
-                            catalog.uri(),
-                            catalog.rawUri(),
-                            catalog.deletable()
-                    ))
+                    .map(Catalog::new)
                     .toList()
             );
         } catch (Exception e) {
@@ -658,7 +658,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
         for (Path path: jarPaths) {
             try {
                 extensionClassLoader.addJar(path);
-            } catch (IOError | SecurityException | MalformedURLException e) {
+            } catch (IOError | MalformedURLException e) {
                 logger.error("Cannot load extension {}", path, e);
             }
         }

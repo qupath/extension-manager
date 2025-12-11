@@ -4,6 +4,7 @@ import javafx.application.Application;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.stage.Stage;
 import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
+import qupath.ext.extensionmanager.core.catalog.Catalog;
 import qupath.ext.extensionmanager.gui.ExtensionManager;
 
 import java.io.IOException;
@@ -13,9 +14,8 @@ import java.nio.file.Path;
 import java.util.List;
 
 /**
- * An application that launches a {@link ExtensionManager}. A temporary directory (with
- * an empty extension JAR file inside) is used as the extension directory.
- * This <a href="https://github.com/qupath/qupath-catalog">catalog</a> is used.
+ * An application that launches a {@link ExtensionManager}. A temporary directory (with an empty extension JAR file inside)
+ * is used as the extension directory. This <a href="https://github.com/qupath/qupath-catalog">catalog</a> is used.
  */
 public class ExtensionManagerApp extends Application {
 
@@ -36,12 +36,11 @@ public class ExtensionManagerApp extends Application {
                 new SimpleObjectProperty<>(createExtensionDirectory()),
                 ExtensionManagerApp.class.getClassLoader(),
                 "v0.6.0",
-                (List.of(new SavedCatalog(
+                List.of(new Catalog(
                         "QuPath catalog",
                         "Extensions maintained by the QuPath team",
                         URI.create("https://github.com/qupath/qupath-catalog"),
-                        URI.create("https://raw.githubusercontent.com/qupath/qupath-catalog/refs/heads/main/catalog.json"),
-                        false
+                        URI.create("https://raw.githubusercontent.com/qupath/qupath-catalog/refs/heads/main/catalog.json")
                 ))
         );
 

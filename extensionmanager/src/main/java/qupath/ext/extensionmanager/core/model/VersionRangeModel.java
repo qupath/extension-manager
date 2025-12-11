@@ -26,8 +26,10 @@ public record VersionRangeModel(String min, String max, List<String> excludes) {
      * <ul>
      *     <li>The 'min' field must be defined.</li>
      *     <li>If 'max' is specified, it must correspond to a version higher than or equal to 'min'.</li>
-     *     <li>If 'excludes' is specified, each of its element must correspond to a version higher than or equal to
-     *     'min', and lower than or equal to 'max' if 'max' is defined.</li>
+     *     <li>
+     *         If 'excludes' is specified, each of its element must correspond to a version higher than or equal to 'min',
+     *         and lower than or equal to 'max' if 'max' is defined.
+     *     </li>
      *     <li>
      *         All versions must be specified in the form "v[MAJOR].[MINOR].[PATCH]" corresponding to
      *         semantic versions, although trailing release candidate qualifiers (eg, "-rc1") are also allowed.

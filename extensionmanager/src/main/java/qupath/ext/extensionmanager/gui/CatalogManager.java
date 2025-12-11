@@ -160,14 +160,7 @@ class CatalogManager extends Stage {
                     return;
                 }
 
-                extensionCatalogManager.addCatalog(new Catalog(
-                        catalog.name(),
-                        catalog.description(),
-                        new URI(catalogUrl),
-                        uri,
-                        true,
-                        catalog
-                ));
+                extensionCatalogManager.addCatalog(new Catalog(catalog, new URI(catalogUrl), uri, true));
             } catch (Exception e) {
                 logger.debug("Error when fetching catalog at {}", catalogUrl, e);
                 displayErrorMessage(
@@ -336,7 +329,7 @@ class CatalogManager extends Stage {
         for (Catalog catalog: catalogsToDelete) {
             try {
                 extensionCatalogManager.removeCatalog(catalog);
-            } catch (IOException | SecurityException | NullPointerException e) {
+            } catch (Exception e) {
                 logger.error("Error when removing {}", catalog, e);
 
                 errors.add(e);

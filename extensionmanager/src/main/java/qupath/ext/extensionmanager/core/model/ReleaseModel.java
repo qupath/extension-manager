@@ -15,8 +15,8 @@ import java.util.List;
  *                               This list is immutable and won't be null
  * @param optionalDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be downloaded.
  *                               This list is immutable and won't be null
- * @param javadocUrls SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension
- *                     jar and for dependencies can be downloaded. This list is immutable and won't be null
+ * @param javadocUrls SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension jar and for
+ *                    dependencies can be downloaded. This list is immutable and won't be null
  * @param versionRange a specification of minimum and maximum compatible versions
  */
 public record ReleaseModel(
@@ -46,12 +46,12 @@ public record ReleaseModel(
      *
      * @param name the name of this release in the form "v[MAJOR].[MINOR].[PATCH]" or "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
      * @param mainUrl the GitHub URL where the main extension jar can be downloaded
-     * @param requiredDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where required dependency jars can be downloaded.
-     *                               Can be null
-     * @param optionalDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be downloaded.
-     *                               Can be null
-     * @param javadocUrls SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension
-     *                    jar and for dependencies can be downloaded. Can be null
+     * @param requiredDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where required dependency jars can be
+     *                               downloaded. Can be null
+     * @param optionalDependencyUrls SciJava Maven, Maven Central, or GitHub URLs where optional dependency jars can be
+     *                               downloaded. Can be null
+     * @param javadocUrls SciJava Maven, Maven Central, or GitHub URLs where javadoc jars for the main extension jar and
+     *                    for dependencies can be downloaded. Can be null
      * @param versionRange a specification of minimum and maximum compatible versions
      * @throws IllegalArgumentException when the created release is not valid (see the requirements above)
      */
