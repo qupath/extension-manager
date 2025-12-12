@@ -31,23 +31,21 @@ public class FileDownloader {
     }
 
     /**
-     * Download a file located at the provided URI and place it on the provided path.
-     * This function may take a lot of time depending on the internet connection and the
-     * size of the download, but is cancellable.
+     * Download a file located at the provided URI and place it on the provided path. This function may take a lot of time
+     * depending on the internet connection and the size of the download, but can be interrupted.
      *
      * @param uri the URI pointing to the file to download. It must contain "http" or "https"
      * @param outputPath the path the downloaded file should have. It will be overridden if it already exists
-     * @param onProgress a function that will be called at different steps during the download. Its parameter
-     *                   will be a float between 0 and 1 indicating the progress of the download (0: beginning,
-     *                   1: finished). This function will be called from the calling thread
+     * @param onProgress a function that will be called at different steps during the download. Its parameter will be a
+     *                   float between 0 and 1 indicating the progress of the download (0: beginning, 1: finished). This
+     *                   function will be called from the calling thread
      * @throws NullPointerException if one of the provided parameter is null
-     * @throws IOException if an I/O error occurs when sending the request or receiving the file. It can also occur
-     * when this function is interrupted, in which case its {@link Exception#getCause() cause} will be an {@link InterruptedException}
+     * @throws IOException if an I/O error occurs when sending the request or receiving the file. It can also occur if this
+     * function is interrupted, in which case its {@link Exception#getCause() cause} will be an {@link InterruptedException}
      * @throws InterruptedException if this function is interrupted
      * @throws IllegalArgumentException if the provided URI does not contain a valid scheme ("http" or "https")
      * @throws java.io.FileNotFoundException if the downloaded file already exists but is a directory rather than a regular
      * file, does not exist but cannot be created, or cannot be opened for any other reason
-     * @throws SecurityException if the user doesn't have enough rights to write the output file
      */
     public static void downloadFile(URI uri, Path outputPath, Consumer<Float> onProgress) throws IOException, InterruptedException {
         if (!"http".equals(uri.getScheme()) && !"https".equals(uri.getScheme())) {

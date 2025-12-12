@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.catalog;
+package qupath.ext.extensionmanager.core.model;
 
 import com.google.gson.Gson;
 import org.junit.jupiter.api.Assertions;
@@ -9,26 +9,26 @@ import java.net.URI;
 import java.util.List;
 import java.util.Optional;
 
-public class TestExtension {
+public class TestExtensionModel {
 
     @Nested
     public class ConstructorTests {
 
         @Test
         void Check_Valid_Extension() {
-            Assertions.assertDoesNotThrow(() -> new Extension(
+            Assertions.assertDoesNotThrow(() -> new ExtensionModel(
                     "",
                     "",
                     "",
                     URI.create("https://github.com/qupath/qupath"),
                     false,
-                    List.of(new Release(
+                    List.of(new ReleaseModel(
                             "v1.0.0",
                             URI.create("https://github.com/qupath/qupath"),
                             List.of(URI.create("https://github.com/qupath/qupath")),
                             null,
                             null,
-                            new VersionRange("v1.0.0", null, null)
+                            new VersionRangeModel("v1.0.0", null, null)
                     ))
             ));
         }
@@ -37,19 +37,19 @@ public class TestExtension {
         void Check_Undefined_Name() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Extension(
+                    () -> new ExtensionModel(
                             null,
                             "",
                             "",
                             URI.create("https://github.com/qupath/qupath"),
                             false,
-                            List.of(new Release(
+                            List.of(new ReleaseModel(
                                     "v1.0.0",
                                     URI.create("https://github.com/qupath/qupath"),
                                     List.of(URI.create("https://github.com/qupath/qupath")),
                                     null,
                                     null,
-                                    new VersionRange("v1.0.0", null, null)
+                                    new VersionRangeModel("v1.0.0", null, null)
                             ))
                     )
             );
@@ -59,19 +59,19 @@ public class TestExtension {
         void Check_Undefined_Description() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Extension(
+                    () -> new ExtensionModel(
                             "",
                             null,
                             "",
                             URI.create("https://github.com/qupath/qupath"),
                             false,
-                            List.of(new Release(
+                            List.of(new ReleaseModel(
                                     "v1.0.0",
                                     URI.create("https://github.com/qupath/qupath"),
                                     List.of(URI.create("https://github.com/qupath/qupath")),
                                     null,
                                     null,
-                                    new VersionRange("v1.0.0", null, null)
+                                    new VersionRangeModel("v1.0.0", null, null)
                             ))
                     )
             );
@@ -81,19 +81,19 @@ public class TestExtension {
         void Check_Undefined_Author() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Extension(
+                    () -> new ExtensionModel(
                             "",
                             "",
                             null,
                             URI.create("https://github.com/qupath/qupath"),
                             false,
-                            List.of(new Release(
+                            List.of(new ReleaseModel(
                                     "v1.0.0",
                                     URI.create("https://github.com/qupath/qupath"),
                                     List.of(URI.create("https://github.com/qupath/qupath")),
                                     null,
                                     null,
-                                    new VersionRange("v1.0.0", null, null)
+                                    new VersionRangeModel("v1.0.0", null, null)
                             ))
                     )
             );
@@ -103,19 +103,19 @@ public class TestExtension {
         void Check_Undefined_Homepage() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Extension(
+                    () -> new ExtensionModel(
                             "",
                             "",
                             "",
                             null,
                             false,
-                            List.of(new Release(
+                            List.of(new ReleaseModel(
                                     "v1.0.0",
                                     URI.create("https://github.com/qupath/qupath"),
                                     List.of(URI.create("https://github.com/qupath/qupath")),
                                     null,
                                     null,
-                                    new VersionRange("v1.0.0", null, null)
+                                    new VersionRangeModel("v1.0.0", null, null)
                             ))
                     )
             );
@@ -125,7 +125,7 @@ public class TestExtension {
         void Check_Undefined_Releases() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Extension(
+                    () -> new ExtensionModel(
                             "",
                             "",
                             "",
@@ -140,19 +140,19 @@ public class TestExtension {
         void Check_Homepage_Not_GitHub() {
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> new Extension(
+                    () -> new ExtensionModel(
                         "",
                         "",
                         "",
                         URI.create("https://qupath.readthedocs.io/"),
                         false,
-                        List.of(new Release(
+                        List.of(new ReleaseModel(
                                 "v1.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.0.0", null, null)
+                                new VersionRangeModel("v1.0.0", null, null)
                         ))
                     )
             );
@@ -164,23 +164,23 @@ public class TestExtension {
 
         @Test
         void Check_Valid_Extension() {
-            Extension expectedExtension = new Extension(
+            ExtensionModel expectedExtension = new ExtensionModel(
                     "",
                     "",
                     "",
                     URI.create("https://github.com/qupath/qupath"),
                     true,
-                    List.of(new Release(
+                    List.of(new ReleaseModel(
                             "v1.0.0",
                             URI.create("https://github.com/qupath/qupath"),
                             null,
                             null,
                             null,
-                            new VersionRange("v1.0.0", null, null)
+                            new VersionRangeModel("v1.0.0", null, null)
                     ))
             );
 
-            Extension extension = new Gson().fromJson("""
+            ExtensionModel extension = new Gson().fromJson("""
                     {
                         "name": "",
                         "description": "",
@@ -198,7 +198,7 @@ public class TestExtension {
                         ]
                     }
                     """,
-                    Extension.class
+                    ExtensionModel.class
             );
 
             Assertions.assertEquals(expectedExtension, extension);
@@ -224,7 +224,7 @@ public class TestExtension {
                                 ]
                             }
                             """,
-                            Extension.class
+                            ExtensionModel.class
                     )
             );
         }
@@ -249,7 +249,7 @@ public class TestExtension {
                                 ]
                             }
                             """,
-                            Extension.class
+                            ExtensionModel.class
                     )
             );
         }
@@ -274,7 +274,7 @@ public class TestExtension {
                                 ]
                             }
                             """,
-                            Extension.class
+                            ExtensionModel.class
                     )
             );
         }
@@ -299,7 +299,7 @@ public class TestExtension {
                                 ]
                             }
                             """,
-                            Extension.class
+                            ExtensionModel.class
                     )
             );
         }
@@ -316,7 +316,7 @@ public class TestExtension {
                                 "homepage": "https://github.com/qupath/qupath"
                             }
                             """,
-                            Extension.class
+                            ExtensionModel.class
                     )
             );
         }
@@ -334,7 +334,7 @@ public class TestExtension {
                                 "releases": [{}]
                             }
                             """,
-                            Extension.class
+                            ExtensionModel.class
                     )
             );
         }
@@ -360,171 +360,171 @@ public class TestExtension {
                                 ]
                             }
                             """,
-                            Extension.class
+                            ExtensionModel.class
                     )
             );
         }
     }
     @Test
     void Check_Max_Compatible_Release_When_Two_Compatibles() {
-        Release expectedRelease = new Release(
+        ReleaseModel expectedRelease = new ReleaseModel(
                 "v2.0.0",
                 URI.create("https://github.com/qupath/qupath"),
                 List.of(URI.create("https://github.com/qupath/qupath")),
                 null,
                 null,
-                new VersionRange("v1.1.0", null, null)
+                new VersionRangeModel("v1.1.0", null, null)
         );
-        Extension extension = new Extension(
+        ExtensionModel extension = new ExtensionModel(
                 "",
                 "",
                 "",
                 URI.create("https://github.com/qupath/qupath"),
                 false,
                 List.of(
-                        new Release(
+                        new ReleaseModel(
                                 "v1.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.0.0", null, null)
+                                new VersionRangeModel("v1.0.0", null, null)
                         ),
                         expectedRelease,
-                        new Release(
+                        new ReleaseModel(
                                 "v3.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.2.0", null, null)
+                                new VersionRangeModel("v1.2.0", null, null)
                         )
                 )
         );
         String version = "v1.1.0";
 
-        Release release = extension.getMaxCompatibleRelease(version).orElse(null);
+        ReleaseModel release = extension.getMaxCompatibleRelease(version).orElse(null);
 
         Assertions.assertEquals(expectedRelease, release);
     }
 
     @Test
     void Check_Max_Compatible_Release_When_Three_Compatible() {
-        Release expectedRelease = new Release(
+        ReleaseModel expectedRelease = new ReleaseModel(
                 "v3.0.0",
                 URI.create("https://github.com/qupath/qupath"),
                 List.of(URI.create("https://github.com/qupath/qupath")),
                 null,
                 null,
-                new VersionRange("v1.2.0", null, null)
+                new VersionRangeModel("v1.2.0", null, null)
         );
-        Extension extension = new Extension(
+        ExtensionModel extension = new ExtensionModel(
                 "",
                 "",
                 "",
                 URI.create("https://github.com/qupath/qupath"),
                 false,
                 List.of(
-                        new Release(
+                        new ReleaseModel(
                                 "v1.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.0.0", null, null)
+                                new VersionRangeModel("v1.0.0", null, null)
                         ),
-                        new Release(
+                        new ReleaseModel(
                                 "v2.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.1.0", null, null)
+                                new VersionRangeModel("v1.1.0", null, null)
                         ),
                         expectedRelease
                 )
         );
         String version = "v2.0.0";
 
-        Release release = extension.getMaxCompatibleRelease(version).orElse(null);
+        ReleaseModel release = extension.getMaxCompatibleRelease(version).orElse(null);
 
         Assertions.assertEquals(expectedRelease, release);
     }
 
     @Test
     void Check_Max_Compatible_Release_When_Zero_Compatible() {
-        Extension extension = new Extension(
+        ExtensionModel extension = new ExtensionModel(
                 "",
                 "",
                 "",
                 URI.create("https://github.com/qupath/qupath"),
                 false,
                 List.of(
-                        new Release(
+                        new ReleaseModel(
                                 "v1.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.0.0", null, null)
+                                new VersionRangeModel("v1.0.0", null, null)
                         ),
-                        new Release(
+                        new ReleaseModel(
                                 "v2.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.1.0", null, null)
+                                new VersionRangeModel("v1.1.0", null, null)
                         ),
-                        new Release(
+                        new ReleaseModel(
                                 "v3.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.2.0", null, null)
+                                new VersionRangeModel("v1.2.0", null, null)
                         )
                 )
         );
         String version = "v0.0.1";
 
-        Optional<Release> release = extension.getMaxCompatibleRelease(version);
+        Optional<ReleaseModel> release = extension.getMaxCompatibleRelease(version);
 
         Assertions.assertTrue(release.isEmpty());
     }
 
     @Test
     void Check_Max_Compatible_Release_When_Invalid_Version() {
-        Extension extension = new Extension(
+        ExtensionModel extension = new ExtensionModel(
                 "",
                 "",
                 "",
                 URI.create("https://github.com/qupath/qupath"),
                 false,
                 List.of(
-                        new Release(
+                        new ReleaseModel(
                                 "v1.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.0.0", null, null)
+                                new VersionRangeModel("v1.0.0", null, null)
                         ),
-                        new Release(
+                        new ReleaseModel(
                                 "v2.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.1.0", null, null)
+                                new VersionRangeModel("v1.1.0", null, null)
                         ),
-                        new Release(
+                        new ReleaseModel(
                                 "v3.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.2.0", null, null)
+                                new VersionRangeModel("v1.2.0", null, null)
                         )
                 )
         );
@@ -538,36 +538,36 @@ public class TestExtension {
 
     @Test
     void Check_Max_Compatible_Release_When_Null_Version() {
-        Extension extension = new Extension(
+        ExtensionModel extension = new ExtensionModel(
                 "",
                 "",
                 "",
                 URI.create("https://github.com/qupath/qupath"),
                 false,
                 List.of(
-                        new Release(
+                        new ReleaseModel(
                                 "v1.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.0.0", null, null)
+                                new VersionRangeModel("v1.0.0", null, null)
                         ),
-                        new Release(
+                        new ReleaseModel(
                                 "v2.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.1.0", null, null)
+                                new VersionRangeModel("v1.1.0", null, null)
                         ),
-                        new Release(
+                        new ReleaseModel(
                                 "v3.0.0",
                                 URI.create("https://github.com/qupath/qupath"),
                                 List.of(URI.create("https://github.com/qupath/qupath")),
                                 null,
                                 null,
-                                new VersionRange("v1.2.0", null, null)
+                                new VersionRangeModel("v1.2.0", null, null)
                         )
                 )
         );

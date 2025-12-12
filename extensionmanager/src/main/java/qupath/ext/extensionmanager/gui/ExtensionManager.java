@@ -1,10 +1,11 @@
 package qupath.ext.extensionmanager.gui;
 
 import javafx.beans.binding.Bindings;
-import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.value.ObservableValue;
 import javafx.collections.ListChangeListener;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.control.Label;
 import javafx.scene.control.TitledPane;
 import javafx.scene.layout.VBox;
@@ -12,7 +13,7 @@ import javafx.stage.Stage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
-import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
+import qupath.ext.extensionmanager.core.catalog.Catalog;
 import qupath.ext.extensionmanager.gui.catalog.CatalogPane;
 import qupath.fx.dialogs.Dialogs;
 
@@ -34,8 +35,10 @@ import java.util.stream.IntStream;
 
 /**
  * A window that displays information and controls regarding catalogs and their extensions.
+ * <p>
+ * An instance of this class must be {@link #close() closed} once no longer used.
  */
-public class ExtensionManager extends Stage {
+public class ExtensionManager extends Stage implements AutoCloseable {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionManager.class);
     private static final ResourceBundle resources = UiUtils.getResources();
@@ -57,12 +60,12 @@ public class ExtensionManager extends Stage {
      *
      * @param extensionCatalogManager the extension catalog manager this window should use
      * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
-     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectoryPath()})
-     *                                    but this directory is currently invalid. It lets the possibility to the user to
-     *                                    define and create a valid directory before performing the operation (which would
-     *                                    fail if the directory is invalid). This function is guaranteed to be called from
-     *                                    the JavaFX Application Thread
-     * @throws IOException when an error occurs while creating the container
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectory()}) but this
+     *                                    directory is currently invalid. It lets the possibility to the user to define
+     *                                    and create a valid directory before performing the operation (which would fail
+     *                                    if the directory is invalid). This function is guaranteed to be called from the
+     *                                    JavaFX Application Thread
+     * @throws IOException if an error occurs while creating the window
      */
     public ExtensionManager(
             ExtensionCatalogManager extensionCatalogManager,
@@ -74,10 +77,10 @@ public class ExtensionManager extends Stage {
 
         UiUtils.loadFXML(this, ExtensionManager.class.getResource("extension_manager.fxml"));
 
-        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
 
         setCatalogs();
-        model.getCatalogs().addListener((ListChangeListener<? super SavedCatalog>) change ->
+        model.getCatalogs().addListener((ListChangeListener<? super Catalog>) change ->
                 setCatalogs()
         );
 
@@ -96,26 +99,39 @@ public class ExtensionManager extends Stage {
         noCatalogOrExtension.managedProperty().bind(noCatalogOrExtension.visibleProperty());
     }
 
+    @Override
+    public void close() {
+        super.close();
+
+        for (Node child: catalogs.getChildren()) {
+            if (child instanceof CatalogPane catalogPane) {
+                catalogPane.close();
+            }
+        }
+        model.close();
+    }
+
     /**
-     * Copy the provided files to the provided extension directory. Some error dialogs will be shown to
-     * the user if some errors occurs.
-     * If at least a destination file already exists, the user is prompted for confirmation.
-     * No confirmation dialog is prompted on success.
+     * Copy the provided files to the provided extension directory. Some error dialogs will be shown to the user if some
+     * errors occurs.
+     * <p>
+     * If at least a destination file already exists, the user is prompted for confirmation. No confirmation dialog is
+     * prompted on success.
      *
      * @param filesToCopy the files to copy. No check is performed on those files
      * @param extensionDirectoryPath the path to the extension directory
-     * @param onInvalidExtensionDirectory a function that will be called if the provided extension
-     *                                    directory is invalid. It lets the possibility to the user to
-     *                                    define and create a valid directory before copying the files
+     * @param onInvalidExtensionDirectory a function that will be called if the provided extension directory is invalid.
+     *                                    It lets the possibility to the user to define and create a valid directory before
+     *                                    copying the files
      */
     public static void promptToCopyFilesToExtensionDirectory(
             List<File> filesToCopy,
-            ReadOnlyObjectProperty<Path> extensionDirectoryPath,
+            ObservableValue<Path> extensionDirectoryPath,
             Runnable onInvalidExtensionDirectory
     ) {
         UiUtils.promptExtensionDirectory(extensionDirectoryPath, onInvalidExtensionDirectory);
 
-        Path extensionFolder = extensionDirectoryPath.get();
+        Path extensionFolder = extensionDirectoryPath.getValue();
         if (extensionFolder == null) {
             Dialogs.showErrorMessage(
                     resources.getString("ExtensionManager.error"),
@@ -142,17 +158,10 @@ public class ExtensionManager extends Stage {
         }
 
         List<File> destinationFilesAlreadyExisting = sourceToDestinationFiles.values().stream()
-                .filter(file -> {
-                    try {
-                        return file.exists();
-                    } catch (SecurityException e) {
-                        logger.debug("Cannot check if {} exists", file, e);
-                        return false;
-                    }
-                })
+                .filter(File::exists)
                 .toList();
         if (!destinationFilesAlreadyExisting.isEmpty()) {
-            var confirmation = Dialogs.showConfirmDialog(
+            boolean confirmation = Dialogs.showConfirmDialog(
                     resources.getString("ExtensionManager.copyFiles"),
                     MessageFormat.format(
                             resources.getString("ExtensionManager.alreadyExist"),
@@ -192,9 +201,9 @@ public class ExtensionManager extends Stage {
 
     @FXML
     private void onOpenExtensionDirectory(ActionEvent ignored) {
-        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
 
-        Path extensionDirectory = extensionCatalogManager.getExtensionDirectoryPath().get();
+        Path extensionDirectory = extensionCatalogManager.getExtensionDirectory().getValue();
         if (extensionDirectory == null) {
             Dialogs.showErrorMessage(
                     resources.getString("ExtensionManager.error"),
@@ -221,7 +230,7 @@ public class ExtensionManager extends Stage {
 
     @FXML
     private void onManageCatalogsClicked(ActionEvent ignored) {
-        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
 
         if (catalogManager == null) {
             try {
@@ -240,10 +249,16 @@ public class ExtensionManager extends Stage {
     }
 
     private void setCatalogs() {
+        for (Node child: catalogs.getChildren()) {
+            if (child instanceof CatalogPane catalogPane) {
+                catalogPane.close();
+            }
+        }
+
         catalogs.getChildren().setAll(model.getCatalogs().stream()
                 .map(catalog -> {
                     try {
-                        return new CatalogPane(extensionCatalogManager, catalog, model, onInvalidExtensionDirectory);
+                        return new CatalogPane(extensionCatalogManager, catalog, onInvalidExtensionDirectory);
                     } catch (IOException e) {
                         logger.error("Error while creating catalog pane", e);
                         return null;

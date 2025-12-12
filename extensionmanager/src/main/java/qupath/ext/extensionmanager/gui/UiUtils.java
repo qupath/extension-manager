@@ -1,7 +1,7 @@
 package qupath.ext.extensionmanager.gui;
 
 import javafx.application.Platform;
-import javafx.beans.property.ReadOnlyObjectProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.beans.value.ObservableValue;
 import javafx.beans.value.WritableValue;
 import javafx.collections.ListChangeListener;
@@ -11,8 +11,6 @@ import org.controlsfx.glyphfont.FontAwesome;
 import org.controlsfx.glyphfont.Glyph;
 import org.controlsfx.glyphfont.GlyphFont;
 import org.controlsfx.glyphfont.GlyphFontRegistry;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.awt.Desktop;
 import java.io.IOException;
@@ -21,6 +19,7 @@ import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
 import java.util.ResourceBundle;
 import java.util.concurrent.CompletableFuture;
 
@@ -29,7 +28,6 @@ import java.util.concurrent.CompletableFuture;
  */
 public class UiUtils {
 
-    private static final Logger logger = LoggerFactory.getLogger(UiUtils.class);
     private static final ResourceBundle resources = ResourceBundle.getBundle("qupath.ext.extensionmanager.strings");
     private static final GlyphFont fontAwesome = GlyphFontRegistry.font("FontAwesome");
 
@@ -93,12 +91,10 @@ public class UiUtils {
     }
 
     /**
-     * Open the provided link in a web browser. This won't do anything if
-     * browsing is not supported by the computer.
+     * Open the provided link in a web browser. This won't do anything if browsing is not supported by the computer.
      *
      * @param url the link to open
-     * @return a CompletableFuture that will complete exceptionally if an error occurs while
-     * browsing the provided link
+     * @return a CompletableFuture that will complete exceptionally if an error occurs while browsing the provided link
      */
     public static CompletableFuture<Void> openLinkInWebBrowser(String url) {
         return CompletableFuture.runAsync(() -> {
@@ -115,12 +111,11 @@ public class UiUtils {
     }
 
     /**
-     * Open the provided directory with the platform's file explorer. This won't do anything if
-     * browsing files is not supported by the computer.
+     * Open the provided directory with the platform's file explorer. This won't do anything if browsing files is not
+     * supported by the computer.
      *
      * @param directory the path to the directory to browse
-     * @return a CompletableFuture that will complete exceptionally if an error occurs while
-     * browsing the provided directory
+     * @return a CompletableFuture that will complete exceptionally if an error occurs while browsing the provided directory
      */
     public static CompletableFuture<Void> openFolderInFileExplorer(Path directory) {
         return CompletableFuture.runAsync(() -> {
@@ -137,24 +132,20 @@ public class UiUtils {
     }
 
     /**
-     * Run the provided Runnable if the provided extension directory property doesn't point to a valid directory.
-     * The provided Runnable can be for example used to prompt the user for a new extension directory path.
+     * Run the provided Runnable if the provided extension directory property doesn't point to a valid directory. The
+     * provided Runnable can be for example used to prompt the user for a new extension directory path.
      *
      * @param extensionDirectoryProperty the property to check
      * @param onInvalidExtensionDirectory the Runnable to call if the provided path is not a valid directory
      */
     public static void promptExtensionDirectory(
-            ReadOnlyObjectProperty<Path> extensionDirectoryProperty,
+            ObservableValue<Path> extensionDirectoryProperty,
             Runnable onInvalidExtensionDirectory
     ) {
-        Path extensionDirectory = extensionDirectoryProperty.get();
+        Path extensionDirectory = extensionDirectoryProperty.getValue();
 
-        try {
-            if (extensionDirectory == null || !Files.isDirectory(extensionDirectory)) {
-                onInvalidExtensionDirectory.run();
-            }
-        } catch (SecurityException e) {
-            logger.debug("Cannot check if {} is invalid", extensionDirectory, e);
+        if (extensionDirectory == null || !Files.isDirectory(extensionDirectory)) {
+            onInvalidExtensionDirectory.run();
         }
     }
 
@@ -169,17 +160,18 @@ public class UiUtils {
     }
 
     /**
-     * Propagates changes made to an observable list to another observable list.
-     * The listening list is updated in the JavaFX Application Thread.
+     * Propagates changes made to an observable list to another observable list. The listening list is updated in the
+     * JavaFX Application Thread.
      *
      * @param listToUpdate the list to update
      * @param listToListen the list to listen
+     * @return the listener that was added to the list to listen, so that it can be removed when needed
      * @param <T> the type of the elements of the lists
      */
-    public static <T> void bindListInUIThread(ObservableList<T> listToUpdate, ObservableList<T> listToListen) {
+    public static <T> ListChangeListener<? super T> bindListInUIThread(List<T> listToUpdate, ObservableList<T> listToListen) {
         listToUpdate.addAll(listToListen);
 
-        listToListen.addListener((ListChangeListener<? super T>) change -> Platform.runLater(() -> {
+        ListChangeListener<? super T> listener = change -> Platform.runLater(() -> {
             if (Platform.isFxApplicationThread()) {
                 while (change.next()) {
                     if (change.wasAdded()) {
@@ -203,26 +195,34 @@ public class UiUtils {
                     change.reset();
                 });
             }
-        }));
+        });
+        listToListen.addListener(listener);
+
+        return listener;
     }
 
     /**
      * Propagates changes made to a property to another property.
-     * The listening property is updated in the JavaFX Application Thread.
+     * <p>
+     * The listening property is updated in the UI thread.
      *
      * @param propertyToUpdate the property to update
      * @param propertyToListen the property to listen
+     * @return the listener that was added to the property to listen, so that it can be removed when needed
      * @param <T> the type of the property
      */
-    public static <T> void bindPropertyInUIThread(WritableValue<T> propertyToUpdate, ObservableValue<T> propertyToListen) {
+    public static <T> ChangeListener<? super T> bindPropertyInUIThread(WritableValue<T> propertyToUpdate, ObservableValue<T> propertyToListen) {
         propertyToUpdate.setValue(propertyToListen.getValue());
 
-        propertyToListen.addListener((p, o, n) -> {
+        ChangeListener<? super T> listener = (p, o, n) -> {
             if (Platform.isFxApplicationThread()) {
                 propertyToUpdate.setValue(n);
             } else {
                 Platform.runLater(() -> propertyToUpdate.setValue(n));
             }
-        });
+        };
+        propertyToListen.addListener(listener);
+
+        return listener;
     }
 }

@@ -43,13 +43,12 @@ public class GitHubRawLinkFinder {
      * Get the link pointing to the raw content of the provided file within the provided GitHub
      * repository.
      *
-     * @param url the URL pointing to the GitHub repository containing the file to find. It can be a link
-     *            to any directory or file within the repository. If it's a link to a directory, all direct
-     *            children of this directory will be searched. If it's a link to a file, only this file will
-     *            be searched. It must contain "http" or "https"
+     * @param url the URL pointing to the GitHub repository containing the file to find. It can be a link to any directory
+     *            or file within the repository. If it's a link to a directory, all direct children of this directory will
+     *            be searched. If it's a link to a file, only this file will be searched. It must contain "http" or "https"
      * @param filePredicate a predicate on the name of the file to find
-     * @return a CompletableFuture with the link pointing to the raw content of the desired file, or a failed
-     * CompletableFuture if it couldn't be retrieved
+     * @return a CompletableFuture with the link pointing to the raw content of the desired file, or a failed CompletableFuture
+     * if it couldn't be retrieved
      */
     public static CompletableFuture<URI> getRawLinkOfFileInRepository(String url, Predicate<String> filePredicate) {
         if (url == null) {

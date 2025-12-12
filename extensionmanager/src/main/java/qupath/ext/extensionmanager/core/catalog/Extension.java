@@ -1,75 +1,197 @@
 package qupath.ext.extensionmanager.core.catalog;
 
+import javafx.beans.property.BooleanProperty;
+import javafx.beans.property.ObjectProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableBooleanValue;
+import javafx.beans.value.ObservableValue;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.Version;
+import qupath.ext.extensionmanager.core.model.ExtensionModel;
 
 import java.net.URI;
-import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 /**
- * A description of an extension.
- *
- * @param name the extension's name
- * @param description a short (one sentence or so) description of what the extension is and what it does
- * @param author the author or group responsible for the extension
- * @param homepage a link to the GitHub repository associated with the extension
- * @param starred whether the extension is generally useful or recommended for most users
- * @param releases a list of available releases of the extension. This list is immutable
+ * An optionally installed extension.
  */
-public record Extension(String name, String description, String author, URI homepage, boolean starred, List<Release> releases) {
+public class Extension {
+
+    private static final Logger logger = LoggerFactory.getLogger(Extension.class);
+    private final String name;
+    private final String description;
+    private final List<Release> releases;
+    private final URI homepage;
+    private final boolean starred;
+    private final ObjectProperty<Optional<Release>> installedRelease;
+    private final BooleanProperty optionalDependenciesInstalled;
 
     /**
-     * Create an Extension.
-     * <p>
-     * It must respect the following requirements:
-     * <ul>
-     *     <li>The 'name', 'description', 'author', 'homepage', and 'releases' fields must be defined (but can be empty).</li>
-     *     <li>
-     *         Each release of the 'version' list must be a valid object
-     *         (see {@link Release#Release(String, URI, List, List, List, VersionRange)}).
-     *     </li>
-     *     <li>The 'homepage' field must be a GitHub URL.</li>
-     * </ul>
+     * Create an extension from a {@link ExtensionModel}.
      *
-     * @param name the extension's name
-     * @param description a short (one sentence or so) description of what the extension is and what it does
-     * @param author the author or group responsible for the extension
-     * @param homepage a link to the GitHub repository associated with the extension
-     * @param starred whether the extension is generally useful or recommended for most users
-     * @param releases a list of available releases of the extension
-     * @throws IllegalArgumentException when the created extension is not valid (see the requirements above)
+     * @param extensionModel information on the extension
+     * @param installedRelease the release of the extension that is currently installed. Can be null to indicate that the
+     *                         extension is not installed
+     * @param optionalDependenciesInstalled whether optional dependencies of the extension are currently installed
      */
-    public Extension(String name, String description, String author, URI homepage, boolean starred, List<Release> releases) {
-        this.name = name;
-        this.description = description;
-        this.author = author;
-        this.homepage = homepage;
-        this.starred = starred;
-        this.releases = releases == null ? null : Collections.unmodifiableList(releases);
+    public Extension(ExtensionModel extensionModel, Release installedRelease, boolean optionalDependenciesInstalled) {
+        this.name = extensionModel.name();
+        this.description = extensionModel.description();
+        this.releases = extensionModel.releases().stream().map(Release::new).toList();
+        this.homepage = extensionModel.homepage();
+        this.starred = extensionModel.starred();
+        this.installedRelease = new SimpleObjectProperty<>(Optional.ofNullable(installedRelease));
+        this.optionalDependenciesInstalled = new SimpleBooleanProperty(optionalDependenciesInstalled);
+    }
 
-        checkValidity();
+    @Override
+    public String toString() {
+        return name;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || getClass() != o.getClass()) return false;
+
+        Extension extension = (Extension) o;
+        return starred == extension.starred && name.equals(extension.name) && description.equals(extension.description) &&
+                releases.equals(extension.releases) && homepage.equals(extension.homepage);
+    }
+
+    @Override
+    public int hashCode() {
+        int result = name.hashCode();
+        result = 31 * result + description.hashCode();
+        result = 31 * result + releases.hashCode();
+        result = 31 * result + homepage.hashCode();
+        result = 31 * result + Boolean.hashCode(starred);
+        return result;
     }
 
     /**
-     * Provide the most up-to-date release compatible with the provided version.
-     *
-     * @param version the version that the release should be compatible with. It
-     *                must be specified in the form "v[MAJOR].[MINOR].[PATCH]" or
-     *                "v[MAJOR].[MINOR].[PATCH]-rc[RELEASE_CANDIDATE]"
-     * @return the most up-to-date release compatible with the provided version, or
-     * an empty Optional if no release is compatible with the provided version
-     * @throws IllegalArgumentException if this extension contains at least one release and
-     * the provided version doesn't match the required form
-     * @throws NullPointerException if this extension contains at least one release and
-     * the provided version is null
+     * @return the name of the extension
      */
-    public Optional<Release> getMaxCompatibleRelease(String version) {
+    public String getName() {
+        return name;
+    }
+
+    /**
+     * @return a short (one sentence or so) description of what the extension is and what it does
+     */
+    public String getDescription() {
+        return description;
+    }
+
+    /**
+     * @return a list of available releases of the extension. This list is immutable
+     */
+    public List<Release> getReleases() {
+        return releases;
+    }
+
+    /**
+     * @return a link to the GitHub repository associated with the extension
+     */
+    public URI getHomepage() {
+        return homepage;
+    }
+
+    /**
+     * @return whether the extension is generally useful or recommended for most users
+     */
+    public boolean isStarred() {
+        return starred;
+    }
+
+    /**
+     * Get an observable value showing the currently installed release of this extension. An empty Optional indicates
+     * that the extension is not installed.
+     * <p>
+     * This observable may be updated from any thread.
+     *
+     * @return an observable value showing the currently installed release of this extension
+     */
+    public ObservableValue<Optional<Release>> getInstalledRelease() {
+        return installedRelease;
+    }
+
+    /**
+     * Get an observable boolean value showing whether optional dependencies are currently installed.
+     * <p>
+     * This observable may be updated from any thread.
+     *
+     * @return observable boolean value showing whether optional dependencies are currently installed
+     */
+    public ObservableBooleanValue areOptionalDependenciesInstalled() {
+        return optionalDependenciesInstalled;
+    }
+
+    /**
+     * Indicate that this extension is now installed with the provided release.
+     *
+     * @param release the installed release
+     * @param optionalDependenciesInstalled whether optional dependencies have been installed
+     * @throws NullPointerException if the provided release is null
+     */
+    public synchronized void installRelease(Release release, boolean optionalDependenciesInstalled) {
+        this.installedRelease.set(Optional.of(Objects.requireNonNull(release)));
+        this.optionalDependenciesInstalled.set(optionalDependenciesInstalled);
+    }
+
+    /**
+     * Indicate that this extension is now uninstalled.
+     */
+    public synchronized void uninstallRelease() {
+        installedRelease.set(Optional.empty());
+        optionalDependenciesInstalled.set(false);
+    }
+
+    /**
+     * Indicate whether this extension is installed, and if the installed version can be updated to a newer release that
+     * is compatible with the provided version.
+     *
+     * @param version the version that the new release should be compatible to
+     * @return a more up-to-date version of this extension, or an empty Optional if this extension is not installed or
+     * is already installed with the latest compatible release
+     */
+    public Optional<UpdateAvailable> getUpdateAvailable(Version version) {
+        Optional<Release> installedRelease = getInstalledRelease().getValue();
+
+        if (installedRelease.isEmpty()) {
+            logger.debug("{} not installed, so no update available", this);
+            return Optional.empty();
+        }
+
+        Optional<Release> maxCompatibleRelease = getMaxCompatibleRelease(version);
+        if (maxCompatibleRelease.isEmpty()) {
+            logger.debug("{} installed but no compatible release with {} found", this, version);
+            return Optional.empty();
+        }
+
+        if (maxCompatibleRelease.get().getVersion().compareTo(installedRelease.get().getVersion()) <= 0) {
+            logger.debug("{} installed but corresponds to the latest compatible version", this);
+            return Optional.empty();
+        }
+
+        logger.debug("{} installed and updatable to {}", this, maxCompatibleRelease.get());
+        return Optional.of(new UpdateAvailable(
+                name,
+                installedRelease.get().getVersion(),
+                maxCompatibleRelease.get().getVersion()
+        ));
+    }
+
+    private Optional<Release> getMaxCompatibleRelease(Version version) {
         Release maxCompatibleRelease = null;
 
         for (Release release: releases) {
-            if (release.versionRange().isCompatible(version) &&
-                    (maxCompatibleRelease == null || new Version(release.name()).compareTo(new Version(maxCompatibleRelease.name())) > 0)
+            if (
+                    release.isCompatible(version) &&
+                    (maxCompatibleRelease == null || release.getVersion().compareTo(maxCompatibleRelease.getVersion()) > 0)
             ) {
                 maxCompatibleRelease = release;
             }
@@ -77,15 +199,4 @@ public record Extension(String name, String description, String author, URI home
 
         return Optional.ofNullable(maxCompatibleRelease);
     }
-
-    private void checkValidity() {
-        Utils.checkField(name, "name", "Extension");
-        Utils.checkField(description, "description", "Extension");
-        Utils.checkField(author, "author", "Extension");
-        Utils.checkField(homepage, "homepage", "Extension");
-        Utils.checkField(releases, "releases", "Extension");
-
-        Utils.checkGithubURI(homepage);
-    }
 }
-

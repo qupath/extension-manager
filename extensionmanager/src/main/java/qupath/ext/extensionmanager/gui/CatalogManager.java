@@ -27,17 +27,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
 import qupath.ext.extensionmanager.core.catalog.Catalog;
-import qupath.ext.extensionmanager.core.catalog.CatalogFetcher;
-import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
+import qupath.ext.extensionmanager.core.model.CatalogModel;
+import qupath.ext.extensionmanager.core.model.CatalogModelFetcher;
 import qupath.ext.extensionmanager.core.tools.GitHubRawLinkFinder;
 import qupath.fx.dialogs.Dialogs;
 
 import java.io.IOException;
 import java.net.URI;
-import java.nio.file.InvalidPathException;
 import java.text.MessageFormat;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.ResourceBundle;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -55,15 +54,15 @@ class CatalogManager extends Stage {
     private final ExtensionCatalogManager extensionCatalogManager;
     private final Runnable onInvalidExtensionDirectory;
     @FXML
-    private TableView<SavedCatalog> catalogTable;
+    private TableView<Catalog> catalogTable;
     @FXML
-    private TableColumn<SavedCatalog, String> nameColumn;
+    private TableColumn<Catalog, String> nameColumn;
     @FXML
-    private TableColumn<SavedCatalog, URI> urlColumn;
+    private TableColumn<Catalog, URI> urlColumn;
     @FXML
-    private TableColumn<SavedCatalog, String> descriptionColumn;
+    private TableColumn<Catalog, String> descriptionColumn;
     @FXML
-    private TableColumn<SavedCatalog, Button> removeColumn;
+    private TableColumn<Catalog, Button> removeColumn;
     @FXML
     private TextField catalogUrl;
 
@@ -73,12 +72,12 @@ class CatalogManager extends Stage {
      * @param extensionCatalogManager the extension catalog manager this window should use
      * @param model the model to use when accessing data
      * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
-     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectoryPath()})
-     *                                    but this directory is currently invalid. It lets the possibility to the user to
-     *                                    define and create a valid directory before performing the operation (which would
-     *                                    fail if the directory is invalid). This function is guaranteed to be called from
-     *                                    the JavaFX Application Thread
-     * @throws IOException when an error occurs while creating the window
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectory()}) but this
+     *                                    directory is currently invalid. It lets the possibility to the user to define
+     *                                    and create a valid directory before performing the operation (which would fail
+     *                                    if the directory is invalid). This function is guaranteed to be called from the
+     *                                    JavaFX Application Thread
+     * @throws IOException if an error occurs while creating the window
      */
     public CatalogManager(
             ExtensionCatalogManager extensionCatalogManager,
@@ -99,7 +98,7 @@ class CatalogManager extends Stage {
 
     @FXML
     private void onAddClicked(ActionEvent ignored) {
-        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
 
         String catalogUrl = this.catalogUrl.getText();
         if (catalogUrl == null || catalogUrl.isBlank()) {
@@ -147,10 +146,10 @@ class CatalogManager extends Stage {
                             finalUri.toString()
                     ));
                 });
-                Catalog catalog = CatalogFetcher.getCatalog(uri).get();
+                CatalogModel catalog = CatalogModelFetcher.getCatalog(uri).get();
                 Platform.runLater(() -> progressWindow.setProgress(1));
 
-                if (extensionCatalogManager.getCatalogs().stream().anyMatch(savedCatalog -> savedCatalog.name().equals(catalog.name()))) {
+                if (extensionCatalogManager.getCatalogs().stream().anyMatch(c -> c.getName().equals(catalog.name()))) {
                     displayErrorMessage(
                             resources.getString("CatalogManager.cannotAddCatalog"),
                             MessageFormat.format(
@@ -161,13 +160,7 @@ class CatalogManager extends Stage {
                     return;
                 }
 
-                extensionCatalogManager.addCatalog(List.of(new SavedCatalog(
-                        catalog.name(),
-                        catalog.description(),
-                        new URI(catalogUrl),
-                        uri,
-                        true
-                )));
+                extensionCatalogManager.addCatalog(new Catalog(catalog, new URI(catalogUrl), uri, true));
             } catch (Exception e) {
                 logger.debug("Error when fetching catalog at {}", catalogUrl, e);
                 displayErrorMessage(
@@ -182,23 +175,25 @@ class CatalogManager extends Stage {
     }
 
     private void setColumns() {
-        nameColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().name()));
-        urlColumn.setCellValueFactory(cellData -> new SimpleObjectProperty<>(cellData.getValue().uri()));
-        descriptionColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().description()));
+        nameColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getName()));
+        urlColumn.setCellValueFactory(cellData -> new SimpleObjectProperty<>(cellData.getValue().getUri()));
+        descriptionColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getDescription()));
         removeColumn.setCellValueFactory(cellData -> {
             Button button = new Button(resources.getString("CatalogManager.remove"));
-            button.setDisable(!cellData.getValue().deletable());
+
+            button.setDisable(!cellData.getValue().isDeletable());
             button.setOnAction(event -> {
-                UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+                UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
 
                 deleteCatalogs(List.of(cellData.getValue()));
             });
+
             return new SimpleObjectProperty<>(button);
         });
 
         nameColumn.setCellFactory(getStringCellFactory());
         urlColumn.setCellFactory(column -> {
-            TableCell<SavedCatalog, URI> tableCell = new TableCell<>() {
+            TableCell<Catalog, URI> tableCell = new TableCell<>() {
                 @Override
                 protected void updateItem(URI item, boolean empty) {
                     super.updateItem(item, empty);
@@ -213,12 +208,14 @@ class CatalogManager extends Stage {
                     }
                 }
             };
+
             tableCell.setAlignment(Pos.CENTER_LEFT);
+
             return tableCell;
         });
         descriptionColumn.setCellFactory(getStringCellFactory());
         removeColumn.setCellFactory(column -> {
-            TableCell<SavedCatalog, Button> tableCell = new TableCell<>() {
+            TableCell<Catalog, Button> tableCell = new TableCell<>() {
                 @Override
                 protected void updateItem(Button item, boolean empty) {
                     super.updateItem(item, empty);
@@ -230,17 +227,20 @@ class CatalogManager extends Stage {
                     }
                 }
             };
+
             tableCell.setAlignment(Pos.CENTER);
+
             return tableCell;
         });
     }
 
     private void setDoubleClickHandler() {
         catalogTable.setRowFactory(tv -> {
-            TableRow<SavedCatalog> row = new TableRow<>();
+            TableRow<Catalog> row = new TableRow<>();
+
             row.setOnMouseClicked(event -> {
                 if (event.getClickCount() == 2 && (!row.isEmpty())) {
-                    String url = row.getItem().uri().toString();
+                    String url = row.getItem().getUri().toString();
 
                     UiUtils.openLinkInWebBrowser(url).exceptionally(error -> {
                         logger.error("Error when opening {} in browser", url, error);
@@ -258,6 +258,7 @@ class CatalogManager extends Stage {
                     });
                 }
             });
+
             return row;
         });
     }
@@ -271,18 +272,18 @@ class CatalogManager extends Stage {
         MenuItem copyItem = new MenuItem(resources.getString("CatalogManager.copyUrl"));
         copyItem.setOnAction(ignored -> {
             ClipboardContent content = new ClipboardContent();
-            content.putString(catalogTable.getSelectionModel().getSelectedItem().uri().toString());
+            content.putString(catalogTable.getSelectionModel().getSelectedItem().getUri().toString());
             Clipboard.getSystemClipboard().setContent(content);
         });
         menu.getItems().add(copyItem);
 
         MenuItem removeItem = new MenuItem(resources.getString("CatalogManager.remove"));
         removeItem.setOnAction(ignored -> {
-            UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectoryPath(), onInvalidExtensionDirectory);
+            UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
 
             List<String> nonDeletableCatalogs = catalogTable.getSelectionModel().getSelectedItems().stream()
-                    .filter(savedCatalog -> !savedCatalog.deletable())
-                    .map(SavedCatalog::name)
+                    .filter(catalog -> !catalog.isDeletable())
+                    .map(Catalog::getName)
                     .toList();
             if (!nonDeletableCatalogs.isEmpty()) {
                 displayErrorMessage(
@@ -316,53 +317,39 @@ class CatalogManager extends Stage {
                 .show();
     }
 
-    private void deleteCatalogs(List<SavedCatalog> catalogs) {
-        List<SavedCatalog> catalogsToDelete = catalogs.stream()
-                .filter(SavedCatalog::deletable)
+    private void deleteCatalogs(List<Catalog> catalogs) {
+        List<Catalog> catalogsToDelete = catalogs.stream()
+                .filter(Catalog::isDeletable)
                 .toList();
         if (catalogsToDelete.isEmpty()) {
             return;
         }
 
-        boolean deleteExtensions = Dialogs.showConfirmDialog(
-                resources.getString("CatalogManager.deleteCatalog"),
-                MessageFormat.format(
-                        resources.getString("CatalogManager.deleteExtensions"),
-                        catalogsToDelete.stream()
-                                .map(savedCatalog -> {
-                                    try {
-                                        return String.format("\"%s\"", extensionCatalogManager.getCatalogDirectory(savedCatalog));
-                                    } catch (InvalidPathException | SecurityException | NullPointerException e) {
-                                        logger.error("Cannot retrieve path of {}", savedCatalog.name(), e);
-                                        return null;
-                                    }
-                                })
-                                .filter(Objects::nonNull)
-                                .collect(Collectors.joining("\n"))
-                )
-        );
+        List<Throwable> errors = new ArrayList<>();
+        for (Catalog catalog: catalogsToDelete) {
+            try {
+                extensionCatalogManager.removeCatalog(catalog);
+            } catch (Exception e) {
+                logger.error("Error when removing {}", catalog, e);
 
-        try {
-            extensionCatalogManager.removeCatalogs(
-                    catalogsToDelete,
-                    deleteExtensions
-            );
-        } catch (IOException | SecurityException | NullPointerException e) {
-            logger.error("Error when removing {}", catalogsToDelete.stream().map(SavedCatalog::name).toList(), e);
+                errors.add(e);
+            }
+        }
 
+        if (!errors.isEmpty()) {
             displayErrorMessage(
                     resources.getString("CatalogManager.deleteCatalog"),
                     MessageFormat.format(
                             resources.getString("CatalogManager.cannotRemoveSelectedCatalogs"),
-                            e.getLocalizedMessage()
+                            errors.stream().map(Throwable::getLocalizedMessage).collect(Collectors.joining("\n"))
                     )
             );
         }
     }
 
-    private static Callback<TableColumn<SavedCatalog, String>, TableCell<SavedCatalog, String>> getStringCellFactory() {
+    private static Callback<TableColumn<Catalog, String>, TableCell<Catalog, String>> getStringCellFactory() {
         return column -> {
-            TableCell<SavedCatalog, String> tableCell = new TableCell<>() {
+            TableCell<Catalog, String> tableCell = new TableCell<>() {
                 @Override
                 protected void updateItem(String item, boolean empty) {
                     super.updateItem(item, empty);
@@ -376,7 +363,9 @@ class CatalogManager extends Stage {
                     }
                 }
             };
+
             tableCell.setAlignment(Pos.CENTER_LEFT);
+
             return tableCell;
         };
     }

@@ -19,6 +19,7 @@ import java.util.ResourceBundle;
 
 /**
  * A window displaying the description and the clickable homepage of an extension.
+ * <p>
  * It is modal to its owning window and can be easily closed with shortcuts.
  */
 class ExtensionDetails extends Stage {
@@ -37,7 +38,7 @@ class ExtensionDetails extends Stage {
      *
      * @param extension the extension whose information should be displayed
      * @param noAvailableRelease whether no release of this extension can be installed
-     * @throws IOException when an error occurs while creating the container
+     * @throws IOException if an error occurs while creating the container
      */
     public ExtensionDetails(Extension extension, boolean noAvailableRelease) throws IOException {
         UiUtils.loadFXML(this, ExtensionDetails.class.getResource("extension_details.fxml"));
@@ -45,11 +46,11 @@ class ExtensionDetails extends Stage {
         FXUtils.addCloseWindowShortcuts(this);
         initModality(Modality.WINDOW_MODAL);
 
-        setTitle(extension.name());
+        setTitle(extension.getName());
 
-        description.setText(extension.description());
+        description.setText(extension.getDescription());
 
-        homepage.setText(extension.homepage().toString());
+        homepage.setText(extension.getHomepage().toString());
 
         notCompatible.setVisible(noAvailableRelease);
         notCompatible.setManaged(notCompatible.isVisible());

@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.catalog;
+package qupath.ext.extensionmanager.core.model;
 
 import com.google.gson.FieldNamingPolicy;
 import com.google.gson.Gson;
@@ -16,15 +16,15 @@ import java.util.concurrent.CompletableFuture;
 /**
  * A class to fetch a catalog.
  */
-public class CatalogFetcher {
+public class CatalogModelFetcher {
 
-    private static final Logger logger = LoggerFactory.getLogger(CatalogFetcher.class);
+    private static final Logger logger = LoggerFactory.getLogger(CatalogModelFetcher.class);
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(10);
     private static final Gson gson = new GsonBuilder()
             .setFieldNamingPolicy(FieldNamingPolicy.LOWER_CASE_WITH_UNDERSCORES) // convert snake case to camel case
             .create();
 
-    private CatalogFetcher() {
+    private CatalogModelFetcher() {
         throw new AssertionError("This class is not instantiable.");
     }
 
@@ -32,10 +32,10 @@ public class CatalogFetcher {
      * Attempt to get a catalog from the provided URL.
      *
      * @param uri the URI pointing to the raw content of the catalog. It must contain "http" or "https"
-     * @return a CompletableFuture with the catalog or a failed CompletableFuture if the provided URL doesn't point to
-     * a valid catalog
+     * @return a CompletableFuture with the catalog or a failed CompletableFuture if the provided URL doesn't point to a
+     * valid catalog
      */
-    public static CompletableFuture<Catalog> getCatalog(URI uri) {
+    public static CompletableFuture<CatalogModel> getCatalog(URI uri) {
         if (uri == null) {
             return CompletableFuture.failedFuture(new NullPointerException("The provided URI is null"));
         }
@@ -66,7 +66,7 @@ public class CatalogFetcher {
                     }
                     logger.debug("Got response from {} with status 200:\n{}", uri, response.body());
 
-                    Catalog catalog = gson.fromJson(response.body(), Catalog.class);
+                    CatalogModel catalog = gson.fromJson(response.body(), CatalogModel.class);
                     if (catalog == null) {
                         throw new RuntimeException(String.format("The response to %s is empty.", uri));
                     }

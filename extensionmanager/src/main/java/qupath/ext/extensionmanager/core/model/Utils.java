@@ -1,4 +1,4 @@
-package qupath.ext.extensionmanager.core.catalog;
+package qupath.ext.extensionmanager.core.model;
 
 import java.net.URI;
 
@@ -8,6 +8,7 @@ import java.net.URI;
 class Utils {
 
     private static final String GITHUB_HOST = "github.com";
+
     private Utils() {
         throw new AssertionError("This class is not instantiable.");
     }
