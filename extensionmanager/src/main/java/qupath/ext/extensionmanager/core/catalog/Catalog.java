@@ -31,12 +31,13 @@ public class Catalog {
      * @param description a short (one sentence or so) description of what the catalog contains and what its purpose is
      * @param uri a URI pointing to the raw content of the catalog, or to a GitHub repository where the catalog can be found
      * @param rawUri the URI pointing to the raw content of the catalog (can be the same as the provided uri)
+     * @throws NullPointerException if one of the provided parameters is null
      */
     public Catalog(String name, String description, URI uri, URI rawUri) {
-        this.name = name;
-        this.description = description;
-        this.uri = uri;
-        this.rawUri = rawUri;
+        this.name = Objects.requireNonNull(name);
+        this.description = Objects.requireNonNull(description);
+        this.uri = Objects.requireNonNull(uri);
+        this.rawUri = Objects.requireNonNull(rawUri);
         this.deletable = false;
         this.registryExtensions = List.of();
     }
@@ -48,6 +49,7 @@ public class Catalog {
      * @param uri a URI pointing to the raw content of the catalog, or to a GitHub repository where the catalog can be found
      * @param rawUri the URI pointing to the raw content of the catalog (can be same as {@link #uri})
      * @param deletable whether this catalog can be deleted
+     * @throws NullPointerException if one of the provided parameters is null
      */
     public Catalog(CatalogModel catalogModel, URI uri, URI rawUri, boolean deletable) {
         this.name = catalogModel.name();
@@ -63,6 +65,7 @@ public class Catalog {
      * Create a catalog from a {@link RegistryCatalog}. This will not populate the extensions.
      *
      * @param registryCatalog information on the catalog
+     * @throws NullPointerException if the provided parameter is null
      */
     public Catalog(RegistryCatalog registryCatalog) {
         this.name = registryCatalog.name();
@@ -137,10 +140,18 @@ public class Catalog {
      * <p>
      * Depending on which constructor was used to create this catalog, this function may act differently:
      * <ul>
-     *     <li>If {@link #Catalog(CatalogModel, URI, URI, boolean)} was used, the extensions are already determined.</li>
+     *     <li>
+     *         If {@link #Catalog(String, String, URI, URI)} was used, this function will call {@link CatalogModelFetcher#getCatalog(URI)}
+     *         to determine the extensions, which might take some time. No extension is considered to be installed by default.
+     *     </li>
+     *     <li>
+     *         If {@link #Catalog(CatalogModel, URI, URI, boolean)} was used, extensions are already determined but none
+     *         is considered to be installed by default.
+     *     </li>
      *     <li>
      *         If {@link #Catalog(RegistryCatalog)} was used, this function will call {@link CatalogModelFetcher#getCatalog(URI)}
-     *         to determine the extensions, which might take some time.
+     *         to determine the extensions, which might take some time. Then, the extensions of the provided {@link RegistryCatalog}
+     *         are used to determine which extensions are installed.
      *     </li>
      * </ul>
      * At most one call to {@link CatalogModelFetcher#getCatalog(URI)} is made, because the results are cached.

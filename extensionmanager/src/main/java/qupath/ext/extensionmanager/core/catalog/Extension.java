@@ -37,6 +37,7 @@ public class Extension {
      * @param installedRelease the release of the extension that is currently installed. Can be null to indicate that the
      *                         extension is not installed
      * @param optionalDependenciesInstalled whether optional dependencies of the extension are currently installed
+     * @throws NullPointerException if the provided extension model is null
      */
     public Extension(ExtensionModel extensionModel, Release installedRelease, boolean optionalDependenciesInstalled) {
         this.name = extensionModel.name();

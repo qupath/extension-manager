@@ -167,9 +167,8 @@ class ExtensionFolderManager implements AutoCloseable {
      * @throws IOException if an I/O error occurs while reading the registry file
      * @throws NullPointerException if the registry file exists but is empty or if the path contained in {@link #getCatalogsDirectoryPath()}
      * is null
-     * @throws java.nio.file.InvalidPathException if the path to the registry cannot be created
-     * @throws JsonSyntaxException if the registry file exists but contain a malformed JSON element
-     * @throws JsonIOException if there was a problem reading from the registry file
+     * @throws InvalidPathException if the path to the registry cannot be created
+     * @throws RuntimeException if the registry file exists but contain a malformed JSON element
      */
     public synchronized Registry getSavedRegistry() throws IOException {
         try(
@@ -187,7 +186,7 @@ class ExtensionFolderManager implements AutoCloseable {
      * @throws IOException if an I/O error occurs while writing the registry file
      * @throws NullPointerException if the path contained in {@link #getCatalogsDirectoryPath()} is null or if the provided
      * registry is null
-     * @throws java.nio.file.InvalidPathException if the path to the registry cannot be created
+     * @throws InvalidPathException if the path to the registry cannot be created
      */
     public synchronized void saveRegistry(Registry registry) throws IOException {
         try (
@@ -216,7 +215,7 @@ class ExtensionFolderManager implements AutoCloseable {
     }
 
     /**
-     * Get the path to the directory containing the provided catalog.
+     * Get the path to the directory containing the provided catalog. It may not exist.
      *
      * @param catalogName the name of the catalog to retrieve
      * @return the path to the directory containing the provided catalog
@@ -306,7 +305,7 @@ class ExtensionFolderManager implements AutoCloseable {
      * @param createDirectory whether to create a folder on the returned path
      * @return the path to the folder containing the specified files of the provided extension
      * @throws IOException if an I/O error occurs while creating the folder
-     * @throws java.nio.file.InvalidPathException if the Path object cannot be created, for example because the extensions
+     * @throws InvalidPathException if the Path object cannot be created, for example because the extensions
      * folder path contain invalid characters
      * @throws NullPointerException if the path contained in {@link #getCatalogsDirectoryPath()} is null or if one of the
      * provided parameters is null

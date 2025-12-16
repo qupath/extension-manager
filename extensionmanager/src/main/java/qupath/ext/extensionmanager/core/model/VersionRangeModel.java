@@ -54,8 +54,6 @@ public record VersionRangeModel(String min, String max, List<String> excludes) {
      *
      * @param version the version to check if this release range is compatible with
      * @return a boolean indicating if the provided version is compatible with this release range
-     * @throws IllegalArgumentException if the provided version doesn't match the required form or if this release range
-     * is not valid
      * @throws NullPointerException if the provided version is null
      */
     public boolean isCompatible(Version version) {

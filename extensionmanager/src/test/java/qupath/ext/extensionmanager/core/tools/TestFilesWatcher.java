@@ -111,10 +111,10 @@ public class TestFilesWatcher {
                 Files.createFile(directoryToWatch.resolve("file2"))
         );
 
-        Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for files to be detected
         TestUtils.assertCollectionsEqualsWithoutOrder(
                 expectedFiles,
-                filesWatcher.getFiles()
+                filesWatcher.getFiles(),
+                CHANGE_WAITING_TIME_MS  // wait for files to be detected
         );
 
         filesWatcher.close();
@@ -162,10 +162,10 @@ public class TestFilesWatcher {
         );
         Files.delete(directoryToWatch.resolve("file1"));
 
-        Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for files to be detected
         TestUtils.assertCollectionsEqualsWithoutOrder(
                 expectedFiles,
-                filesWatcher.getFiles()
+                filesWatcher.getFiles(),
+                CHANGE_WAITING_TIME_MS      // wait for files to be detected
         );
 
         filesWatcher.close();
@@ -211,10 +211,10 @@ public class TestFilesWatcher {
         );
         Files.move(subFolder, Files.createTempDirectory(null).resolve("folder"));
 
-        Thread.sleep(CHANGE_WAITING_TIME_MS);     // wait for files to be detected
         TestUtils.assertCollectionsEqualsWithoutOrder(
                 expectedFiles,
-                filesWatcher.getFiles()
+                filesWatcher.getFiles(),
+                CHANGE_WAITING_TIME_MS      // wait for files to be detected
         );
 
         filesWatcher.close();

@@ -114,7 +114,7 @@ public class FilesWatcher implements AutoCloseable {
                         files.remove(removedFile);
                     }
             );
-        } catch (IOException | UnsupportedOperationException | SecurityException e) {
+        } catch (IOException | UnsupportedOperationException e) {
             logger.debug(
                     "Error when creating files watcher for {}. Files added to this directory won't be detected.",
                     directory,

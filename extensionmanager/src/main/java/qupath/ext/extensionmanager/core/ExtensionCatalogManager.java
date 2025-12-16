@@ -135,7 +135,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     /**
-     * Get the path to the directory containing the provided catalog.
+     * Get the path to the directory containing the provided catalog. It may not exist.
      *
      * @param catalogName the name of the catalog to retrieve
      * @return the path of the directory containing the provided catalog
@@ -199,10 +199,12 @@ public class ExtensionCatalogManager implements AutoCloseable{
      * by this platform or recursively delete it if extension are asked to be removed. If this operation fails, no exception
      * is thrown.
      * <p>
+     * If the provided catalog does not belong to {@link #getCatalogs()}, nothing happens.
+     * <p>
      * This operation may take some time, but can be interrupted.
      *
      * @param catalog the catalog to remove
-     * @throws IllegalArgumentException if the provided catalog is not {@link RegistryCatalog#deletable()}
+     * @throws IllegalArgumentException if the provided catalog is not {@link RegistryCatalog#deletable() deletable}
      * @throws IOException if an I/O error occurs while removing the catalog from disk
      * @throws NullPointerException if the path contained in {@link #getExtensionDirectory()} is null or if the provided
      * catalog is null
@@ -211,6 +213,11 @@ public class ExtensionCatalogManager implements AutoCloseable{
      * @throws InterruptedException if the calling thread is interrupted
      */
     public synchronized void removeCatalog(Catalog catalog) throws IOException, ExecutionException, InterruptedException {
+        if (catalogs.stream().noneMatch(catalog::equals)) {
+            logger.debug("{} was asked to be removed, but does not belong to {}. Doing nothing", catalog, catalogs);
+            return;
+        }
+
         if (!catalog.isDeletable()) {
             throw new IllegalArgumentException(String.format("Cannot delete %s: this catalog is not deletable", catalog));
         }
@@ -525,7 +532,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
     }
 
     private void updateCatalogManagedInstalledJarsOfDirectory(Path directory, Operation operation) {
-        if (directory != null) {
+        if (directory != null && directory.toFile().exists()) {
             try (Stream<Path> files = Files.walk(directory)) {
                 List<Path> jars = files.filter(path -> path.toString().endsWith(".jar")).toList();
 

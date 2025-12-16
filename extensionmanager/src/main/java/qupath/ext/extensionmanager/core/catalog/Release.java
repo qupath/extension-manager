@@ -23,6 +23,7 @@ public class Release {
      * Create a release from a {@link ReleaseModel}.
      *
      * @param releaseModel information on the release
+     * @throws NullPointerException if the provided parameter is null
      */
     public Release(ReleaseModel releaseModel) {
         this.version = new Version(releaseModel.name());
@@ -71,6 +72,7 @@ public class Release {
      *
      * @param version the version that may be compatible with this release
      * @return whether the provided version is compatible with this release
+     * @throws NullPointerException if the provided version is null
      */
     public boolean isCompatible(Version version) {
         return versionRange.isCompatible(version);

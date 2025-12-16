@@ -8,6 +8,8 @@ import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
@@ -185,7 +187,20 @@ class CatalogManager extends Stage {
             button.setOnAction(event -> {
                 UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
 
-                deleteCatalogs(List.of(cellData.getValue()));
+                boolean confirmation = new Dialogs.Builder()
+                        .alertType(Alert.AlertType.CONFIRMATION)
+                        .title(resources.getString("CatalogManager.deletionConfirmation"))
+                        .content(new Label(MessageFormat.format(
+                                resources.getString("CatalogManager.confirmation"),
+                                extensionCatalogManager.getCatalogDirectory(cellData.getValue().getName())
+                        )))
+                        .resizable()
+                        .showAndWait()
+                        .orElse(ButtonType.CANCEL).getButtonData() == ButtonBar.ButtonData.OK_DONE;
+
+                if (confirmation) {
+                    deleteCatalogs(List.of(cellData.getValue()));
+                }
             });
 
             return new SimpleObjectProperty<>(button);
