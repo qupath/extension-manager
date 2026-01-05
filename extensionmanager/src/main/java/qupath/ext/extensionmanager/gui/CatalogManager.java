@@ -8,6 +8,8 @@ import javafx.fxml.FXML;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.control.ContextMenu;
 import javafx.scene.control.Label;
 import javafx.scene.control.MenuItem;
@@ -72,7 +74,7 @@ class CatalogManager extends Stage {
      * @param extensionCatalogManager the extension catalog manager this window should use
      * @param model the model to use when accessing data
      * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
-     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectory()}) but this
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionsDirectory()}) but this
      *                                    directory is currently invalid. It lets the possibility to the user to define
      *                                    and create a valid directory before performing the operation (which would fail
      *                                    if the directory is invalid). This function is guaranteed to be called from the
@@ -98,7 +100,7 @@ class CatalogManager extends Stage {
 
     @FXML
     private void onAddClicked(ActionEvent ignored) {
-        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionsDirectory(), onInvalidExtensionDirectory);
 
         String catalogUrl = this.catalogUrl.getText();
         if (catalogUrl == null || catalogUrl.isBlank()) {
@@ -183,9 +185,22 @@ class CatalogManager extends Stage {
 
             button.setDisable(!cellData.getValue().isDeletable());
             button.setOnAction(event -> {
-                UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
+                UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionsDirectory(), onInvalidExtensionDirectory);
 
-                deleteCatalogs(List.of(cellData.getValue()));
+                boolean confirmation = new Dialogs.Builder()
+                        .alertType(Alert.AlertType.CONFIRMATION)
+                        .title(resources.getString("CatalogManager.deletionConfirmation"))
+                        .content(new Label(MessageFormat.format(
+                                resources.getString("CatalogManager.confirmation"),
+                                extensionCatalogManager.getCatalogDirectory(cellData.getValue().getName())
+                        )))
+                        .resizable()
+                        .showAndWait()
+                        .orElse(ButtonType.CANCEL).getButtonData() == ButtonBar.ButtonData.OK_DONE;
+
+                if (confirmation) {
+                    deleteCatalogs(List.of(cellData.getValue()));
+                }
             });
 
             return new SimpleObjectProperty<>(button);
@@ -279,7 +294,7 @@ class CatalogManager extends Stage {
 
         MenuItem removeItem = new MenuItem(resources.getString("CatalogManager.remove"));
         removeItem.setOnAction(ignored -> {
-            UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
+            UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionsDirectory(), onInvalidExtensionDirectory);
 
             List<String> nonDeletableCatalogs = catalogTable.getSelectionModel().getSelectedItems().stream()
                     .filter(catalog -> !catalog.isDeletable())

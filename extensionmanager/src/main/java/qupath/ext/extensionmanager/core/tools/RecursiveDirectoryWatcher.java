@@ -55,14 +55,13 @@ class RecursiveDirectoryWatcher implements AutoCloseable {
      *                    this predicate
      * @param directoriesToSkip a predicate indicating directories not to watch
      * @param onFileAdded a function that will be called when a new file is added to one of the watched directory. Its
-     *                    parameter will be the path of the new file. This function may be called from  any thread. If
+     *                    parameter will be the path of the new file. This function may be called from any thread. If
      *                    files already exist in the provided directory to watch, this function will be called on them
      * @param onFileDeleted a function that will be called when a file is removed from one of the watched directory. Its
      *                      parameter will be the path of the deleted file. This function may be called from any thread.
      *                      If a folder containing a file to consider is deleted, this function will be called on this file
-     * @throws IOException if an I/O error occurs
+     * @throws IOException if an I/O error occurs or if there is no directory on the provided path
      * @throws UnsupportedOperationException if watching file system is not supported by this system
-     * @throws java.nio.file.NotDirectoryException if there is no directory on the provided path
      * @throws NullPointerException if one of the parameter is used and null
      */
     public RecursiveDirectoryWatcher(
@@ -101,10 +100,22 @@ class RecursiveDirectoryWatcher implements AutoCloseable {
                         Path filename = (Path) event.context();
                         Path filePath = parentFolder.resolve(filename);
 
+                        boolean removeFiles = false;
                         if (Files.isDirectory(filePath) && kind == StandardWatchEventKinds.ENTRY_CREATE) {
-                            registerDirectory(filePath);
+                            try {
+                                registerDirectory(filePath);
+                            } catch (IOException e) {
+                                logger.debug(
+                                        "Error while registering {} directory. Removing all files belonging to it",
+                                        filename
+                                );
+                                removeFiles = true;
+                            }
                         }
                         if (kind == StandardWatchEventKinds.ENTRY_DELETE) {
+                            removeFiles = true;
+                        }
+                        if (removeFiles) {
                             List<Path> filesToRemove = addedFiles.stream()
                                     .filter(path -> FileTools.isFileParentOfAnotherFile(
                                             filePath.toFile(),
@@ -141,7 +152,7 @@ class RecursiveDirectoryWatcher implements AutoCloseable {
                 Thread.currentThread().interrupt();
             } catch (ClosedWatchServiceException e) {
                 logger.debug("Service watching {} closed", directoryToWatch, e);
-            } catch (IOException | NullPointerException | SecurityException e) {
+            } catch (NullPointerException e) {
                 logger.error("Error when watching directory {}", directoryToWatch, e);
             }
         });

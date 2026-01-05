@@ -37,6 +37,7 @@ public class Extension {
      * @param installedRelease the release of the extension that is currently installed. Can be null to indicate that the
      *                         extension is not installed
      * @param optionalDependenciesInstalled whether optional dependencies of the extension are currently installed
+     * @throws NullPointerException if the provided extension model is null
      */
     public Extension(ExtensionModel extensionModel, Release installedRelease, boolean optionalDependenciesInstalled) {
         this.name = extensionModel.name();
@@ -51,25 +52,6 @@ public class Extension {
     @Override
     public String toString() {
         return name;
-    }
-
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-
-        Extension extension = (Extension) o;
-        return starred == extension.starred && name.equals(extension.name) && description.equals(extension.description) &&
-                releases.equals(extension.releases) && homepage.equals(extension.homepage);
-    }
-
-    @Override
-    public int hashCode() {
-        int result = name.hashCode();
-        result = 31 * result + description.hashCode();
-        result = 31 * result + releases.hashCode();
-        result = 31 * result + homepage.hashCode();
-        result = 31 * result + Boolean.hashCode(starred);
-        return result;
     }
 
     /**

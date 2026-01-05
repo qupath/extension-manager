@@ -73,7 +73,7 @@ class ExtensionLine extends HBox implements AutoCloseable {
      * @param catalog the catalog owning the extension to display
      * @param extension the extension to display
      * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
-     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectory()}) but this
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionsDirectory()}) but this
      *                                    directory is currently invalid. It lets the possibility to the user to define
      *                                    and create a valid directory before performing the operation (which would fail
      *                                    if the directory is invalid). This function is guaranteed to be called from the

@@ -4,6 +4,7 @@ import com.google.gson.Gson;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import qupath.ext.extensionmanager.core.Version;
 
 import java.util.List;
 
@@ -292,28 +293,13 @@ public class TestVersionRangeModel {
     }
 
     @Test
-    void Check_Version_Compatibility_When_Invalid_Version() {
-        VersionRangeModel versionRange = new VersionRangeModel(
-                "v0.1.0",
-                "v1.0.0",
-                List.of("v0.1.1", "v0.2.0", "v1.0.0")
-        );
-        String version = "invalid_version";
-
-        Assertions.assertThrows(
-                IllegalArgumentException.class,
-                () -> versionRange.isCompatible(version)
-        );
-    }
-
-    @Test
     void Check_Compatible_Version() {
         VersionRangeModel versionRange = new VersionRangeModel(
                 "v0.1.0",
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
         );
-        String version = "v0.1.4";
+        Version version = new Version("v0.1.4");
 
         boolean isCompatible = versionRange.isCompatible(version);
 
@@ -327,7 +313,7 @@ public class TestVersionRangeModel {
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
         );
-        String version = "v0.1.4";
+        Version version = new Version("v0.1.4");
 
         boolean isCompatible = versionRange.isCompatible(version);
 
@@ -341,7 +327,7 @@ public class TestVersionRangeModel {
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
         );
-        String version = "v0.1.4";
+        Version version = new Version("v0.1.4");
 
         boolean isCompatible = versionRange.isCompatible(version);
 
@@ -355,7 +341,7 @@ public class TestVersionRangeModel {
                 "v1.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
         );
-        String version = "v1.0.4";
+        Version version = new Version("v1.0.4");
 
         boolean isCompatible = versionRange.isCompatible(version);
 
@@ -369,7 +355,7 @@ public class TestVersionRangeModel {
                 "v1",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
         );
-        String version = "v1.1.4";
+        Version version = new Version("v1.1.4");
 
         boolean isCompatible = versionRange.isCompatible(version);
 
@@ -383,7 +369,7 @@ public class TestVersionRangeModel {
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
         );
-        String version = "v0.0.4";
+        Version version = new Version("v0.0.4");
 
         boolean isCompatible = versionRange.isCompatible(version);
 
@@ -397,7 +383,7 @@ public class TestVersionRangeModel {
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
         );
-        String version = "v1.0.4";
+        Version version = new Version("v1.0.4");
 
         boolean isCompatible = versionRange.isCompatible(version);
 
@@ -411,7 +397,7 @@ public class TestVersionRangeModel {
                 "v1.0.0",
                 List.of("v0.1.1", "v0.2.0", "v1.0.0")
         );
-        String version = "v0.2.0";
+        Version version = new Version("v0.2.0");
 
         boolean isCompatible = versionRange.isCompatible(version);
 
