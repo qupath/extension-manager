@@ -72,19 +72,6 @@ class ExtensionClassLoader extends URLClassLoader {
     }
 
     /**
-     * Indicate that a JAR file should be unloaded.
-     * <p>
-     * While this function doesn't currently unload the JAR, it is recommended to call it when a JAR file given to
-     * {@link #addJar(Path)} should not be loaded anymore. A future implementation may actually unload the JAR.
-     *
-     * @param jarPath the path of the JAR file to unload
-     * @throws NullPointerException if the provided path is null
-     */
-    public synchronized void removeJar(Path jarPath) {
-        filenamesAdded.remove(jarPath.getFileName().toString());
-    }
-
-    /**
      * Set a runnable to be called each time a JAR file is loaded by this class loader. The call may happen from any thread.
      *
      * @param runnable the runnable to run when a JAR file is loaded
