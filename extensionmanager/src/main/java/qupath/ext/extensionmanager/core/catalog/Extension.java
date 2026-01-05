@@ -54,25 +54,6 @@ public class Extension {
         return name;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-
-        Extension extension = (Extension) o;
-        return starred == extension.starred && name.equals(extension.name) && description.equals(extension.description) &&
-                releases.equals(extension.releases) && homepage.equals(extension.homepage);
-    }
-
-    @Override
-    public int hashCode() {
-        int result = name.hashCode();
-        result = 31 * result + description.hashCode();
-        result = 31 * result + releases.hashCode();
-        result = 31 * result + homepage.hashCode();
-        result = 31 * result + Boolean.hashCode(starred);
-        return result;
-    }
-
     /**
      * @return the name of the extension
      */

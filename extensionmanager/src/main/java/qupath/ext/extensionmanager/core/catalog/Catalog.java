@@ -81,25 +81,6 @@ public class Catalog {
         return name;
     }
 
-    @Override
-    public boolean equals(Object o) {
-        if (o == null || getClass() != o.getClass()) return false;
-
-        Catalog catalog = (Catalog) o;
-        return deletable == catalog.deletable && name.equals(catalog.name) && description.equals(catalog.description) &&
-                uri.equals(catalog.uri) && rawUri.equals(catalog.rawUri);
-    }
-
-    @Override
-    public int hashCode() {
-        int result = name.hashCode();
-        result = 31 * result + description.hashCode();
-        result = 31 * result + uri.hashCode();
-        result = 31 * result + rawUri.hashCode();
-        result = 31 * result + Boolean.hashCode(deletable);
-        return result;
-    }
-
     /**
      * @return the name of the catalog
      */

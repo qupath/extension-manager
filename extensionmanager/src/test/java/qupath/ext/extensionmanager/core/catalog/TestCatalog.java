@@ -161,7 +161,10 @@ public class TestCatalog {
 
             List<Extension> extensions = catalog.getExtensions().get();
 
-            TestUtils.assertCollectionsEqualsWithoutOrder(expectedExtensions, extensions);
+            TestUtils.assertCollectionsEqualsWithoutOrder(
+                    expectedExtensions.stream().map(Extension::getName).toList(),   // Extension does not override equals,
+                    extensions.stream().map(Extension::getName).toList()            // so only the name is checked
+            );
 
             server.close();
         }
@@ -279,7 +282,10 @@ public class TestCatalog {
 
             List<Extension> extensions = catalog.getExtensions().get();
 
-            TestUtils.assertCollectionsEqualsWithoutOrder(expectedExtensions, extensions);
+            TestUtils.assertCollectionsEqualsWithoutOrder(
+                    expectedExtensions.stream().map(Extension::getName).toList(),   // Extension does not override equals,
+                    extensions.stream().map(Extension::getName).toList()            // so only the name is checked
+            );
         }
 
         @Override
@@ -357,7 +363,10 @@ public class TestCatalog {
 
             List<Extension> extensions = catalog.getExtensions().get();
 
-            TestUtils.assertCollectionsEqualsWithoutOrder(expectedExtensions, extensions);
+            TestUtils.assertCollectionsEqualsWithoutOrder(
+                    expectedExtensions.stream().map(Extension::getName).toList(),   // Extension does not override equals,
+                    extensions.stream().map(Extension::getName).toList()            // so only the name is checked
+            );
 
             server.close();
         }

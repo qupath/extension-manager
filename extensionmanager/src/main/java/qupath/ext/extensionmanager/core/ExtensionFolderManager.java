@@ -1,8 +1,6 @@
 package qupath.ext.extensionmanager.core;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonIOException;
-import com.google.gson.JsonSyntaxException;
 import com.google.gson.stream.JsonReader;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
@@ -71,7 +69,7 @@ class ExtensionFolderManager implements AutoCloseable {
     private static final String REGISTRY_NAME = "registry.json";
     private static final Predicate<Path> isJar = path -> path.toString().toLowerCase().endsWith(".jar");
     private static final Gson gson = new Gson();
-    private final ObservableValue<Path> extensionDirectoryPath;
+    private final ObservableValue<Path> extensionsDirectoryPath;
     private final ObservableValue<Path> catalogsDirectoryPath;
     private final FilesWatcher manuallyInstalledExtensionsWatcher;
     /**
@@ -107,15 +105,15 @@ class ExtensionFolderManager implements AutoCloseable {
     /**
      * Create the extension folder manager.
      *
-     * @param extensionDirectoryPath an observable value pointing to the path the extension directory should have. The
+     * @param extensionsDirectoryPath an observable value pointing to the path the extension directory should have. The
      *                               path can be null or invalid (but not the observable). If this observable is changed,
      *                               catalogs and extensions will be set to the content of the new value of the observable
      *                               (so will be reset if the new path is empty)
      * @throws NullPointerException if the parameter is null
      */
-    public ExtensionFolderManager(ObservableValue<Path> extensionDirectoryPath) {
-        this.extensionDirectoryPath = extensionDirectoryPath;
-        this.catalogsDirectoryPath = extensionDirectoryPath.map(path -> {
+    public ExtensionFolderManager(ObservableValue<Path> extensionsDirectoryPath) {
+        this.extensionsDirectoryPath = extensionsDirectoryPath;
+        this.catalogsDirectoryPath = extensionsDirectoryPath.map(path -> {
             if (path == null) {
                 return null;
             }
@@ -142,11 +140,11 @@ class ExtensionFolderManager implements AutoCloseable {
         });
 
         this.manuallyInstalledExtensionsWatcher = new FilesWatcher(
-                extensionDirectoryPath,
+                extensionsDirectoryPath,
                 isJar,
                 path -> {
                     try {
-                        return path.equals(extensionDirectoryPath.getValue().resolve(CATALOGS_FOLDER));
+                        return path.equals(extensionsDirectoryPath.getValue().resolve(CATALOGS_FOLDER));
                     } catch (InvalidPathException | NullPointerException e) {
                         logger.debug("Error when trying to assess if {} should be watched", path, e);
                         return true;
@@ -201,13 +199,13 @@ class ExtensionFolderManager implements AutoCloseable {
      * @return an observable value containing the path to the extension folder. It may be updated from any thread and
      * the path (but not the observable) can be null or invalid
      */
-    public ObservableValue<Path> getExtensionDirectoryPath() {
-        return extensionDirectoryPath;
+    public ObservableValue<Path> getExtensionsDirectoryPath() {
+        return extensionsDirectoryPath;
     }
 
     /**
      * @return an observable value containing the path to the "catalogs" directory in the extension folder. It may be
-     * updated from any thread and the path can be null or invalid. Note that if {@link #getExtensionDirectoryPath()}
+     * updated from any thread and the path can be null or invalid. Note that if {@link #getExtensionsDirectoryPath()}
      * points to a valid directory, the path returned by this function should also point to a valid (i.e. existing) directory
      */
     public ObservableValue<Path> getCatalogsDirectoryPath() {

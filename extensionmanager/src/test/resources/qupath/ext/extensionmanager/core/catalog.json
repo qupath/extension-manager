@@ -10,6 +10,8 @@
       {
         "name": "v0.1.0",
         "main_url": "https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar",
+        "required_dependency_urls": ["https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"],
+        "optional_dependency_urls": ["https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"],
         "version_range": {
           "min": "v1.0.0"
         }

@@ -81,7 +81,7 @@ class ExtensionModificationWindow extends Stage {
      * @param catalog the catalog owning the extension to modify
      * @param extension the extension to modify
      * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
-     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectory()}) but this
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionsDirectory()}) but this
      *                                    directory is currently invalid. It lets the possibility to the user to define
      *                                    and create a valid directory before performing the operation (which would fail
      *                                    if the directory is invalid). This function is guaranteed to be called from the
@@ -101,7 +101,7 @@ class ExtensionModificationWindow extends Stage {
 
         UiUtils.loadFXML(this, ExtensionModificationWindow.class.getResource("extension_modification_window.fxml"));
 
-        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionsDirectory(), onInvalidExtensionDirectory);
 
         initModality(Modality.WINDOW_MODAL);
 
@@ -152,8 +152,6 @@ class ExtensionModificationWindow extends Stage {
                 () -> {
                     try {
                         return extensionCatalogManager.getDownloadLinks(
-                                        catalog.getName(),
-                                        extension.getName(),
                                         release.getSelectionModel().getSelectedItem(),
                                         optionalDependencies.isSelected()
                                 )
@@ -205,7 +203,7 @@ class ExtensionModificationWindow extends Stage {
         }
         Release selectedRelease = release.getSelectionModel().getSelectedItem();
 
-        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionsDirectory(), onInvalidExtensionDirectory);
 
         try {
             if (extension.getInstalledRelease().getValue().isEmpty() && isJarAlreadyDownloaded(selectedRelease)) {

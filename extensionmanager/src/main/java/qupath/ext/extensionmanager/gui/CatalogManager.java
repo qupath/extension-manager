@@ -74,7 +74,7 @@ class CatalogManager extends Stage {
      * @param extensionCatalogManager the extension catalog manager this window should use
      * @param model the model to use when accessing data
      * @param onInvalidExtensionDirectory a function that will be called if an operation needs to access the extension
-     *                                    directory (see {@link ExtensionCatalogManager#getExtensionDirectory()}) but this
+     *                                    directory (see {@link ExtensionCatalogManager#getExtensionsDirectory()}) but this
      *                                    directory is currently invalid. It lets the possibility to the user to define
      *                                    and create a valid directory before performing the operation (which would fail
      *                                    if the directory is invalid). This function is guaranteed to be called from the
@@ -100,7 +100,7 @@ class CatalogManager extends Stage {
 
     @FXML
     private void onAddClicked(ActionEvent ignored) {
-        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
+        UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionsDirectory(), onInvalidExtensionDirectory);
 
         String catalogUrl = this.catalogUrl.getText();
         if (catalogUrl == null || catalogUrl.isBlank()) {
@@ -185,7 +185,7 @@ class CatalogManager extends Stage {
 
             button.setDisable(!cellData.getValue().isDeletable());
             button.setOnAction(event -> {
-                UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
+                UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionsDirectory(), onInvalidExtensionDirectory);
 
                 boolean confirmation = new Dialogs.Builder()
                         .alertType(Alert.AlertType.CONFIRMATION)
@@ -294,7 +294,7 @@ class CatalogManager extends Stage {
 
         MenuItem removeItem = new MenuItem(resources.getString("CatalogManager.remove"));
         removeItem.setOnAction(ignored -> {
-            UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionDirectory(), onInvalidExtensionDirectory);
+            UiUtils.promptExtensionDirectory(extensionCatalogManager.getExtensionsDirectory(), onInvalidExtensionDirectory);
 
             List<String> nonDeletableCatalogs = catalogTable.getSelectionModel().getSelectedItems().stream()
                     .filter(catalog -> !catalog.isDeletable())
