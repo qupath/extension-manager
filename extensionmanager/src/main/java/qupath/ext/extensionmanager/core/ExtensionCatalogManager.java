@@ -521,7 +521,6 @@ public class ExtensionCatalogManager implements AutoCloseable{
         extensionFolderManager.getManuallyInstalledJars().addListener((ListChangeListener<? super Path>) change -> {
             while (change.next()) {
                 addJars(change.getAddedSubList());
-                removeJars(change.getRemoved());
             }
             change.reset();
         });
@@ -530,7 +529,6 @@ public class ExtensionCatalogManager implements AutoCloseable{
         catalogManagedInstalledJarsImmutable.addListener((ListChangeListener<? super Path>) change -> {
             while (change.next()) {
                 addJars(change.getAddedSubList());
-                removeJars(change.getRemoved());
             }
             change.reset();
         });
@@ -682,12 +680,6 @@ public class ExtensionCatalogManager implements AutoCloseable{
             } catch (IOError | MalformedURLException e) {
                 logger.error("Cannot load extension {}", path, e);
             }
-        }
-    }
-
-    private void removeJars(List<? extends Path> jarPaths) {
-        for (Path path: jarPaths) {
-            extensionClassLoader.removeJar(path);
         }
     }
 }

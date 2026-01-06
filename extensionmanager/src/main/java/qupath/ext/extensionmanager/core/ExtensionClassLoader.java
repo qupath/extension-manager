@@ -2,6 +2,7 @@ package qupath.ext.extensionmanager.core;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import qupath.ext.extensionmanager.core.tools.FileTools;
 
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -21,7 +22,7 @@ import java.util.Set;
 class ExtensionClassLoader extends URLClassLoader {
 
     private static final Logger logger = LoggerFactory.getLogger(ExtensionClassLoader.class);
-    private final Set<String> filenamesAdded = new HashSet<>();
+    private final Set<String> addedJars = new HashSet<>();
     private final List<Runnable> runnables = new ArrayList<>();
 
     /**
@@ -46,15 +47,16 @@ class ExtensionClassLoader extends URLClassLoader {
             addURL(jarPath.toUri().toURL());
             logger.debug("File {} loaded by extension class loader", jarPath);
 
-            String filename = jarPath.getFileName().toString();
-            if (filenamesAdded.contains(filename)) {
+            String jarName = jarPath.getFileName().toString();
+            String nameWithoutVersion = FileTools.stripVersionFromFileName(jarName);
+            if (addedJars.contains(nameWithoutVersion)) {
                 logger.warn(
-                        "A JAR file with the same file name ({}) was already added to this class loader. {} will probably not be loaded",
-                        filename,
-                        jarPath
+                        "A JAR file with the same name ({}) was already added to this class loader. {} will probably not be loaded",
+                        nameWithoutVersion,
+                        jarName
                 );
             }
-            filenamesAdded.add(filename);
+            addedJars.add(nameWithoutVersion);
         }
 
         List<Runnable> runnables;
@@ -69,19 +71,6 @@ class ExtensionClassLoader extends URLClassLoader {
                 logger.error("Error when calling runnable of class loader", e);
             }
         }
-    }
-
-    /**
-     * Indicate that a JAR file should be unloaded.
-     * <p>
-     * While this function doesn't currently unload the JAR, it is recommended to call it when a JAR file given to
-     * {@link #addJar(Path)} should not be loaded anymore. A future implementation may actually unload the JAR.
-     *
-     * @param jarPath the path of the JAR file to unload
-     * @throws NullPointerException if the provided path is null
-     */
-    public synchronized void removeJar(Path jarPath) {
-        filenamesAdded.remove(jarPath.getFileName().toString());
     }
 
     /**
