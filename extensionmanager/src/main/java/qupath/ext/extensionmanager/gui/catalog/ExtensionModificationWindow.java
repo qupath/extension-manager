@@ -256,6 +256,8 @@ class ExtensionModificationWindow extends Stage {
 
         executor.execute(() -> {
             try {
+                Optional<Release> previousRelease = extension.getInstalledRelease().getValue();
+
                 extensionCatalogManager.installOrUpdateExtension(
                         catalog,
                         extension,
@@ -273,14 +275,28 @@ class ExtensionModificationWindow extends Stage {
 
                 Platform.runLater(() -> {
                     progressWindow.close();
-                    Dialogs.showInfoNotification(
-                            resources.getString("Catalog.ExtensionModificationWindow.extensionManager"),
-                            MessageFormat.format(
-                                    resources.getString("Catalog.ExtensionModificationWindow.installed"),
-                                    extension.getName(),
-                                    release.getSelectionModel().getSelectedItem().getVersion().toString()
-                            )
-                    );
+
+                    if (previousRelease.isPresent()) {
+                        Dialogs.showMessageDialog(
+                                resources.getString("Catalog.ExtensionModificationWindow.extensionManager"),
+                                MessageFormat.format(
+                                        resources.getString("Catalog.ExtensionModificationWindow.removedAndInstalled"),
+                                        extension.getName(),
+                                        previousRelease.get().getVersion().toString(),
+                                        release.getSelectionModel().getSelectedItem().getVersion().toString()
+                                )
+                        );
+                    } else {
+                        Dialogs.showInfoNotification(
+                                resources.getString("Catalog.ExtensionModificationWindow.extensionManager"),
+                                MessageFormat.format(
+                                        resources.getString("Catalog.ExtensionModificationWindow.installed"),
+                                        extension.getName(),
+                                        release.getSelectionModel().getSelectedItem().getVersion().toString()
+                                )
+                        );
+                    }
+
                     close();
                 });
             } catch (Exception e) {

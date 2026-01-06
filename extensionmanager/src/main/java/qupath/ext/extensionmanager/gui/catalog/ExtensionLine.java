@@ -264,7 +264,7 @@ class ExtensionLine extends HBox implements AutoCloseable {
             }
         }).handle((v, error) -> {
             if (error == null) {
-                Dialogs.showInfoNotification(
+                Dialogs.showMessageDialog(
                         resources.getString("Catalog.ExtensionLine.extensionManager"),
                         MessageFormat.format(
                                 resources.getString("Catalog.ExtensionLine.removed"),
