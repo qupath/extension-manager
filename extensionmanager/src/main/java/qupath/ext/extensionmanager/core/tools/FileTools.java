@@ -11,6 +11,9 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
@@ -19,6 +22,7 @@ import java.util.stream.Stream;
 public class FileTools {
 
     private static final Logger logger = LoggerFactory.getLogger(FileTools.class);
+    private static final Pattern VERSION_PATTERN = Pattern.compile("(-\\d+\\.\\d+\\.\\d+)");
 
     private FileTools() {
         throw new AssertionError("This class is not instantiable.");
@@ -120,6 +124,24 @@ public class FileTools {
             }
         }
         return false;
+    }
+
+    /**
+     * Strip the version from a file name. A version is defined as "-x.y.z" where x, y, and z are positive numbers.
+     * If such version is not found, the input name is returned.
+     *
+     * @param fileName the name to strip the version from
+     * @return the input file name without the potential version
+     * @throws NullPointerException if the provided file name is null
+     */
+    public static String stripVersionFromFileName(String fileName) {
+        Matcher versionMatcher = VERSION_PATTERN.matcher(Objects.requireNonNull(fileName));
+
+        if (versionMatcher.find() && versionMatcher.groupCount() > 0) {
+            return fileName.replace(versionMatcher.group(1), "");
+        } else {
+            return fileName;
+        }
     }
 
     private static boolean moveToTrash(Desktop desktop, File fileToDelete) {
