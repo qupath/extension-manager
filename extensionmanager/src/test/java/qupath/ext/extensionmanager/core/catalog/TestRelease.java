@@ -1,442 +1,102 @@
 package qupath.ext.extensionmanager.core.catalog;
 
-import com.google.gson.Gson;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import qupath.ext.extensionmanager.TestUtils;
+import qupath.ext.extensionmanager.core.Version;
+import qupath.ext.extensionmanager.core.model.ReleaseModel;
+import qupath.ext.extensionmanager.core.model.VersionRangeModel;
 
 import java.net.URI;
 import java.util.List;
 
 public class TestRelease {
 
-    @Nested
-    public class ConstructorTests {
+    @Test
+    void Check_Null_Release_Model() {
+        ReleaseModel releaseModel = null;
 
-        @Test
-        void Check_Valid_Release() {
-            Assertions.assertDoesNotThrow(() -> new Release(
-                    "v0.1.0",
-                    URI.create("https://github.com/qupath/qupath"),
-                    null,
-                    null,
-                    null,
-                    new VersionRange("v1.0.0", null, null)
-            ));
-        }
-
-        @Test
-        void Check_Undefined_Name() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Release(
-                            null,
-                            URI.create("https://github.com/qupath/qupath"),
-                            null,
-                            null,
-                            null,
-                            new VersionRange("v1.0.0", null, null)
-                    )
-            );
-        }
-
-        @Test
-        void Check_Undefined_Main_Url() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Release(
-                            "v0.1.0",
-                            null,
-                            null,
-                            null,
-                            null,
-                            new VersionRange("v1.0.0", null, null)
-                    )
-            );
-        }
-
-        @Test
-        void Check_Undefined_Version_Range() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Release(
-                            "v0.1.0",
-                            URI.create("https://github.com/qupath/qupath"),
-                            null,
-                            null,
-                            null,
-                            null
-                    )
-            );
-        }
-
-        @Test
-        void Check_Invalid_Name() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Release(
-                            "invalid_version",
-                            URI.create("https://github.com/qupath/qupath"),
-                            null,
-                            null,
-                            null,
-                            new VersionRange("v1.0.0", null, null)
-                    )
-            );
-        }
-
-        @Test
-        void Check_Invalid_Main_Url() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Release(
-                            "v0.1.0",
-                            URI.create("https://qupath.readthedocs.io/"),
-                            null,
-                            null,
-                            null,
-                            new VersionRange("v1.0.0", null, null)
-                    )
-            );
-        }
-
-        @Test
-        void Check_Valid_Required_Dependency_Url() {
-            Assertions.assertDoesNotThrow(
-                    () -> new Release(
-                            "v0.1.0",
-                            URI.create("https://github.com/qupath/qupath/"),
-                            List.of(URI.create("https://maven.scijava.org/content")),
-                            null,
-                            null,
-                            new VersionRange("v1.0.0", null, null)
-                    )
-            );
-        }
-
-        @Test
-        void Check_Invalid_Required_Dependency_Url() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Release(
-                            "v0.1.0",
-                            URI.create("https://github.com/qupath/qupath/"),
-                            List.of(URI.create("https://qupath.readthedocs.io/")),
-                            null,
-                            null,
-                            new VersionRange("v1.0.0", null, null)
-                    )
-            );
-        }
-
-        @Test
-        void Check_Valid_Optional_Dependency_Url() {
-            Assertions.assertDoesNotThrow(
-                    () -> new Release(
-                            "v0.1.0",
-                            URI.create("https://github.com/qupath/qupath/"),
-                            null,
-                            List.of(URI.create("https://maven.scijava.org/content")),
-                            null,
-                            new VersionRange("v1.0.0", null, null)
-                    )
-            );
-        }
-
-        @Test
-        void Check_Invalid_Optional_Dependency_Url() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Release(
-                            "v0.1.0",
-                            URI.create("https://github.com/qupath/qupath/"),
-                            null,
-                            List.of(URI.create("https://qupath.readthedocs.io/")),
-                            null,
-                            new VersionRange("v1.0.0", null, null)
-                    )
-            );
-        }
-
-        @Test
-        void Check_Valid_Javadoc_Url() {
-            Assertions.assertDoesNotThrow(
-                    () -> new Release(
-                            "v0.1.0",
-                            URI.create("https://github.com/qupath/qupath/"),
-                            null,
-                            null,
-                            List.of(URI.create("https://maven.scijava.org/content")),
-                            new VersionRange("v1.0.0", null, null)
-                    )
-            );
-        }
-
-        @Test
-        void Check_Invalid_Javadoc_Url() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Release(
-                            "v0.1.0",
-                            URI.create("https://github.com/qupath/qupath/"),
-                            null,
-                            null,
-                            List.of(URI.create("https://qupath.readthedocs.io/")),
-                            new VersionRange("v1.0.0", null, null)
-                    )
-            );
-        }
+        Assertions.assertThrows(NullPointerException.class, () -> new Release(releaseModel));
     }
 
-    @Nested
-    public class JsonTests {
+    @Test
+    void Check_Version() {
+        Release release = createRelease();
+        Version expectedVersion = new Version("v1.0.0");
 
-        @Test
-        void Check_Valid_Release() {
-            Release expectedRelease = new Release(
-                    "v0.1.0",
-                    URI.create("https://github.com/qupath/qupath"),
-                    null,
-                    null,
-                    null,
-                    new VersionRange("v1.0.0", null, null)
-            );
+        Version version = release.getVersion();
 
-            Release release = new Gson().fromJson("""
-                    {
-                        "name": "v0.1.0",
-                        "mainUrl": "https://github.com/qupath/qupath",
-                        "versionRange": {
-                            "min": "v1.0.0"
-                        }
-                    }
-                    """
-                    ,
-                    Release.class
-            );
+        Assertions.assertEquals(expectedVersion, version);
+    }
 
-            Assertions.assertEquals(expectedRelease, release);
-        }
+    @Test
+    void Check_Compatible_Version() {
+        Release release = createRelease();
+        Version compatibleVersion = new Version("v0.1.0");
 
-        @Test
-        void Check_Undefined_Name() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "mainUrl": "https://github.com/qupath/qupath",
-                                "versionRange": {
-                                    "min": "v1.0.0"
-                                }
-                            }
-                            """,
-                            Release.class
-                    )
-            );
-        }
+        boolean isCompatible = release.isCompatible(compatibleVersion);
 
-        @Test
-        void Check_Undefined_Main_Url() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "v0.1.0",
-                                "versionRange": {
-                                    "min": "v1.0.0"
-                                }
-                            }
-                            """,
-                            Release.class
-                    )
-            );
-        }
+        Assertions.assertTrue(isCompatible);
+    }
 
-        @Test
-        void Check_Undefined_Version_Range() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "v0.1.0",
-                                "mainUrl": "https://github.com/qupath/qupath"
-                            }
-                            """,
-                            Release.class
-                    )
-            );
-        }
+    @Test
+    void Check_Incompatible_Version() {
+        Release release = createRelease();
+        Version compatibleVersion = new Version("v0.30.0");
 
-        @Test
-        void Check_Invalid_Name() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "invalid_version",
-                                "mainUrl": "https://github.com/qupath/qupath",
-                                "versionRange": {
-                                    "min": "v1.0.0"
-                                }
-                            }
-                            """,
-                            Release.class
-                    )
-            );
-        }
+        boolean isCompatible = release.isCompatible(compatibleVersion);
 
-        @Test
-        void Check_Invalid_Version_Range() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "v0.1.0",
-                                "mainUrl": "https://github.com/qupath/qupath",
-                                "versionRange": {}
-                            }
-                            """,
-                            Release.class
-                    )
-            );
-        }
+        Assertions.assertFalse(isCompatible);
+    }
 
-        @Test
-        void Check_Invalid_Main_Url() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "v0.1.0",
-                                "mainUrl": "https://qupath.readthedocs.io/",
-                                "versionRange": {
-                                    "min": "v1.0.0"
-                                }
-                            }
-                            """,
-                            Release.class
-                    )
-            );
-        }
+    @Test
+    void Check_Main_Url() {
+        Release release = createRelease();
+        URI expectedMainUrl = URI.create("https://github.com/main");
 
-        @Test
-        void Check_Valid_Required_Dependency_Url() {
-            List<URI> expectedRequiredDependencyUrls = List.of(URI.create("https://maven.scijava.org/content"));
+        URI mainUrl = release.getMainUrl();
 
-            Release release = new Gson().fromJson("""
-                    {
-                        "name": "v0.1.0",
-                        "mainUrl": "https://github.com/qupath/qupath",
-                        "requiredDependencyUrls": ["https://maven.scijava.org/content"],
-                        "versionRange": {
-                            "min": "v1.0.0"
-                        }
-                    }
-                    """
-                    ,
-                    Release.class
-            );
+        Assertions.assertEquals(expectedMainUrl, mainUrl);
+    }
 
-            Assertions.assertEquals(expectedRequiredDependencyUrls, release.requiredDependencyUrls());
-        }
+    @Test
+    void Check_Javadocs_Urls() {
+        Release release = createRelease();
+        List<URI> expectedJavadocsUrls = List.of(URI.create("https://github.com/javadocs"));
 
-        @Test
-        void Check_Invalid_Required_Dependency_Url() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "v0.1.0",
-                                "mainUrl": "https://github.com/qupath/qupath/",
-                                "requiredDependencyUrls": ["https://qupath.readthedocs.io/"],
-                                "versionRange": {
-                                    "min": "v1.0.0"
-                                }
-                            }
-                            """,
-                            Release.class
-                    )
-            );
-        }
+        List<URI> javadocUrls = release.getJavadocUrls();
 
-        @Test
-        void Check_Valid_Optional_Dependency_Url() {
-            List<URI> expectedOptionalDependencyUrls = List.of(URI.create("https://maven.scijava.org/content"));
+        TestUtils.assertCollectionsEqualsWithoutOrder(expectedJavadocsUrls, javadocUrls);
+    }
 
-            Release release = new Gson().fromJson("""
-                    {
-                        "name": "v0.1.0",
-                        "mainUrl": "https://github.com/qupath/qupath",
-                        "optionalDependencyUrls": ["https://maven.scijava.org/content"],
-                        "versionRange": {
-                            "min": "v1.0.0"
-                        }
-                    }
-                    """
-                    ,
-                    Release.class
-            );
+    @Test
+    void Check_Required_Dependencies_Urls() {
+        Release release = createRelease();
+        List<URI> expectedRequiredDependenciesUrls = List.of(URI.create("https://github.com/required"));
 
-            Assertions.assertEquals(expectedOptionalDependencyUrls, release.optionalDependencyUrls());
-        }
+        List<URI> requiredDependencyUrls = release.getRequiredDependencyUrls();
 
-        @Test
-        void Check_Invalid_Optional_Dependency_Url() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "v0.1.0",
-                                "mainUrl": "https://github.com/qupath/qupath/",
-                                "optionalDependencyUrls": ["https://qupath.readthedocs.io/"],
-                                "versionRange": {
-                                    "min": "v1.0.0"
-                                }
-                            }
-                            """,
-                            Release.class
-                    )
-            );
-        }
+        TestUtils.assertCollectionsEqualsWithoutOrder(expectedRequiredDependenciesUrls, requiredDependencyUrls);
+    }
 
-        @Test
-        void Check_Valid_Javadoc_Url() {
-            List<URI> expectedJavadocUrls = List.of(URI.create("https://maven.scijava.org/content"));
+    @Test
+    void Check_Optional_Dependencies_Urls() {
+        Release release = createRelease();
+        List<URI> expectedOptionalDependenciesUrls = List.of(URI.create("https://github.com/optional"));
 
-            Release release = new Gson().fromJson("""
-                    {
-                        "name": "v0.1.0",
-                        "mainUrl": "https://github.com/qupath/qupath",
-                        "javadocUrls": ["https://maven.scijava.org/content"],
-                        "versionRange": {
-                            "min": "v1.0.0"
-                        }
-                    }
-                    """
-                    ,
-                    Release.class
-            );
+        List<URI> optionalDependencyUrls = release.getOptionalDependencyUrls();
 
-            Assertions.assertEquals(expectedJavadocUrls, release.javadocUrls());
-        }
+        TestUtils.assertCollectionsEqualsWithoutOrder(expectedOptionalDependenciesUrls, optionalDependencyUrls);
+    }
 
-        @Test
-        void Check_Invalid_Javadoc_Url() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "v0.1.0",
-                                "mainUrl": "https://github.com/qupath/qupath/",
-                                "javadocUrls": ["https://qupath.readthedocs.io/"],
-                                "versionRange": {
-                                    "min": "v1.0.0"
-                                }
-                            }
-                            """,
-                            Release.class
-                    )
-            );
-        }
+    private static Release createRelease() {
+        return new Release(new ReleaseModel(
+                "v1.0.0",
+                URI.create("https://github.com/main"),
+                List.of(URI.create("https://github.com/required")),
+                List.of(URI.create("https://github.com/optional")),
+                List.of(URI.create("https://github.com/javadocs")),
+                new VersionRangeModel("v0.1.0", "v0.2.0", null)
+        ));
     }
 }

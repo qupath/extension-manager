@@ -11,6 +11,7 @@ import java.io.IOException;
 
 /**
  * A window that displays the progress of a long-running and cancellable operation.
+ * <p>
  * It is modal to its owning window.
  */
 public class ProgressWindow extends Stage {
@@ -25,9 +26,9 @@ public class ProgressWindow extends Stage {
      * Create the window.
      *
      * @param label a text describing the operation
-     * @param onCancelClicked a function that will be called when the user cancel the operation. This window is
-     *                        already automatically closed when this happens
-     * @throws IOException when an error occurs while creating the window
+     * @param onCancelClicked a function that will be called when the user cancel the operation. This window is automatically
+     *                        closed when this happens
+     * @throws IOException if an error occurs while creating the window
      */
     public ProgressWindow(String label, Runnable onCancelClicked) throws IOException {
         this.onCancelClicked = onCancelClicked;
@@ -48,8 +49,7 @@ public class ProgressWindow extends Stage {
     /**
      * Set the progress displayed by the window.
      *
-     * @param progress a number between 0 and 1, where 0 means the beginning and 1 the end of
-     *                 the operation
+     * @param progress a number between 0 and 1, where 0 means the beginning and 1 the end of the operation
      */
     public void setProgress(float progress) {
         progressBar.setProgress(progress);

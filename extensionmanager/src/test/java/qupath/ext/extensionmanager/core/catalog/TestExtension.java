@@ -1,9 +1,12 @@
 package qupath.ext.extensionmanager.core.catalog;
 
-import com.google.gson.Gson;
 import org.junit.jupiter.api.Assertions;
-import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import qupath.ext.extensionmanager.TestUtils;
+import qupath.ext.extensionmanager.core.Version;
+import qupath.ext.extensionmanager.core.model.ExtensionModel;
+import qupath.ext.extensionmanager.core.model.ReleaseModel;
+import qupath.ext.extensionmanager.core.model.VersionRangeModel;
 
 import java.net.URI;
 import java.util.List;
@@ -11,570 +14,384 @@ import java.util.Optional;
 
 public class TestExtension {
 
-    @Nested
-    public class ConstructorTests {
-
-        @Test
-        void Check_Valid_Extension() {
-            Assertions.assertDoesNotThrow(() -> new Extension(
-                    "",
-                    "",
-                    "",
-                    URI.create("https://github.com/qupath/qupath"),
-                    false,
-                    List.of(new Release(
-                            "v1.0.0",
-                            URI.create("https://github.com/qupath/qupath"),
-                            List.of(URI.create("https://github.com/qupath/qupath")),
-                            null,
-                            null,
-                            new VersionRange("v1.0.0", null, null)
-                    ))
-            ));
-        }
-
-        @Test
-        void Check_Undefined_Name() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Extension(
-                            null,
-                            "",
-                            "",
-                            URI.create("https://github.com/qupath/qupath"),
-                            false,
-                            List.of(new Release(
-                                    "v1.0.0",
-                                    URI.create("https://github.com/qupath/qupath"),
-                                    List.of(URI.create("https://github.com/qupath/qupath")),
-                                    null,
-                                    null,
-                                    new VersionRange("v1.0.0", null, null)
-                            ))
-                    )
-            );
-        }
-
-        @Test
-        void Check_Undefined_Description() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Extension(
-                            "",
-                            null,
-                            "",
-                            URI.create("https://github.com/qupath/qupath"),
-                            false,
-                            List.of(new Release(
-                                    "v1.0.0",
-                                    URI.create("https://github.com/qupath/qupath"),
-                                    List.of(URI.create("https://github.com/qupath/qupath")),
-                                    null,
-                                    null,
-                                    new VersionRange("v1.0.0", null, null)
-                            ))
-                    )
-            );
-        }
-
-        @Test
-        void Check_Undefined_Author() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Extension(
-                            "",
-                            "",
-                            null,
-                            URI.create("https://github.com/qupath/qupath"),
-                            false,
-                            List.of(new Release(
-                                    "v1.0.0",
-                                    URI.create("https://github.com/qupath/qupath"),
-                                    List.of(URI.create("https://github.com/qupath/qupath")),
-                                    null,
-                                    null,
-                                    new VersionRange("v1.0.0", null, null)
-                            ))
-                    )
-            );
-        }
-
-        @Test
-        void Check_Undefined_Homepage() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Extension(
-                            "",
-                            "",
-                            "",
-                            null,
-                            false,
-                            List.of(new Release(
-                                    "v1.0.0",
-                                    URI.create("https://github.com/qupath/qupath"),
-                                    List.of(URI.create("https://github.com/qupath/qupath")),
-                                    null,
-                                    null,
-                                    new VersionRange("v1.0.0", null, null)
-                            ))
-                    )
-            );
-        }
-
-        @Test
-        void Check_Undefined_Releases() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Extension(
-                            "",
-                            "",
-                            "",
-                            URI.create("https://github.com/qupath/qupath"),
-                            false,
-                            null
-                    )
-            );
-        }
-
-        @Test
-        void Check_Homepage_Not_GitHub() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Extension(
-                        "",
-                        "",
-                        "",
-                        URI.create("https://qupath.readthedocs.io/"),
-                        false,
-                        List.of(new Release(
-                                "v1.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.0.0", null, null)
-                        ))
-                    )
-            );
-        }
-    }
-
-    @Nested
-    public class JsonTests {
-
-        @Test
-        void Check_Valid_Extension() {
-            Extension expectedExtension = new Extension(
-                    "",
-                    "",
-                    "",
-                    URI.create("https://github.com/qupath/qupath"),
-                    true,
-                    List.of(new Release(
-                            "v1.0.0",
-                            URI.create("https://github.com/qupath/qupath"),
-                            null,
-                            null,
-                            null,
-                            new VersionRange("v1.0.0", null, null)
-                    ))
-            );
-
-            Extension extension = new Gson().fromJson("""
-                    {
-                        "name": "",
-                        "description": "",
-                        "author": "",
-                        "homepage": "https://github.com/qupath/qupath",
-                        "starred": true,
-                        "releases": [
-                            {
-                                "name": "v1.0.0",
-                                "mainUrl": "https://github.com/qupath/qupath",
-                                "versionRange": {
-                                    "min": "v1.0.0"
-                                }
-                            }
-                        ]
-                    }
-                    """,
-                    Extension.class
-            );
-
-            Assertions.assertEquals(expectedExtension, extension);
-        }
-
-        @Test
-        void Check_Undefined_Name() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "description": "",
-                                "author": "",
-                                "homepage": "https://github.com/qupath/qupath",
-                                "releases": [
-                                    {
-                                        "name": "v1.0.0",
-                                        "mainUrl": "https://github.com/qupath/qupath",
-                                        "versionRange": {
-                                            "min": "v1.0.0"
-                                        }
-                                    }
-                                ]
-                            }
-                            """,
-                            Extension.class
-                    )
-            );
-        }
-
-        @Test
-        void Check_Undefined_Description() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "",
-                                "author": "",
-                                "homepage": "https://github.com/qupath/qupath",
-                                "releases": [
-                                    {
-                                        "name": "v1.0.0",
-                                        "mainUrl": "https://github.com/qupath/qupath",
-                                        "versionRange": {
-                                            "min": "v1.0.0"
-                                        }
-                                    }
-                                ]
-                            }
-                            """,
-                            Extension.class
-                    )
-            );
-        }
-
-        @Test
-        void Check_Undefined_Author() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "",
-                                "description": "",
-                                "homepage": "https://github.com/qupath/qupath",
-                                "releases": [
-                                    {
-                                        "name": "v1.0.0",
-                                        "mainUrl": "https://github.com/qupath/qupath",
-                                        "versionRange": {
-                                            "min": "v1.0.0"
-                                        }
-                                    }
-                                ]
-                            }
-                            """,
-                            Extension.class
-                    )
-            );
-        }
-
-        @Test
-        void Check_Undefined_Homepage() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "",
-                                "description": "",
-                                "author": "",
-                                "releases": [
-                                    {
-                                        "name": "v1.0.0",
-                                        "mainUrl": "https://github.com/qupath/qupath",
-                                        "versionRange": {
-                                            "min": "v1.0.0"
-                                        }
-                                    }
-                                ]
-                            }
-                            """,
-                            Extension.class
-                    )
-            );
-        }
-
-        @Test
-        void Check_Undefined_Releases() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "",
-                                "description": "",
-                                "author": "",
-                                "homepage": "https://github.com/qupath/qupath"
-                            }
-                            """,
-                            Extension.class
-                    )
-            );
-        }
-
-        @Test
-        void Check_Invalid_Release() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "",
-                                "description": "",
-                                "author": "",
-                                "homepage": "https://github.com/qupath/qupath",
-                                "releases": [{}]
-                            }
-                            """,
-                            Extension.class
-                    )
-            );
-        }
-
-        @Test
-        void Check_Homepage_Not_GitHub() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "",
-                                "description": "",
-                                "author": "",
-                                "homepage": "https://qupath.readthedocs.io/",
-                                "releases": [
-                                    {
-                                        "name": "v1.0.0",
-                                        "mainUrl": "https://github.com/qupath/qupath",
-                                        "versionRange": {
-                                            "min": "v1.0.0"
-                                        }
-                                    }
-                                ]
-                            }
-                            """,
-                            Extension.class
-                    )
-            );
-        }
-    }
     @Test
-    void Check_Max_Compatible_Release_When_Two_Compatibles() {
-        Release expectedRelease = new Release(
-                "v2.0.0",
-                URI.create("https://github.com/qupath/qupath"),
-                List.of(URI.create("https://github.com/qupath/qupath")),
-                null,
-                null,
-                new VersionRange("v1.1.0", null, null)
-        );
-        Extension extension = new Extension(
-                "",
-                "",
-                "",
-                URI.create("https://github.com/qupath/qupath"),
-                false,
-                List.of(
-                        new Release(
-                                "v1.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.0.0", null, null)
-                        ),
-                        expectedRelease,
-                        new Release(
-                                "v3.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.2.0", null, null)
-                        )
-                )
-        );
-        String version = "v1.1.0";
-
-        Release release = extension.getMaxCompatibleRelease(version).orElse(null);
-
-        Assertions.assertEquals(expectedRelease, release);
-    }
-
-    @Test
-    void Check_Max_Compatible_Release_When_Three_Compatible() {
-        Release expectedRelease = new Release(
-                "v3.0.0",
-                URI.create("https://github.com/qupath/qupath"),
-                List.of(URI.create("https://github.com/qupath/qupath")),
-                null,
-                null,
-                new VersionRange("v1.2.0", null, null)
-        );
-        Extension extension = new Extension(
-                "",
-                "",
-                "",
-                URI.create("https://github.com/qupath/qupath"),
-                false,
-                List.of(
-                        new Release(
-                                "v1.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.0.0", null, null)
-                        ),
-                        new Release(
-                                "v2.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.1.0", null, null)
-                        ),
-                        expectedRelease
-                )
-        );
-        String version = "v2.0.0";
-
-        Release release = extension.getMaxCompatibleRelease(version).orElse(null);
-
-        Assertions.assertEquals(expectedRelease, release);
-    }
-
-    @Test
-    void Check_Max_Compatible_Release_When_Zero_Compatible() {
-        Extension extension = new Extension(
-                "",
-                "",
-                "",
-                URI.create("https://github.com/qupath/qupath"),
-                false,
-                List.of(
-                        new Release(
-                                "v1.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.0.0", null, null)
-                        ),
-                        new Release(
-                                "v2.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.1.0", null, null)
-                        ),
-                        new Release(
-                                "v3.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.2.0", null, null)
-                        )
-                )
-        );
-        String version = "v0.0.1";
-
-        Optional<Release> release = extension.getMaxCompatibleRelease(version);
-
-        Assertions.assertTrue(release.isEmpty());
-    }
-
-    @Test
-    void Check_Max_Compatible_Release_When_Invalid_Version() {
-        Extension extension = new Extension(
-                "",
-                "",
-                "",
-                URI.create("https://github.com/qupath/qupath"),
-                false,
-                List.of(
-                        new Release(
-                                "v1.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.0.0", null, null)
-                        ),
-                        new Release(
-                                "v2.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.1.0", null, null)
-                        ),
-                        new Release(
-                                "v3.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.2.0", null, null)
-                        )
-                )
-        );
-        String version = "invalid_version";
-
-        Assertions.assertThrows(
-                IllegalArgumentException.class,
-                () -> extension.getMaxCompatibleRelease(version)
-        );
-    }
-
-    @Test
-    void Check_Max_Compatible_Release_When_Null_Version() {
-        Extension extension = new Extension(
-                "",
-                "",
-                "",
-                URI.create("https://github.com/qupath/qupath"),
-                false,
-                List.of(
-                        new Release(
-                                "v1.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.0.0", null, null)
-                        ),
-                        new Release(
-                                "v2.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.1.0", null, null)
-                        ),
-                        new Release(
-                                "v3.0.0",
-                                URI.create("https://github.com/qupath/qupath"),
-                                List.of(URI.create("https://github.com/qupath/qupath")),
-                                null,
-                                null,
-                                new VersionRange("v1.2.0", null, null)
-                        )
-                )
-        );
+    void Check_Null_Extension_Model() {
+        ExtensionModel extensionModel = null;
+        Release installedRelease = new Release(new ReleaseModel(
+                "v1.0.0",
+                URI.create("http://github.com/1.0.0"),
+                List.of(),
+                List.of(),
+                List.of(),
+                new VersionRangeModel("v1.0.0", null, null)
+        ));
+        boolean optionalDependenciesInstalled = true;
 
         Assertions.assertThrows(
                 NullPointerException.class,
-                () -> extension.getMaxCompatibleRelease(null)
+                () -> new Extension(extensionModel, installedRelease, optionalDependenciesInstalled)
+        );
+    }
+
+    @Test
+    void Check_Name() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                null,
+                false
+        );
+        String expectedName = "name";
+
+        String name = extension.getName();
+
+        Assertions.assertEquals(expectedName, name);
+    }
+
+    @Test
+    void Check_Description() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                null,
+                false
+        );
+        String expectedDescription = "description";
+
+        String description = extension.getDescription();
+
+        Assertions.assertEquals(expectedDescription, description);
+    }
+
+    @Test
+    void Check_Releases() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                null,
+                false
+        );
+        List<Release> expectedReleases = List.of(
+                new Release(new ReleaseModel(
+                        "v0.1.0",
+                        URI.create("http://github.com/0.1.0"),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        new VersionRangeModel("v0.1.0", "v0.2.0", null)
+                )),
+                new Release(new ReleaseModel(
+                        "v0.2.0",
+                        URI.create("http://github.com/0.2.0"),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        new VersionRangeModel("v0.1.0", "v0.2.0", null)
+                ))
+        );
+
+        List<Release> releases = extension.getReleases();
+
+        TestUtils.assertCollectionsEqualsWithoutOrder(expectedReleases, releases);
+    }
+
+    @Test
+    void Check_Homepage() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                null,
+                false
+        );
+        URI expectedHomepage = URI.create("http://github.com/extension");
+
+        URI homepage = extension.getHomepage();
+
+        Assertions.assertEquals(expectedHomepage, homepage);
+    }
+
+    @Test
+    void Check_Starred() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                null,
+                false
+        );
+        boolean expectedStarred = true;
+
+        boolean starred = extension.isStarred();
+
+        Assertions.assertEquals(expectedStarred, starred);
+    }
+
+    @Test
+    void Check_Installed_Release_When_Not_Installed() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                null,
+                false
+        );
+
+        Optional<Release> installedRelease = extension.getInstalledRelease().getValue();
+
+        Assertions.assertTrue(installedRelease.isEmpty());
+    }
+
+    @Test
+    void Check_Installed_Release_When_Installed() {
+        Release expectedInstalledRelease = new Release(new ReleaseModel(
+                "v0.2.0",
+                URI.create("http://github.com/0.2.0"),
+                List.of(),
+                List.of(),
+                List.of(),
+                new VersionRangeModel("v0.1.0", "v0.2.0", null)
+        ));
+        Extension extension = new Extension(
+                createExtensionModel(),
+                expectedInstalledRelease,
+                false
+        );
+
+        Release installedRelease = extension.getInstalledRelease().getValue().orElse(null);
+
+        Assertions.assertEquals(expectedInstalledRelease, installedRelease);
+    }
+
+    @Test
+    void Check_Installed_Release_When_Installed_After_Initialization() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                null,
+                false
+        );
+        Release expectedInstalledRelease = new Release(new ReleaseModel(
+                "v0.2.0",
+                URI.create("http://github.com/0.2.0"),
+                List.of(),
+                List.of(),
+                List.of(),
+                new VersionRangeModel("v0.1.0", "v0.2.0", null)
+        ));
+        extension.installRelease(expectedInstalledRelease, false);
+
+        Release installedRelease = extension.getInstalledRelease().getValue().orElse(null);
+
+        Assertions.assertEquals(expectedInstalledRelease, installedRelease);
+    }
+
+    @Test
+    void Check_Installed_Release_When_Uninstalled() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                new Release(new ReleaseModel(
+                        "v0.2.0",
+                        URI.create("http://github.com/0.2.0"),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        new VersionRangeModel("v0.1.0", "v0.2.0", null)
+                )),
+                false
+        );
+        extension.uninstallRelease();
+
+        Optional<Release> installedRelease = extension.getInstalledRelease().getValue();
+
+        Assertions.assertTrue(installedRelease.isEmpty());
+    }
+
+    @Test
+    void Check_Optional_Dependencies_Installed_When_Not_Installed() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                null,
+                false
+        );
+
+        boolean optionalDependenciesInstalled = extension.areOptionalDependenciesInstalled().getValue();
+
+        Assertions.assertFalse(optionalDependenciesInstalled);
+    }
+
+    @Test
+    void Check_Optional_Dependencies_Installed_When_Installed() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                null,
+                true
+        );
+
+        boolean optionalDependenciesInstalled = extension.areOptionalDependenciesInstalled().getValue();
+
+        Assertions.assertTrue(optionalDependenciesInstalled);
+    }
+
+    @Test
+    void Check_Optional_Dependencies_Installed_When_Installed_After_Initialization() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                null,
+                false
+        );
+        extension.installRelease(
+                new Release(new ReleaseModel(
+                        "v0.2.0",
+                        URI.create("http://github.com/0.2.0"),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        new VersionRangeModel("v0.1.0", "v0.2.0", null)
+                )),
+                true
+        );
+
+        boolean optionalDependenciesInstalled = extension.areOptionalDependenciesInstalled().getValue();
+
+        Assertions.assertTrue(optionalDependenciesInstalled);
+    }
+
+    @Test
+    void Check_Optional_Dependencies_Installed_When_Not_Installed_After_Initialization() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                null,
+                false
+        );
+        extension.installRelease(
+                new Release(new ReleaseModel(
+                        "v0.2.0",
+                        URI.create("http://github.com/0.2.0"),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        new VersionRangeModel("v0.1.0", "v0.2.0", null)
+                )),
+                false
+        );
+
+        boolean optionalDependenciesInstalled = extension.areOptionalDependenciesInstalled().getValue();
+
+        Assertions.assertFalse(optionalDependenciesInstalled);
+    }
+
+    @Test
+    void Check_Optional_Dependencies_Installed_When_Uninstalled() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                null,
+                true
+        );
+        extension.uninstallRelease();
+
+        boolean optionalDependenciesInstalled = extension.areOptionalDependenciesInstalled().getValue();
+
+        Assertions.assertFalse(optionalDependenciesInstalled);
+    }
+
+    @Test
+    void Check_No_Available_Updates_When_Extension_Not_Installed() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                null,
+                false
+        );
+        Version version = new Version("v0.1.0");
+
+        Optional<UpdateAvailable> updateAvailable = extension.getUpdateAvailable(version);
+
+        Assertions.assertTrue(updateAvailable.isEmpty());
+    }
+
+    @Test
+    void Check_No_Available_Updates_When_No_Compatible_Release() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                new Release(new ReleaseModel(
+                        "v0.1.0",
+                        URI.create("http://github.com/0.1.0"),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        new VersionRangeModel("v0.1.0", "v0.2.0", null)
+                )),
+                false
+        );
+        Version version = new Version("v0.30.0");
+
+        Optional<UpdateAvailable> updateAvailable = extension.getUpdateAvailable(version);
+
+        Assertions.assertTrue(updateAvailable.isEmpty());
+    }
+
+    @Test
+    void Check_No_Available_Updates_When_Already_Latest_Release() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                new Release(new ReleaseModel(
+                        "v0.2.0",
+                        URI.create("http://github.com/0.2.0"),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        new VersionRangeModel("v0.1.0", "v0.2.0", null)
+                )),
+                false
+        );
+        Version version = new Version("v0.1.0");
+
+        Optional<UpdateAvailable> updateAvailable = extension.getUpdateAvailable(version);
+
+        Assertions.assertTrue(updateAvailable.isEmpty());
+    }
+
+    @Test
+    void Check_Available_Update() {
+        Extension extension = new Extension(
+                createExtensionModel(),
+                new Release(new ReleaseModel(
+                        "v0.1.0",
+                        URI.create("http://github.com/0.1.0"),
+                        List.of(),
+                        List.of(),
+                        List.of(),
+                        new VersionRangeModel("v0.1.0", "v0.2.0", null)
+                )),
+                false
+        );
+        Version version = new Version("v0.1.0");
+        UpdateAvailable expectedUpdateAvailable = new UpdateAvailable(
+                "name",
+                new Version("v0.1.0"),
+                new Version("v0.2.0")
+        );
+
+        UpdateAvailable updateAvailable = extension.getUpdateAvailable(version).orElse(null);
+
+        Assertions.assertEquals(expectedUpdateAvailable, updateAvailable);
+    }
+
+    private static ExtensionModel createExtensionModel() {
+        return new ExtensionModel(
+                "name",
+                "description",
+                "author",
+                URI.create("http://github.com/extension"),
+                true,
+                List.of(
+                        new ReleaseModel(
+                                "v0.1.0",
+                                URI.create("http://github.com/0.1.0"),
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                new VersionRangeModel("v0.1.0", "v0.2.0", null)
+                        ),
+                        new ReleaseModel(
+                                "v0.2.0",
+                                URI.create("http://github.com/0.2.0"),
+                                List.of(),
+                                List.of(),
+                                List.of(),
+                                new VersionRangeModel("v0.1.0", "v0.2.0", null)
+                        )
+                )
         );
     }
 }

@@ -1,0 +1,26 @@
+{
+    "name": "Some catalog 2",
+    "description": "Some description 2",
+    "extensions": [{
+        "name": "Some extension 2",
+        "description": "Some extension description 2",
+        "author": "Some author 2",
+        "homepage": "http://github.com/qupath/qupath",
+        "releases": [
+            {
+                "name": "v0.2.0",
+                "main_url": "https://github.com/qupath/qupath",
+                "version_range": {
+                    "min": "v2.0.0"
+                }
+            },
+            {
+                "name": "v2.0.0",
+                "main_url": "https://github.com/qupath/qupath",
+                "version_range": {
+                    "min": "v2.0.0"
+                }
+            }
+        ]
+    }]
+}

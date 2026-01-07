@@ -166,4 +166,31 @@ public class TestFileTools {
 
         Assertions.assertTrue(isParent);
     }
+
+    @Test
+    void Check_Stripped_Version_With_Null_File_Name() {
+        String fileName = null;
+
+        Assertions.assertThrows(NullPointerException.class, () -> FileTools.stripVersionFromFileName(fileName));
+    }
+
+    @Test
+    void Check_Stripped_Version_When_Version_Present() {
+        String fileName = "qupath-extension-04.2.145-javadoc.jar";
+        String expectedStrippedName = "qupath-extension-javadoc.jar";
+
+        String strippedName = FileTools.stripVersionFromFileName(fileName);
+
+        Assertions.assertEquals(expectedStrippedName, strippedName);
+    }
+
+    @Test
+    void Check_Stripped_Version_When_Version_Not_Present() {
+        String fileName = "qupath-extension.jar";
+        String expectedStrippedName = "qupath-extension.jar";
+
+        String strippedName = FileTools.stripVersionFromFileName(fileName);
+
+        Assertions.assertEquals(expectedStrippedName, strippedName);
+    }
 }

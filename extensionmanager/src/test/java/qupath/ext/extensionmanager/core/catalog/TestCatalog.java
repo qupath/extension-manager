@@ -1,202 +1,386 @@
 package qupath.ext.extensionmanager.core.catalog;
 
-import com.google.gson.Gson;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import qupath.ext.extensionmanager.SimpleServer;
+import qupath.ext.extensionmanager.TestUtils;
+import qupath.ext.extensionmanager.core.model.CatalogModel;
+import qupath.ext.extensionmanager.core.model.ExtensionModel;
+import qupath.ext.extensionmanager.core.model.ReleaseModel;
+import qupath.ext.extensionmanager.core.model.VersionRangeModel;
+import qupath.ext.extensionmanager.core.registry.RegistryCatalog;
+import qupath.ext.extensionmanager.core.registry.RegistryExtension;
 
+import java.io.IOException;
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
+import java.util.concurrent.ExecutionException;
 
 public class TestCatalog {
 
+    abstract static class GenericCreation {
+
+        @Test
+        void Check_Name() {
+            String expectedName = "name";
+
+            Catalog catalog = createCatalog();
+
+            Assertions.assertEquals(expectedName, catalog.getName());
+        }
+
+        @Test
+        void Check_Description() {
+            String expectedDescription = "description";
+
+            Catalog catalog = createCatalog();
+
+            Assertions.assertEquals(expectedDescription, catalog.getDescription());
+        }
+
+        @Test
+        void Check_Uri() {
+            URI expectedUri = URI.create("http://uri.com");
+
+            Catalog catalog = createCatalog();
+
+            Assertions.assertEquals(expectedUri, catalog.getUri());
+        }
+
+        @Test
+        void Check_Raw_Uri() {
+            URI expectedRawUri = URI.create("http://raw.com");
+
+            Catalog catalog = createCatalog();
+
+            Assertions.assertEquals(expectedRawUri, catalog.getRawUri());
+        }
+
+        @Test
+        void Check_Deletable() {
+            boolean expectedDeletable = false;
+
+            Catalog catalog = createCatalog();
+
+            Assertions.assertEquals(expectedDeletable, catalog.isDeletable());
+        }
+
+        @Test
+        abstract void Check_Extensions() throws IOException, ExecutionException, InterruptedException;
+
+        protected abstract Catalog createCatalog();
+    }
+
     @Nested
-    public class ConstructorTests {
+    class AttributeCreation extends GenericCreation {
 
         @Test
-        void Check_Valid_Catalog() {
-            Assertions.assertDoesNotThrow(() -> new Catalog(
-                    "",
-                    "",
-                    List.of(new Extension("", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of()))
+        void Check_Null_Name() {
+            String name = null;
+            String description = "description";
+            URI uri = URI.create("http://uri.com");
+            URI rawUri = URI.create("http://raw.com");
+
+            Assertions.assertThrows(NullPointerException.class, () -> new Catalog(name, description, uri, rawUri));
+        }
+
+        @Test
+        void Check_Null_Description() {
+            String name = null;
+            String description = "description";
+            URI uri = URI.create("http://uri.com");
+            URI rawUri = URI.create("http://raw.com");
+
+            Assertions.assertThrows(NullPointerException.class, () -> new Catalog(name, description, uri, rawUri));
+        }
+
+        @Test
+        void Check_Null_Uri() {
+            String name = "name";
+            String description = "description";
+            URI uri = null;
+            URI rawUri = URI.create("http://raw.com");
+
+            Assertions.assertThrows(NullPointerException.class, () -> new Catalog(name, description, uri, rawUri));
+        }
+
+        @Test
+        void Check_Null_Raw_Uri() {
+            String name = "name";
+            String description = "description";
+            URI uri = URI.create("http://uri.com");
+            URI rawUri = null;
+
+            Assertions.assertThrows(NullPointerException.class, () -> new Catalog(name, description, uri, rawUri));
+        }
+
+        @Test
+        @Override
+        void Check_Extensions() throws IOException, ExecutionException, InterruptedException {
+            SimpleServer server = new SimpleServer(List.of(new SimpleServer.FileToServe(
+                    "catalog.json",
+                    Objects.requireNonNull(TestCatalog.class.getResourceAsStream("catalog.json"))
+            )));
+            Catalog catalog = new Catalog(
+                    "name",
+                    "description",
+                    server.getURI("catalog.json"),
+                    server.getURI("catalog.json")
+            );
+            List<Extension> expectedExtensions = List.of(new Extension(
+                    new ExtensionModel(
+                            "Some extension",
+                            "Some extension description",
+                            "Some author",
+                            URI.create("http://github.com/qupath/qupath"),
+                            false,
+                            List.of(
+                                    new ReleaseModel(
+                                            "v0.1.0",
+                                            URI.create("https://github.com/qupath/qupath"),
+                                            List.of(),
+                                            List.of(),
+                                            List.of(),
+                                            new VersionRangeModel("v1.0.0", null, null)
+                                    ),
+                                    new ReleaseModel(
+                                            "v1.0.0",
+                                            URI.create("https://github.com/qupath/qupath"),
+                                            List.of(),
+                                            List.of(),
+                                            List.of(),
+                                            new VersionRangeModel("v2.0.0", null, null)
+                                    )
+                            )
+                    ),
+                    null,
+                    false
             ));
-        }
 
-        @Test
-        void Check_Undefined_Name() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Catalog(null, "", List.of())
-            );
-        }
+            List<Extension> extensions = catalog.getExtensions().get();
 
-        @Test
-        void Check_Undefined_Description() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Catalog("", null, List.of())
-            );
-        }
-
-        @Test
-        void Check_Undefined_Extensions() {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Catalog("", "", null)
-            );
-        }
-
-        @Test
-        void Check_Extensions_With_Same_Name() {
-            List<Extension> extensions = List.of(
-                    new Extension("name", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of()),
-                    new Extension("name", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of()),
-                    new Extension("other_name", "", "", URI.create("https://github.com/qupath/qupath"), false, List.of())
+            TestUtils.assertCollectionsEqualsWithoutOrder(
+                    expectedExtensions.stream().map(Extension::getName).toList(),   // Extension does not override equals,
+                    extensions.stream().map(Extension::getName).toList()            // so only the name is checked
             );
 
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> new Catalog("", "", extensions)
+            server.close();
+        }
+
+        @Override
+        protected Catalog createCatalog() {
+            return new Catalog(
+                    "name",
+                    "description",
+                    URI.create("http://uri.com"),
+                    URI.create("http://raw.com")
             );
         }
     }
 
     @Nested
-    public class JsonTests {
+    class CatalogModelCreation extends GenericCreation {
 
         @Test
-        void Check_Valid_Catalog() {
-            Catalog expectedCatalog = new Catalog(
-                    "",
-                    "",
-                    List.of(new Extension(
-                            "",
-                            "",
-                            "",
+        void Check_Null_Catalog_Model() {
+            CatalogModel catalogModel = null;
+            URI uri = URI.create("http://uri.com");
+            URI rawUri = URI.create("http://raw.com");
+            boolean deletable = true;
+
+            Assertions.assertThrows(NullPointerException.class, () -> new Catalog(catalogModel, uri, rawUri, deletable));
+        }
+
+        @Test
+        void Check_Null_Uri() {
+            CatalogModel catalogModel = new CatalogModel("name", "description", List.of());
+            URI uri = null;
+            URI rawUri = URI.create("http://raw.com");
+            boolean deletable = true;
+
+            Assertions.assertThrows(NullPointerException.class, () -> new Catalog(catalogModel, uri, rawUri, deletable));
+        }
+
+        @Test
+        void Check_Null_Raw_Uri() {
+            CatalogModel catalogModel = new CatalogModel("name", "description", List.of());
+            URI uri = URI.create("http://uri.com");
+            URI rawUri = null;
+            boolean deletable = true;
+
+            Assertions.assertThrows(NullPointerException.class, () -> new Catalog(catalogModel, uri, rawUri, deletable));
+        }
+
+        @Test
+        @Override
+        void Check_Extensions() throws ExecutionException, InterruptedException {
+            Catalog catalog = new Catalog(
+                    new CatalogModel(
+                            "name",
+                            "description",
+                            List.of(new ExtensionModel(
+                                    "name",
+                                    "description",
+                                    "author",
+                                    URI.create("https://github.com/qupath/qupath"),
+                                    true,
+                                    List.of(
+                                            new ReleaseModel(
+                                                    "v0.1.0",
+                                                    URI.create("https://github.com/qupath/qupath"),
+                                                    List.of(),
+                                                    List.of(),
+                                                    List.of(),
+                                                    new VersionRangeModel("v1.0.0", null, null)
+                                            ),
+                                            new ReleaseModel(
+                                                    "v1.0.0",
+                                                    URI.create("https://github.com/qupath/qupath"),
+                                                    List.of(),
+                                                    List.of(),
+                                                    List.of(),
+                                                    new VersionRangeModel("v2.0.0", null, null)
+                                            )
+                                    )
+                            ))
+                    ),
+                    URI.create("http://uri.com"),
+                    URI.create("http://raw.com"),
+                    false
+            );
+            List<Extension> expectedExtensions = List.of(new Extension(
+                    new ExtensionModel(
+                            "name",
+                            "description",
+                            "author",
                             URI.create("https://github.com/qupath/qupath"),
+                            true,
+                            List.of(
+                                    new ReleaseModel(
+                                            "v0.1.0",
+                                            URI.create("https://github.com/qupath/qupath"),
+                                            List.of(),
+                                            List.of(),
+                                            List.of(),
+                                            new VersionRangeModel("v1.0.0", null, null)
+                                    ),
+                                    new ReleaseModel(
+                                            "v1.0.0",
+                                            URI.create("https://github.com/qupath/qupath"),
+                                            List.of(),
+                                            List.of(),
+                                            List.of(),
+                                            new VersionRangeModel("v2.0.0", null, null)
+                                    )
+                            )
+                    ),
+                    null,
+                    false
+            ));
+
+            List<Extension> extensions = catalog.getExtensions().get();
+
+            TestUtils.assertCollectionsEqualsWithoutOrder(
+                    expectedExtensions.stream().map(Extension::getName).toList(),   // Extension does not override equals,
+                    extensions.stream().map(Extension::getName).toList()            // so only the name is checked
+            );
+        }
+
+        @Override
+        protected Catalog createCatalog() {
+            return new Catalog(
+                    new CatalogModel("name", "description", List.of()),
+                    URI.create("http://uri.com"),
+                    URI.create("http://raw.com"),
+                    false
+            );
+        }
+    }
+
+    @Nested
+    class RegistryCatalogCreation extends GenericCreation {
+
+        @Test
+        void Check_Null_Registry_Catalog() {
+            RegistryCatalog registryCatalog = null;
+
+            Assertions.assertThrows(NullPointerException.class, () -> new Catalog(registryCatalog));
+        }
+
+        @Test
+        @Override
+        void Check_Extensions() throws IOException, ExecutionException, InterruptedException {
+            SimpleServer server = new SimpleServer(List.of(new SimpleServer.FileToServe(
+                    "catalog.json",
+                    Objects.requireNonNull(TestCatalog.class.getResourceAsStream("catalog.json"))
+            )));
+            Catalog catalog = new Catalog(new RegistryCatalog(
+                    "name",
+                    "description",
+                    server.getURI("catalog.json"),
+                    server.getURI("catalog.json"),
+                    false,
+                    List.of(new RegistryExtension("Some extension", "v1.0.0", true))
+            ));
+            List<Extension> expectedExtensions = List.of(new Extension(
+                    new ExtensionModel(
+                            "Some extension",
+                            "Some extension description",
+                            "Some author",
+                            URI.create("http://github.com/qupath/qupath"),
                             false,
-                            List.of()
-                    ))
+                            List.of(
+                                    new ReleaseModel(
+                                            "v0.1.0",
+                                            URI.create("https://github.com/qupath/qupath"),
+                                            List.of(),
+                                            List.of(),
+                                            List.of(),
+                                            new VersionRangeModel("v1.0.0", null, null)
+                                    ),
+                                    new ReleaseModel(
+                                            "v1.0.0",
+                                            URI.create("https://github.com/qupath/qupath"),
+                                            List.of(),
+                                            List.of(),
+                                            List.of(),
+                                            new VersionRangeModel("v2.0.0", null, null)
+                                    )
+                            )
+                    ),
+                    new Release(new ReleaseModel(
+                            "v1.0.0",
+                            URI.create("https://github.com/qupath/qupath"),
+                            List.of(),
+                            List.of(),
+                            List.of(),
+                            new VersionRangeModel("v2.0.0", null, null)
+                    )),
+                    true
+            ));
+
+            List<Extension> extensions = catalog.getExtensions().get();
+
+            TestUtils.assertCollectionsEqualsWithoutOrder(
+                    expectedExtensions.stream().map(Extension::getName).toList(),   // Extension does not override equals,
+                    extensions.stream().map(Extension::getName).toList()            // so only the name is checked
             );
 
-            Catalog catalog = new Gson().fromJson("""
-                    {
-                        "name": "",
-                        "description": "",
-                        "extensions": [
-                            {
-                                "name": "",
-                                "description": "",
-                                "author": "",
-                                "homepage": "https://github.com/qupath/qupath",
-                                "releases": []
-                            }
-                        ]
-                    }
-                    """,
-                    Catalog.class
-            );
-
-            Assertions.assertEquals(expectedCatalog, catalog);
+            server.close();
         }
 
-        @Test
-        void Check_Undefined_Name() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "description": "",
-                                "extensions": []
-                            }
-                            """,
-                            Catalog.class
-                    )
-            );
-        }
-
-        @Test
-        void Check_Undefined_Description() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "",
-                                "extensions": []
-                            }
-                            """,
-                            Catalog.class
-                    )
-            );
-        }
-
-        @Test
-        void Check_Undefined_Extensions() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "",
-                                "description": ""
-                            }
-                            """,
-                            Catalog.class
-                    )
-            );
-        }
-
-        @Test
-        void Check_Invalid_Extensions() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "",
-                                "description": "",
-                                "extensions": [{}]
-                            }
-                            """,
-                            Catalog.class
-                    )
-            );
-        }
-
-        @Test
-        void Check_Extensions_With_Same_Name() {
-            Assertions.assertThrows(
-                    RuntimeException.class,
-                    () -> new Gson().fromJson("""
-                            {
-                                "name": "",
-                                "description": "",
-                                "extensions": [
-                                    {
-                                        "name": "name",
-                                        "description": "",
-                                        "author": "",
-                                        "homepage": "https://github.com/qupath/qupath",
-                                        "releases": []
-                                    },
-                                    {
-                                        "name": "name",
-                                        "description": "",
-                                        "author": "",
-                                        "homepage": "https://github.com/qupath/qupath",
-                                        "releases": []
-                                    },
-                                    {
-                                        "name": "other_name",
-                                        "description": "",
-                                        "author": "",
-                                        "homepage": "https://github.com/qupath/qupath",
-                                        "releases": []
-                                    }
-                                ]
-                            }
-                            """,
-                            Catalog.class
-                    )
-            );
+        @Override
+        protected Catalog createCatalog() {
+            return new Catalog(new RegistryCatalog(
+                    "name",
+                    "description",
+                    URI.create("http://uri.com"),
+                    URI.create("http://raw.com"),
+                    false,
+                    List.of()
+            ));
         }
     }
 }

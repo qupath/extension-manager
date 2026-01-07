@@ -11,6 +11,9 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Objects;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 /**
@@ -19,6 +22,7 @@ import java.util.stream.Stream;
 public class FileTools {
 
     private static final Logger logger = LoggerFactory.getLogger(FileTools.class);
+    private static final Pattern VERSION_PATTERN = Pattern.compile("(-\\d+\\.\\d+\\.\\d+)");
 
     private FileTools() {
         throw new AssertionError("This class is not instantiable.");
@@ -30,7 +34,6 @@ public class FileTools {
      * @param path the path to check
      * @return whether the provided path is a directory and is not empty
      * @throws IOException if an I/O error occurs
-     * @throws SecurityException if the user doesn't have sufficient rights to read the file
      * @throws NullPointerException if the provided path is null
      */
     public static boolean isDirectoryNotEmpty(Path path) throws IOException {
@@ -51,15 +54,13 @@ public class FileTools {
     }
 
     /**
-     * Attempt to move the provided file to trash, or delete it (and all its children
-     * recursively if it's a directory) if the current platform does not support moving
-     * files to trash.
+     * Attempt to move the provided file to trash, or delete it (and all its children recursively if it's a directory) if
+     * the current platform does not support moving files to trash.
+     * <p>
      * This won't do anything if the provided file doesn't exist.
      *
      * @param directoryToDelete the file or directory to delete
      * @throws IOException if an I/O error occurs
-     * @throws SecurityException if the user doesn't have sufficient rights to move or
-     * delete some files
      * @throws NullPointerException if the provided directory is null
      */
     public static void moveDirectoryToTrashOrDeleteRecursively(File directoryToDelete) throws IOException {
@@ -82,8 +83,8 @@ public class FileTools {
     }
 
     /**
-     * Strip the provided name from characters that would be invalid
-     * in a file name. This is not guaranteed to work for any character.
+     * Strip the provided name from characters that would be invalid in a file name. This is not guaranteed to work for
+     * any character.
      *
      * @param name the name to strip characters from
      * @return the provided name without characters that would be invalid in a file name
@@ -94,22 +95,19 @@ public class FileTools {
     }
 
     /**
-     * Get the name of the file or directory denoted by the path contained in the
-     * provided URI.
+     * Get the name of the file or directory denoted by the path contained in the provided URI.
      *
      * @param uri the URI containing the file name to retrieve
      * @return the file name denoted by the path contained in the provided URI
      * @throws NullPointerException if the path of the provided URI is undefined
-     * @throws java.nio.file.InvalidPathException if the path of the provided URI cannot be
-     * converted to a Path
+     * @throws java.nio.file.InvalidPathException if the path of the provided URI cannot be converted to a Path
      */
     public static String getFileNameFromURI(URI uri) {
         return Paths.get(uri.getPath()).getFileName().toString();
     }
 
     /**
-     * Indicate whether a file is a (direct or not) parent of another file. The provided
-     * files don't have to exist.
+     * Indicate whether a file is a (direct or not) parent of another file. The provided files don't have to exist.
      *
      * @param possibleParent the file that may be a parent of the other file
      * @param possibleChild the file that may be a child of the other file
@@ -126,6 +124,24 @@ public class FileTools {
             }
         }
         return false;
+    }
+
+    /**
+     * Strip the version from a file name. A version is defined as "-x.y.z" where x, y, and z are positive numbers.
+     * If such version is not found, the input name is returned.
+     *
+     * @param fileName the name to strip the version from
+     * @return the input file name without the potential version
+     * @throws NullPointerException if the provided file name is null
+     */
+    public static String stripVersionFromFileName(String fileName) {
+        Matcher versionMatcher = VERSION_PATTERN.matcher(Objects.requireNonNull(fileName));
+
+        if (versionMatcher.find() && versionMatcher.groupCount() > 0) {
+            return fileName.replace(versionMatcher.group(1), "");
+        } else {
+            return fileName;
+        }
     }
 
     private static boolean moveToTrash(Desktop desktop, File fileToDelete) {

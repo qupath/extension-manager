@@ -12,12 +12,11 @@ import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
 
 /**
- * A class that returns an ObservableList of paths to certain files that
- * are contained within a specific directory (recursively but with a maximal
- * depth of 8).
- * The list is automatically updated based on changes to the specified directory
- * (or one of its descendant).
- * Note that changes may take a few seconds to be detected.
+ * A class that returns an ObservableList of paths to certain files that are contained within a specific directory (recursively
+ * but with a maximal depth of 8).
+ * <p>
+ * The list is automatically updated based on changes to the specified directory (or one of its descendant). Note that
+ * changes may take a few seconds to be detected.
  * <p>
  * This watcher must be {@link #close() closed} once no longer used.
  * <p>
@@ -72,9 +71,8 @@ public class FilesWatcher implements AutoCloseable {
     }
 
     /**
-     * @return a read-only list of files that are currently present according to the parameters
-     * specified in {@link #FilesWatcher(ObservableValue, Predicate, Predicate)}. This list may be
-     * updated from any thread
+     * @return a read-only list of files that are currently present according to the parameters specified in
+     * {@link #FilesWatcher(ObservableValue, Predicate, Predicate)}. This list may be updated from any thread
      */
     public ObservableList<Path> getFiles() {
         return filesImmutable;
@@ -116,7 +114,7 @@ public class FilesWatcher implements AutoCloseable {
                         files.remove(removedFile);
                     }
             );
-        } catch (IOException | UnsupportedOperationException | SecurityException e) {
+        } catch (IOException | UnsupportedOperationException e) {
             logger.debug(
                     "Error when creating files watcher for {}. Files added to this directory won't be detected.",
                     directory,

@@ -2,29 +2,33 @@ package qupath.ext.extensionmanager.core;
 
 import javafx.beans.property.ObjectProperty;
 import javafx.beans.property.SimpleObjectProperty;
+import javafx.beans.value.ObservableValue;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import qupath.ext.extensionmanager.SimpleServer;
 import qupath.ext.extensionmanager.TestUtils;
-import qupath.ext.extensionmanager.core.catalog.CatalogFetcher;
+import qupath.ext.extensionmanager.core.catalog.Catalog;
+import qupath.ext.extensionmanager.core.catalog.DefaultCatalog;
 import qupath.ext.extensionmanager.core.catalog.Extension;
 import qupath.ext.extensionmanager.core.catalog.Release;
-import qupath.ext.extensionmanager.core.catalog.VersionRange;
-import qupath.ext.extensionmanager.core.savedentities.InstalledExtension;
-import qupath.ext.extensionmanager.core.savedentities.Registry;
-import qupath.ext.extensionmanager.core.savedentities.SavedCatalog;
-import qupath.ext.extensionmanager.core.savedentities.UpdateAvailable;
+import qupath.ext.extensionmanager.core.model.CatalogModel;
+import qupath.ext.extensionmanager.core.model.ExtensionModel;
+import qupath.ext.extensionmanager.core.model.ReleaseModel;
+import qupath.ext.extensionmanager.core.model.VersionRangeModel;
+import qupath.ext.extensionmanager.core.catalog.UpdateAvailable;
 
 import java.io.IOException;
 import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.function.BiConsumer;
+import java.util.function.Consumer;
 import java.util.stream.Stream;
 
 /**
@@ -36,8 +40,7 @@ import java.util.stream.Stream;
 public class TestExtensionCatalogManager {
 
     private static final String CATALOG_NAME = "catalog.json";
-    private static final int CHANGE_WAITING_TIME_CATALOG_MS = 100;
-    private static final int CHANGE_WAITING_TIME_MANUAL_MS = 10000;
+    private static final int JAR_LOADED_TIMEOUT_MS = 10000;
     private static SimpleServer server;
 
     @BeforeAll
@@ -56,547 +59,552 @@ public class TestExtensionCatalogManager {
     }
 
     @Test
-    void Check_Creation_When_Extension_Directory_Null() {
+    void Check_Creation_When_Extensions_Directory_Observable_Null() {
+        ObservableValue<Path> extensionsDirectory = null;
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+
+        Assertions.assertThrows(
+                NullPointerException.class,
+                () -> new ExtensionCatalogManager(extensionsDirectory, classLoader, version, defaultCatalogs)
+        );
+    }
+
+    @Test
+    void Check_Creation_When_Extensions_Directory_Null() {
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(null);
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+
         Assertions.assertDoesNotThrow(() -> {
                 ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                        new SimpleObjectProperty<>(null),
-                        TestExtensionCatalogManager.class.getClassLoader(),
-                        "v1.2.3",
-                        createSampleRegistry()
+                        extensionsDirectory,
+                        classLoader,
+                        version,
+                        defaultCatalogs
                 );
                 extensionCatalogManager.close();
         });
     }
 
     @Test
-    void Check_Creation_When_Extension_Directory_Property_Null() {
-        Assertions.assertThrows(
-                NullPointerException.class,
-                () -> {
-                    ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                            null,
-                            TestExtensionCatalogManager.class.getClassLoader(),
-                            "v1.2.3",
-                            createSampleRegistry()
-                    );
-                    extensionCatalogManager.close();
-                }
-        );
-    }
+    void Check_Creation_When_Parent_Class_Loader_Null() throws IOException {
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = null;
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
 
-    @Test
-    void Check_Creation_When_Parent_Class_Loader_Null() {
         Assertions.assertDoesNotThrow(() -> {
             ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                    new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                    null,
-                    "v1.2.3",
-                    createSampleRegistry()
+                    extensionsDirectory,
+                    classLoader,
+                    version,
+                    defaultCatalogs
             );
             extensionCatalogManager.close();
         });
     }
 
     @Test
-    void Check_Creation_When_Version_Null() {
+    void Check_Creation_When_Version_Null() throws IOException {
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = null;
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+
         Assertions.assertThrows(
                 NullPointerException.class,
-                () -> {
-                    ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                            new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                            TestExtensionCatalogManager.class.getClassLoader(),
-                            null,
-                            createSampleRegistry()
-                    );
-                    extensionCatalogManager.close();
-                }
+                () -> new ExtensionCatalogManager(extensionsDirectory, classLoader, version, defaultCatalogs)
         );
     }
 
     @Test
-    void Check_Creation_When_Version_Not_Valid() {
+    void Check_Creation_When_Version_Not_Valid() throws IOException {
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "invalid_version";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+
         Assertions.assertThrows(
                 IllegalArgumentException.class,
-                () -> {
-                    ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                            new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                            TestExtensionCatalogManager.class.getClassLoader(),
-                            "invalid_version",
-                            createSampleRegistry()
-                    );
-                    extensionCatalogManager.close();
-                }
+                () -> new ExtensionCatalogManager(extensionsDirectory, classLoader, version, defaultCatalogs)
         );
     }
 
     @Test
-    void Check_Creation_When_Default_Registry_Null() {
-        Assertions.assertDoesNotThrow(() -> {
-            ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                    new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                    TestExtensionCatalogManager.class.getClassLoader(),
-                    "v1.2.3",
-                    null
-            );
-            extensionCatalogManager.close();
-        });
-    }
+    void Check_Creation_When_Default_Catalogs_Null() throws IOException {
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = null;
 
-    @Test
-    void Check_Extension_Directory_Path() throws Exception {
-        Path expectedExtensionDirectory = Files.createTempDirectory(null);
-        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(expectedExtensionDirectory),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
-        )) {
-            Path extensionDirectory = extensionCatalogManager.getExtensionDirectoryPath().get();
-
-            Assertions.assertEquals(expectedExtensionDirectory, extensionDirectory);
-        }
-    }
-
-    @Test
-    void Check_Extension_Directory_Path_After_Changed() throws Exception {
-        Path firstExtensionDirectory = Files.createTempDirectory(null);
-        Path expectedExtensionDirectory = Files.createTempDirectory(null);
-        ObjectProperty<Path> extensionDirectoryProperty = new SimpleObjectProperty<>(firstExtensionDirectory);
-        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                extensionDirectoryProperty,
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
-        )) {
-            extensionDirectoryProperty.set(expectedExtensionDirectory);
-            Path extensionDirectory = extensionCatalogManager.getExtensionDirectoryPath().get();
-
-            Assertions.assertEquals(expectedExtensionDirectory, extensionDirectory);
-        }
+        Assertions.assertThrows(
+                NullPointerException.class,
+                () -> new ExtensionCatalogManager(extensionsDirectory, classLoader, version, defaultCatalogs)
+        );
     }
 
     @Test
     void Check_Version() throws Exception {
-        String expectedVersion = "v1.2.4";
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        Version expectedVersion = new Version("v1.2.3");
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                expectedVersion,
-                createSampleRegistry()
+                extensionsDirectory,
+                classLoader,
+                expectedVersion.toString(),
+                defaultCatalogs
         )) {
-            String version = extensionCatalogManager.getVersion();
+            Version version = extensionCatalogManager.getVersion();
 
             Assertions.assertEquals(expectedVersion, version);
         }
     }
 
     @Test
-    void Check_Catalog_Directory_When_Catalog_Is_Null() throws Exception {
+    void Check_Extensions_Directory_Path() throws Exception {
+        Path expectedExtensionsDirectory = Files.createTempDirectory(null);
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(expectedExtensionsDirectory);
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
+        )) {
+            Path extensionsDirectoryValue = extensionCatalogManager.getExtensionsDirectory().getValue();
+
+            Assertions.assertEquals(expectedExtensionsDirectory, extensionsDirectoryValue);
+        }
+    }
+
+    @Test
+    void Check_Extensions_Directory_Path_After_Changed() throws Exception {
+        ObjectProperty<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        Path expectedExtensionsDirectory = Files.createTempDirectory(null);
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
+        )) {
+            extensionsDirectory.set(expectedExtensionsDirectory);
+            Path extensionsDirectoryValue = extensionCatalogManager.getExtensionsDirectory().getValue();
+
+            Assertions.assertEquals(expectedExtensionsDirectory, extensionsDirectoryValue);
+        }
+    }
+
+    @Test
+    void Check_Catalog_Directory_With_Null_Catalog_Name() throws Exception {
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        String catalogName = null;
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
         )) {
             Assertions.assertThrows(
                     NullPointerException.class,
-                    () -> extensionCatalogManager.getCatalogDirectory(null)
+                    () -> extensionCatalogManager.getCatalogDirectory(catalogName)
+            );
+        }
+    }
+
+    @Test
+    void Check_Catalog_Directory_With_Null_Extensions_Directory() throws Exception {
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(null);
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        String catalogName = "catalog";
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
+        )) {
+            Assertions.assertThrows(
+                    NullPointerException.class,
+                    () -> extensionCatalogManager.getCatalogDirectory(catalogName)
             );
         }
     }
 
     @Test
     void Check_Catalog_Directory_Not_Null() throws Exception {
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        String catalogName = "catalog";
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
         )) {
-            Path catalogDirectory = extensionCatalogManager.getCatalogDirectory(new SavedCatalog(
-                    "some name",
-                    "some description",
-                    URI.create("http://test"),
-                    URI.create("http://test"),
-                    true
-            ));
+            Path catalogDirectory = extensionCatalogManager.getCatalogDirectory(catalogName);
 
             Assertions.assertNotNull(catalogDirectory);
         }
     }
 
     @Test
-    void Check_Catalog_Addition_When_Extension_Directory_Null() throws Exception {
-        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(null),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
-        )) {
-            Assertions.assertThrows(
-                    NullPointerException.class,
-                    () -> extensionCatalogManager.addCatalog(List.of())
-            );
-        }
-    }
-
-    @Test
-    void Check_Catalog_Addition_When_List_Null() throws Exception {
-        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
-        )) {
-            Assertions.assertThrows(
-                    NullPointerException.class,
-                    () -> extensionCatalogManager.addCatalog(null)
-            );
-        }
-    }
-
-    @Test
-    void Check_Catalog_Addition_When_One_Null() throws Exception {
-        List<SavedCatalog> catalogsToAdd = new ArrayList<>();
-        catalogsToAdd.add(new SavedCatalog(
-                "some other name",
+    void Check_Catalog_With_Existing_Name_Not_Added() throws Exception {
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        Catalog firstCatalog = new Catalog(
+                "same name",
+                "some description",
+                server.getURI(CATALOG_NAME),
+                server.getURI(CATALOG_NAME)
+        );
+        Catalog secondCatalog = new Catalog(
+                "same name",
                 "some other description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        ));
-        catalogsToAdd.add(null);
+                server.getURI(CATALOG_NAME),
+                server.getURI(CATALOG_NAME)
+        );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
+        )) {
+            extensionCatalogManager.addCatalog(firstCatalog);
+
+            Assertions.assertThrows(
+                    IllegalArgumentException.class,
+                    () -> extensionCatalogManager.addCatalog(secondCatalog)
+            );
+        }
+    }
+
+    @Test
+    void Check_Catalog_Addition_When_Extensions_Directory_Null() throws Exception {
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(null);
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        Catalog catalog = new Catalog(
+                "name",
+                "description",
+                server.getURI(CATALOG_NAME),
+                server.getURI(CATALOG_NAME)
+        );
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
         )) {
             Assertions.assertThrows(
                     NullPointerException.class,
-                    () -> extensionCatalogManager.addCatalog(catalogsToAdd)
+                    () -> extensionCatalogManager.addCatalog(catalog)
+            );
+        }
+    }
+
+    @Test
+    void Check_Catalog_Addition_When_Null() throws Exception {
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        Catalog catalog = null;
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
+        )) {
+            Assertions.assertThrows(
+                    NullPointerException.class,
+                    () -> extensionCatalogManager.addCatalog(catalog)
             );
         }
     }
 
     @Test
     void Check_Catalog_Added() throws Exception {
-        Registry defaultRegistry = createSampleRegistry();
-        SavedCatalog catalogToAdd = new SavedCatalog(
-                "some other name",
-                "some other description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
+        ObservableValue<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        Catalog catalog = new Catalog(
+                "name",
+                "description",
+                server.getURI(CATALOG_NAME),
+                server.getURI(CATALOG_NAME)
         );
-        List<SavedCatalog> expectedCatalogs = Stream.concat(
-                defaultRegistry.catalogs().stream(),
-                Stream.of(catalogToAdd)
-        ).toList();
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                defaultRegistry
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
         )) {
-            extensionCatalogManager.addCatalog(List.of(catalogToAdd));
+            List<Catalog> expectedCatalogs = Stream.concat(
+                    extensionCatalogManager.getCatalogs().stream(),
+                    Stream.of(catalog)
+            ).toList();
+
+            extensionCatalogManager.addCatalog(catalog);
 
             TestUtils.assertCollectionsEqualsWithoutOrder(expectedCatalogs, extensionCatalogManager.getCatalogs());
         }
     }
 
     @Test
-    void Check_Catalog_Addition_When_Same_Name() throws Exception {
-        SavedCatalog firstCatalog = new SavedCatalog(
-                "same name",
+    void Check_Only_Catalogs_From_Default_Registry_When_Extensions_Directory_Changed() throws Exception {
+        SimpleObjectProperty<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        int expectedNumberOfCatalogs = defaultCatalogs.size();
+        Catalog catalog = new Catalog(
+                "some name",
                 "some description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        SavedCatalog secondCatalog = new SavedCatalog(
-                "same name",
-                "some other description",
-                URI.create("http://test/other"),
-                URI.create("http://test/other"),
-                true
+                server.getURI(CATALOG_NAME),
+                server.getURI(CATALOG_NAME)
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                null
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
         )) {
+            extensionCatalogManager.addCatalog(catalog);
+            extensionsDirectory.set(Files.createTempDirectory(null));
+
+            List<Catalog> catalogs = extensionCatalogManager.getCatalogs();
+
+            Assertions.assertEquals(expectedNumberOfCatalogs, catalogs.size());
+        }
+    }
+
+    @Test
+    void Check_Undeletable_Catalog_Not_Removed() throws Exception {
+        SimpleObjectProperty<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        Catalog catalog = new Catalog(
+                "some name",
+                "some description",
+                server.getURI(CATALOG_NAME),
+                server.getURI(CATALOG_NAME)
+        );
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
+        )) {
+            extensionCatalogManager.addCatalog(catalog);
+
             Assertions.assertThrows(
                     IllegalArgumentException.class,
-                    () -> extensionCatalogManager.addCatalog(List.of(firstCatalog, secondCatalog))
+                    () -> extensionCatalogManager.removeCatalog(catalog)
             );
         }
     }
 
     @Test
-    void Check_Catalog_With_Existing_Name_Not_Added() throws Exception {
-        SavedCatalog firstCatalog = new SavedCatalog(
-                "same name",
-                "some description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        SavedCatalog secondCatalog = new SavedCatalog(
-                "same name",
-                "some other description",
-                URI.create("http://test/other"),
-                URI.create("http://test/other"),
-                true
-        );
-        List<SavedCatalog> expectedCatalogs = List.of(firstCatalog);
+    void Check_Catalog_Removal_When_Catalog_Null() throws Exception {
+        SimpleObjectProperty<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        Catalog catalog = null;
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                null
-        )) {
-            extensionCatalogManager.addCatalog(List.of(firstCatalog));
-            extensionCatalogManager.addCatalog(List.of(secondCatalog));
-
-            TestUtils.assertCollectionsEqualsWithoutOrder(expectedCatalogs, extensionCatalogManager.getCatalogs());
-        }
-    }
-
-    @Test
-    void Check_Only_Catalogs_From_Default_Registry_When_Extension_Directory_Changed() throws Exception {
-        SimpleObjectProperty<Path> extensionDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
-        SavedCatalog catalogToAdd = new SavedCatalog(
-                "some other name",
-                "some other description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        Registry defaultRegistry = createSampleRegistry();
-        List<SavedCatalog> expectedCatalogs = defaultRegistry.catalogs();
-        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                extensionDirectory,
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                defaultRegistry
-        )) {
-            extensionCatalogManager.addCatalog(List.of(catalogToAdd));
-
-            extensionDirectory.set(Files.createTempDirectory(null));
-
-            TestUtils.assertCollectionsEqualsWithoutOrder(expectedCatalogs, extensionCatalogManager.getCatalogs());
-        }
-    }
-
-    @Test
-    void Check_Catalog_Deletion_When_Extension_Directory_Null() throws Exception {
-        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(null),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
         )) {
             Assertions.assertThrows(
                     NullPointerException.class,
-                    () -> extensionCatalogManager.removeCatalogs(List.of(), true)
-            );
-        }
-    }
-
-    @Test
-    void Check_Catalog_Deletion_When_List_Null() throws Exception {
-        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
-        )) {
-            Assertions.assertThrows(
-                    NullPointerException.class,
-                    () -> extensionCatalogManager.removeCatalogs(null, true)
-            );
-        }
-    }
-
-    @Test
-    void Check_Catalog_Deletion_When_One_Null() throws Exception {
-        List<SavedCatalog> catalogsToRemove = new ArrayList<>();
-        catalogsToRemove.add(new SavedCatalog(
-                "some other name",
-                "some other description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        ));
-        catalogsToRemove.add(null);
-        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
-        )) {
-            Assertions.assertThrows(
-                    NullPointerException.class,
-                    () -> extensionCatalogManager.removeCatalogs(catalogsToRemove, true)
+                    () -> extensionCatalogManager.removeCatalog(catalog)
             );
         }
     }
 
     @Test
     void Check_Catalog_Removed() throws Exception {
-        Registry defaultRegistry = createSampleRegistry();
-        SavedCatalog catalogToAdd = new SavedCatalog(
-                "some other name",
-                "some other description",
-                URI.create("http://test"),
-                URI.create("http://test"),
+        SimpleObjectProperty<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        Catalog catalog = new Catalog(
+                new CatalogModel("some name", "some description", List.of()),
+                server.getURI(CATALOG_NAME),
+                server.getURI(CATALOG_NAME),
                 true
         );
-        List<SavedCatalog> expectedCatalogs = defaultRegistry.catalogs();
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                defaultRegistry
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
         )) {
-            extensionCatalogManager.addCatalog(List.of(catalogToAdd));
-            extensionCatalogManager.removeCatalogs(List.of(catalogToAdd), true);
+            List<Catalog> expectedCatalogs = List.copyOf(extensionCatalogManager.getCatalogs());    // defensive copy because
+            extensionCatalogManager.addCatalog(catalog);                                            // extensionCatalogManager.getCatalogs()
+                                                                                                    // will be modified
+            extensionCatalogManager.removeCatalog(catalog);
 
             TestUtils.assertCollectionsEqualsWithoutOrder(expectedCatalogs, extensionCatalogManager.getCatalogs());
         }
     }
 
     @Test
-    void Check_Undeletable_Catalog_Not_Removed() throws Exception {
-        Registry defaultRegistry = createSampleRegistry();
-        SavedCatalog catalogToAdd = new SavedCatalog(
-                "some other name",
-                "some other description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                false
-        );
-        List<SavedCatalog> expectedCatalogs = Stream.concat(
-                defaultRegistry.catalogs().stream(),
-                Stream.of(catalogToAdd)
-        ).toList();
+    void Check_Extensions_Directory_When_Catalog_Name_Is_Null() throws Exception {
+        SimpleObjectProperty<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        String catalogName = null;
+        String extensionName = "extension";
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                defaultRegistry
-        )) {
-            extensionCatalogManager.addCatalog(List.of(catalogToAdd));
-            extensionCatalogManager.removeCatalogs(List.of(catalogToAdd), true);
-
-            TestUtils.assertCollectionsEqualsWithoutOrder(expectedCatalogs, extensionCatalogManager.getCatalogs());
-        }
-    }
-
-    @Test
-    void Check_Extension_Directory_When_Catalog_Is_Null() throws Exception {
-        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
         )) {
             Assertions.assertThrows(
                     NullPointerException.class,
-                    () -> extensionCatalogManager.getExtensionDirectory(
-                            null,
-                            new Extension("", "", "", URI.create("http://github.com"), false, List.of())
-                    )
+                    () -> extensionCatalogManager.getExtensionDirectory(catalogName, extensionName)
             );
         }
     }
 
     @Test
-    void Check_Extension_Directory_When_Extension_Is_Null() throws Exception {
+    void Check_Extensions_Directory_When_Extension_Name_Is_Null() throws Exception {
+        SimpleObjectProperty<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        String catalogName = "catalog";
+        String extensionName = null;
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
         )) {
             Assertions.assertThrows(
                     NullPointerException.class,
-                    () -> extensionCatalogManager.getExtensionDirectory(
-                            new SavedCatalog(
-                                    "some name",
-                                    "some description",
-                                    URI.create("http://test"),
-                                    URI.create("http://test"),
-                                    true
-                            ),
-                            null
-                    )
+                    () -> extensionCatalogManager.getExtensionDirectory(catalogName, extensionName)
             );
         }
     }
 
     @Test
-    void Check_Extension_Directory_Not_Null() throws Exception {
+    void Check_Extensions_Directory_Not_Null() throws Exception {
+        SimpleObjectProperty<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        String catalogName = "catalog";
+        String extensionName = "extension";
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
         )) {
-            Path extensionDirectory = extensionCatalogManager.getExtensionDirectory(
-                    new SavedCatalog(
-                            "some name",
-                            "some description",
-                            URI.create("http://test"),
-                            URI.create("http://test"),
-                            true
-                    ),
-                    new Extension("", "", "", URI.create("http://github.com"), false, List.of())
-            );
-
-            Assertions.assertNotNull(extensionDirectory);
+            Assertions.assertNotNull(extensionCatalogManager.getExtensionDirectory(catalogName, extensionName));
         }
     }
 
     @Test
-    void Check_Download_Links() throws Exception {
-        List<URI> expectedDownloadLinks = List.of(
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")
-        );
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        Release release = new Release(
+    void Check_Download_Links_With_Null_Release() throws Exception {
+        SimpleObjectProperty<Path> extensionsDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        Release release = null;
+        boolean installOptionalDependencies = true;
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
+        )) {
+            Assertions.assertThrows(
+                    NullPointerException.class,
+                    () -> extensionCatalogManager.getDownloadLinks(release, installOptionalDependencies)
+            );
+        }
+    }
+
+    @Test
+    void Check_Download_Links_With_Null_Extensions_Directory() throws Exception {
+        SimpleObjectProperty<Path> extensionsDirectory = new SimpleObjectProperty<>(null);
+        ClassLoader classLoader = TestExtensionCatalogManager.class.getClassLoader();
+        String version = "v1.2.3";
+        List<DefaultCatalog> defaultCatalogs = createDefaultCatalogs();
+        Release release = new Release(new ReleaseModel(
                 "v0.1.2",
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
+                URI.create("https://github.com/main"),
+                List.of(),
+                List.of(),
+                List.of(),
+                new VersionRangeModel("v0.0.0", null, null)
+        ));
+        boolean installOptionalDependencies = true;
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                extensionsDirectory,
+                classLoader,
+                version,
+                defaultCatalogs
+        )) {
+            Assertions.assertThrows(
+                    NullPointerException.class,
+                    () -> extensionCatalogManager.getDownloadLinks(release, installOptionalDependencies)
+            );
+        }
+    }
+
+    @Test
+    void Check_Download_Links_With_Optional_Dependencies() throws Exception {
+        Release release = new Release(new ReleaseModel(
+                "v0.1.2",
+                URI.create("https://github.com/main"),
+                List.of(URI.create("https://github.com/required1"), URI.create("https://github.com/required2")),
+                List.of(URI.create("https://github.com/optional1"), URI.create("https://github.com/optional2")),
                 null,
-                List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
-                null,
-                new VersionRange("v0.0.0", null, null)
+                new VersionRangeModel("v0.0.0", null, null)
+        ));
+        List<URI> expectedDownloadLinks = List.of(
+                URI.create("https://github.com/main"),
+                URI.create("https://github.com/required1"),
+                URI.create("https://github.com/required2"),
+                URI.create("https://github.com/optional1"),
+                URI.create("https://github.com/optional2")
         );
-        InstalledExtension installationInformation = new InstalledExtension(release.name(), true);
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of(release)
-        );
+        boolean optionalDependencies = true;
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
                 new SimpleObjectProperty<>(Files.createTempDirectory(null)),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
-            List<URI> downloadLinks = extensionCatalogManager.getDownloadLinks(catalog, extension, installationInformation);
+            List<URI> downloadLinks = extensionCatalogManager.getDownloadLinks(release, optionalDependencies);
 
             TestUtils.assertCollectionsEqualsWithoutOrder(
                     expectedDownloadLinks,
@@ -606,347 +614,490 @@ public class TestExtensionCatalogManager {
     }
 
     @Test
-    void Check_Download_Links_Cannot_Be_Retrieved_When_Desired_Release_Does_Not_Exist() throws Exception {
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
+    void Check_Download_Links_Without_Optional_Dependencies() throws Exception {
+        Release release = new Release(new ReleaseModel(
+                "v0.1.2",
+                URI.create("https://github.com/main"),
+                List.of(URI.create("https://github.com/required1"), URI.create("https://github.com/required2")),
+                List.of(URI.create("https://github.com/optional1"), URI.create("https://github.com/optional2")),
+                null,
+                new VersionRangeModel("v0.0.0", null, null)
+        ));
+        List<URI> expectedDownloadLinks = List.of(
+                URI.create("https://github.com/main"),
+                URI.create("https://github.com/required1"),
+                URI.create("https://github.com/required2")
         );
-        InstalledExtension installationInformation = new InstalledExtension("invalid_release", false);
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of()
-        );
+        boolean optionalDependencies = false;
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
                 new SimpleObjectProperty<>(Files.createTempDirectory(null)),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> extensionCatalogManager.getDownloadLinks(catalog, extension, installationInformation)
+            List<URI> downloadLinks = extensionCatalogManager.getDownloadLinks(release, optionalDependencies);
+
+            TestUtils.assertCollectionsEqualsWithoutOrder(
+                    expectedDownloadLinks,
+                    downloadLinks
             );
         }
     }
 
     @Test
-    void Check_Download_Links_Cannot_Be_Retrieved_When_Extension_Directory_Null() throws Exception {
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        Release release = new Release(
-                "v0.1.2",
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
-                null,
-                List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
-                null,
-                new VersionRange("v0.0.0", null, null)
-        );
-        InstalledExtension installationInformation = new InstalledExtension(release.name(), true);
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of(release)
-        );
+    void Check_Extension_Installation_When_Unknown_Catalog() throws Exception {
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                TestExtensionCatalogManager.class.getClassLoader(),
+                "v1.2.3",
+                createDefaultCatalogs()
+        )) {
+            Catalog catalog = new Catalog(
+                    "Unknown catalog",
+                    "Description",
+                    server.getURI(CATALOG_NAME),
+                    server.getURI(CATALOG_NAME)
+            );
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
+
+            Assertions.assertThrows(
+                    IllegalArgumentException.class,
+                    () -> extensionCatalogManager.installOrUpdateExtension(
+                            catalog,
+                            extension,
+                            release,
+                            optionalDependencies,
+                            onProgress,
+                            onStatusChanged
+                    )
+            );
+        }
+    }
+
+    @Test
+    void Check_Extension_Installation_When_Extension_Does_Not_Belong_To_Catalog() throws Exception {
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                TestExtensionCatalogManager.class.getClassLoader(),
+                "v1.2.3",
+                createDefaultCatalogs()
+        )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = new Extension(
+                    new ExtensionModel(
+                            "Unknown extension",
+                            "Description",
+                            "Some author",
+                            URI.create("https://github.com/qupath/qupath-macOS-extension"),
+                            false,
+                            List.of(new ReleaseModel(
+                                    "v0.1.0",
+                                    URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
+                                    null,
+                                    null,
+                                    null,
+                                    new VersionRangeModel("v1.0.0", null, null)
+                            ))
+                    ),
+                    null,
+                    false
+            );
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
+
+            Assertions.assertThrows(
+                    IllegalArgumentException.class,
+                    () -> extensionCatalogManager.installOrUpdateExtension(
+                            catalog,
+                            extension,
+                            release,
+                            optionalDependencies,
+                            onProgress,
+                            onStatusChanged
+                    )
+            );
+        }
+    }
+
+    @Test
+    void Check_Extension_Installation_When_Release_Does_Not_Belong_To_Extension() throws Exception {
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                TestExtensionCatalogManager.class.getClassLoader(),
+                "v1.2.3",
+                createDefaultCatalogs()
+        )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = new Release(new ReleaseModel(
+                    "v0.4.6",
+                    URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
+                    null,
+                    null,
+                    null,
+                    new VersionRangeModel("v5.0.0", null, null)
+            ));
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
+
+            Assertions.assertThrows(
+                    IllegalArgumentException.class,
+                    () -> extensionCatalogManager.installOrUpdateExtension(
+                            catalog,
+                            extension,
+                            release,
+                            optionalDependencies,
+                            onProgress,
+                            onStatusChanged
+                    )
+            );
+        }
+    }
+
+    @Test
+    void Check_Extension_Installation_With_Null_Catalog() throws Exception {
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                TestExtensionCatalogManager.class.getClassLoader(),
+                "v1.2.3",
+                createDefaultCatalogs()
+        )) {
+            Catalog catalog = null;
+            Extension extension = extensionCatalogManager.getCatalogs().getFirst().getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
+
+            Assertions.assertThrows(
+                    NullPointerException.class,
+                    () -> extensionCatalogManager.installOrUpdateExtension(
+                            catalog,
+                            extension,
+                            release,
+                            optionalDependencies,
+                            onProgress,
+                            onStatusChanged
+                    )
+            );
+        }
+    }
+
+    @Test
+    void Check_Extension_Installation_With_Null_Extension() throws Exception {
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                TestExtensionCatalogManager.class.getClassLoader(),
+                "v1.2.3",
+                createDefaultCatalogs()
+        )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = null;
+            Release release = catalog.getExtensions().get().getFirst().getReleases().getFirst();
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
+
+            Assertions.assertThrows(
+                    NullPointerException.class,
+                    () -> extensionCatalogManager.installOrUpdateExtension(
+                            catalog,
+                            extension,
+                            release,
+                            optionalDependencies,
+                            onProgress,
+                            onStatusChanged
+                    )
+            );
+        }
+    }
+
+    @Test
+    void Check_Extension_Installation_With_Null_Release() throws Exception {
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                TestExtensionCatalogManager.class.getClassLoader(),
+                "v1.2.3",
+                createDefaultCatalogs()
+        )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = null;
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
+
+            Assertions.assertThrows(
+                    NullPointerException.class,
+                    () -> extensionCatalogManager.installOrUpdateExtension(
+                            catalog,
+                            extension,
+                            release,
+                            optionalDependencies,
+                            onProgress,
+                            onStatusChanged
+                    )
+            );
+        }
+    }
+
+    @Test
+    void Check_Extension_Installation_With_Null_Extensions_Directory() throws Exception {
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
                 new SimpleObjectProperty<>(null),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
+
             Assertions.assertThrows(
                     NullPointerException.class,
-                    () -> extensionCatalogManager.getDownloadLinks(catalog, extension, installationInformation)
+                    () -> extensionCatalogManager.installOrUpdateExtension(
+                            catalog,
+                            extension,
+                            release,
+                            optionalDependencies,
+                            onProgress,
+                            onStatusChanged
+                    )
             );
         }
     }
 
     @Test
-    void Check_Extension_Installed() throws Exception {
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        Release release = new Release(
-                "v0.1.2",
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
-                null,
-                List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
-                null,
-                new VersionRange("v0.0.0", null, null)
-        );
-        InstalledExtension installationInformation = new InstalledExtension(release.name(), true);
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of(release)
-        );
+    void Check_Extension_Installation_With_Null_On_Progress() throws Exception {
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
                 new SimpleObjectProperty<>(Files.createTempDirectory(null)),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = null;
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
+
+            Assertions.assertThrows(
+                    NullPointerException.class,
+                    () -> extensionCatalogManager.installOrUpdateExtension(
+                            catalog,
+                            extension,
+                            release,
+                            optionalDependencies,
+                            onProgress,
+                            onStatusChanged
+                    )
+            );
+        }
+    }
+
+    @Test
+    void Check_Extension_Installation_With_Null_On_Status_Changed() throws Exception {
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                TestExtensionCatalogManager.class.getClassLoader(),
+                "v1.2.3",
+                createDefaultCatalogs()
+        )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = null;
+
+            Assertions.assertThrows(
+                    NullPointerException.class,
+                    () -> extensionCatalogManager.installOrUpdateExtension(
+                            catalog,
+                            extension,
+                            release,
+                            optionalDependencies,
+                            onProgress,
+                            onStatusChanged
+                    )
+            );
+        }
+    }
+
+    @Test
+    void Check_Extension_Release_Installed() throws Exception {
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                TestExtensionCatalogManager.class.getClassLoader(),
+                "v1.2.3",
+                createDefaultCatalogs()
+        )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
+
             extensionCatalogManager.installOrUpdateExtension(
                     catalog,
                     extension,
-                    installationInformation,
-                    progress -> {},
-                    (step, resource) -> {}
+                    release,
+                    optionalDependencies,
+                    onProgress,
+                    onStatusChanged
             );
 
             Assertions.assertEquals(
-                    installationInformation,
-                    extensionCatalogManager.getInstalledExtension(catalog, extension).get().orElse(null)
+                    release,
+                    extension.getInstalledRelease().getValue().orElse(null)
+            );
+        }
+    }
+
+    @Test
+    void Check_Extension_Optional_Dependencies_Installed() throws Exception {
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                TestExtensionCatalogManager.class.getClassLoader(),
+                "v1.2.3",
+                createDefaultCatalogs()
+        )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = true;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
+
+            extensionCatalogManager.installOrUpdateExtension(
+                    catalog,
+                    extension,
+                    release,
+                    optionalDependencies,
+                    onProgress,
+                    onStatusChanged
+            );
+
+            Assertions.assertEquals(
+                    optionalDependencies,
+                    extension.areOptionalDependenciesInstalled().getValue()
             );
         }
     }
 
     @Test
     void Check_Extension_Reinstalled_When_Already_Installed() throws Exception {
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        Release release = new Release(
-                "v0.1.2",
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
-                null,
-                List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
-                null,
-                new VersionRange("v0.0.0", null, null)
-        );
-        InstalledExtension firstInstallationInformation = new InstalledExtension(release.name(), true);
-        InstalledExtension secondInstallationInformation = new InstalledExtension(release.name(), false);
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of(release)
-        );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
                 new SimpleObjectProperty<>(Files.createTempDirectory(null)),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release firstRelease = extension.getReleases().get(0);
+            Release secondRelease = extension.getReleases().get(1);
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
             extensionCatalogManager.installOrUpdateExtension(
                     catalog,
                     extension,
-                    firstInstallationInformation,
-                    progress -> {},
-                    (step, resource) -> {}
+                    firstRelease,
+                    optionalDependencies,
+                    onProgress,
+                    onStatusChanged
             );
+
             extensionCatalogManager.installOrUpdateExtension(
                     catalog,
                     extension,
-                    secondInstallationInformation,
-                    progress -> {},
-                    (step, resource) -> {}
+                    secondRelease,
+                    optionalDependencies,
+                    onProgress,
+                    onStatusChanged
             );
 
             Assertions.assertEquals(
-                    secondInstallationInformation,
-                    extensionCatalogManager.getInstalledExtension(catalog, extension).get().orElse(null)
+                    secondRelease,
+                    extension.getInstalledRelease().getValue().orElse(null)
             );
         }
     }
 
     @Test
-    void Check_Extension_Installation_Fails_When_Desired_Release_Does_Not_Exist() throws Exception {
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        InstalledExtension installationInformation = new InstalledExtension("invalid_release", false);
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of()
-        );
+    void Check_Extension_Not_Installed_After_Extensions_Directory_Moved() throws Exception {
+        SimpleObjectProperty<Path> extensionsDirectoryPath = new SimpleObjectProperty<>(Files.createTempDirectory(null));
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                extensionsDirectoryPath,
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
-            Assertions.assertThrows(
-                    IllegalArgumentException.class,
-                    () -> extensionCatalogManager.installOrUpdateExtension(
-                            catalog,
-                            extension,
-                            installationInformation,
-                            progress -> {},
-                            (step, resource) -> {}
-                    )
-            );
-        }
-    }
-
-    @Test
-    void Check_Extension_Installation_Fails_When_Extension_Directory_Null() throws Exception {
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        Release release = new Release(
-                "v0.1.2",
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
-                null,
-                List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
-                null,
-                new VersionRange("v0.0.0", null, null)
-        );
-        InstalledExtension installationInformation = new InstalledExtension(release.name(), true);
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of(release)
-        );
-        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(null),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
-        )) {
-            Assertions.assertThrows(
-                    NullPointerException.class,
-                    () -> extensionCatalogManager.installOrUpdateExtension(
-                            catalog,
-                            extension,
-                            installationInformation,
-                            progress -> {},
-                            (step, resource) -> {}
-                    )
-            );
-        }
-    }
-
-    @Test
-    void Check_Extension_Removed_After_Changing_Extension_Directory() throws Exception {
-        SimpleObjectProperty<Path> extensionDirectory = new SimpleObjectProperty<>(Files.createTempDirectory(null));
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        Release release = new Release(
-                "v0.1.2",
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
-                null,
-                List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
-                null,
-                new VersionRange("v0.0.0", null, null)
-        );
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of(release)
-        );
-        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                extensionDirectory,
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
-        )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
             extensionCatalogManager.installOrUpdateExtension(
                     catalog,
                     extension,
-                    new InstalledExtension(release.name(), true),
-                    progress -> {},
-                    (step, resource) -> {}
+                    release,
+                    optionalDependencies,
+                    onProgress,
+                    onStatusChanged
             );
 
-            extensionDirectory.set(Files.createTempDirectory(null));
+            extensionsDirectoryPath.set(Files.createTempDirectory(null));
 
-            Assertions.assertNull(extensionCatalogManager.getInstalledExtension(catalog, extension).get().orElse(null));
+            // Changing extensionsDirectoryPath reset catalogs and extensions, so the extension needs to be retrieved
+            Extension newExtension = extensionCatalogManager.getCatalogs().getFirst().getExtensions().get().getFirst();
+            Assertions.assertFalse(newExtension.getInstalledRelease().getValue().isPresent());
         }
     }
 
     @Test
     void Check_Installed_Jars_After_Extension_Installation() throws Exception {
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        Release release = new Release(
-                "v0.1.2",
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
-                null,
-                List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
-                null,
-                new VersionRange("v0.0.0", null, null)
-        );
-        List<String> expectedJarNames = List.of("qupath-extension-macos.jar", "qupath-extension-macos.jar");
-        InstalledExtension installationInformation = new InstalledExtension(release.name(), true);
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of(release)
+        List<String> expectedJarNames = List.of(
+                "qupath-extension-macos.jar",   // for main URL
+                "qupath-extension-macos.jar",   // for required dependency URL
+                "qupath-extension-macos.jar"    // for optional dependency URL
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
                 new SimpleObjectProperty<>(Files.createTempDirectory(null)),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = true;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
+
             extensionCatalogManager.installOrUpdateExtension(
                     catalog,
                     extension,
-                    installationInformation,
-                    progress -> {},
-                    (step, resource) -> {}
+                    release,
+                    optionalDependencies,
+                    onProgress,
+                    onStatusChanged
             );
 
-            Thread.sleep(CHANGE_WAITING_TIME_CATALOG_MS);     // wait for list to update
             TestUtils.assertCollectionsEqualsWithoutOrder(
                     expectedJarNames,
                     extensionCatalogManager.getCatalogManagedInstalledJars().stream()
@@ -958,68 +1109,33 @@ public class TestExtensionCatalogManager {
     }
 
     @Test
-    void Check_Installed_Jars_After_Extension_Manually_Installed() throws Exception {
-        Path extensionDirectory = Files.createTempDirectory(null);
-        Files.createFile(extensionDirectory.resolve("lib.jar"));
-        List<Path> expectedJars = List.of();
-        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
-                new SimpleObjectProperty<>(extensionDirectory),
-                TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                createSampleRegistry()
-        )) {
-            TestUtils.assertCollectionsEqualsWithoutOrder(
-                    expectedJars,
-                    extensionCatalogManager.getCatalogManagedInstalledJars()
-            );
-        }
-    }
-
-    @Test
     void Check_Jar_Loaded_Runnable_Run_After_Extension_Installation() throws Exception {
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        Release release = new Release(
-                "v0.1.2",
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
-                null,
-                List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
-                null,
-                new VersionRange("v0.0.0", null, null)
-        );
-        int expectedNumberOfCalls = 2;
-        InstalledExtension installationInformation = new InstalledExtension(release.name(), true);
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of(release)
-        );
+        int expectedNumberOfCalls = 3;      // one jar for main URL, one required dependency, and one optional dependency
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
                 new SimpleObjectProperty<>(Files.createTempDirectory(null)),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
-            AtomicInteger numberOfJarLoaded = new AtomicInteger();
-            extensionCatalogManager.addOnJarLoadedRunnable(numberOfJarLoaded::getAndIncrement);
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = true;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
+            CountDownLatch countDownLatch = new CountDownLatch(expectedNumberOfCalls);
+
+            extensionCatalogManager.addOnJarLoadedRunnable(countDownLatch::countDown);
             extensionCatalogManager.installOrUpdateExtension(
                     catalog,
                     extension,
-                    installationInformation,
-                    progress -> {},
-                    (step, resource) -> {}
+                    release,
+                    optionalDependencies,
+                    onProgress,
+                    onStatusChanged
             );
 
-            Thread.sleep(CHANGE_WAITING_TIME_CATALOG_MS);     // wait for list to update
-            Assertions.assertEquals(expectedNumberOfCalls, numberOfJarLoaded.get());
+            Assertions.assertTrue(countDownLatch.await(JAR_LOADED_TIMEOUT_MS, TimeUnit.MILLISECONDS));
         }
     }
 
@@ -1030,7 +1146,7 @@ public class TestExtensionCatalogManager {
                 new SimpleObjectProperty<>(Files.createTempDirectory(null)),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
             List<UpdateAvailable> updates = extensionCatalogManager.getAvailableUpdates().get();
 
@@ -1040,23 +1156,27 @@ public class TestExtensionCatalogManager {
 
     @Test
     void Check_No_Available_Updates_When_Incompatible_Version() throws Exception {
-        Registry defaultRegistry = createSampleRegistry();
-        SavedCatalog catalog = defaultRegistry.catalogs().getFirst();
-        Extension extension = CatalogFetcher.getCatalog(catalog.rawUri()).get().extensions().getFirst();
-        Release release = extension.releases().getFirst();
+        String version = "v1.2.3";
         List<UpdateAvailable> expectedUpdates = List.of();
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
                 new SimpleObjectProperty<>(Files.createTempDirectory(null)),
                 TestExtensionCatalogManager.class.getClassLoader(),
-                "v1.2.3",
-                defaultRegistry
+                version,
+                createDefaultCatalogs()
         )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
             extensionCatalogManager.installOrUpdateExtension(
                     catalog,
                     extension,
-                    new InstalledExtension(release.name(), true),
-                    progress -> {},
-                    (step, resource) -> {}
+                    release,
+                    optionalDependencies,
+                    onProgress,
+                    onStatusChanged
             );
 
             List<UpdateAvailable> updates = extensionCatalogManager.getAvailableUpdates().get();
@@ -1067,27 +1187,31 @@ public class TestExtensionCatalogManager {
 
     @Test
     void Check_Update_Available() throws Exception {
-        Registry defaultRegistry = createSampleRegistry();
-        SavedCatalog catalog = defaultRegistry.catalogs().getFirst();
-        Extension extension = CatalogFetcher.getCatalog(catalog.rawUri()).get().extensions().getFirst();
-        Release release = extension.releases().getFirst();
+        String version = "v2.2.3";
         List<UpdateAvailable> expectedUpdates = List.of(new UpdateAvailable(
                 "Some extension",
-                "v0.1.0",
-                "v1.0.0"
+                new Version("v0.1.0"),
+                new Version("v1.0.0")
         ));     // see catalog.json in resources
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
                 new SimpleObjectProperty<>(Files.createTempDirectory(null)),
                 TestExtensionCatalogManager.class.getClassLoader(),
-                "v2.2.3",
-                defaultRegistry
+                version,
+                createDefaultCatalogs()
         )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
             extensionCatalogManager.installOrUpdateExtension(
                     catalog,
                     extension,
-                    new InstalledExtension(release.name(), true),
-                    progress -> {},
-                    (step, resource) -> {}
+                    release,
+                    optionalDependencies,
+                    onProgress,
+                    onStatusChanged
             );
 
             List<UpdateAvailable> updates = extensionCatalogManager.getAvailableUpdates().get();
@@ -1097,132 +1221,170 @@ public class TestExtensionCatalogManager {
     }
 
     @Test
-    void Check_Extension_Removed() throws Exception {
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
+    void Check_Extension_Removal_When_Unknown_Catalog() throws Exception {
+        Catalog catalog = new Catalog(
+                "Unknown catalog",
+                "Description",
+                server.getURI(CATALOG_NAME),
+                server.getURI(CATALOG_NAME)
         );
-        Release release = new Release(
-                "v0.1.2",
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
-                null,
-                List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
-                null,
-                new VersionRange("v0.0.0", null, null)
-        );
-        InstalledExtension installationInformation = new InstalledExtension(release.name(), true);
+        Extension extension = catalog.getExtensions().get().getFirst();
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                TestExtensionCatalogManager.class.getClassLoader(),
+                "v1.2.3",
+                createDefaultCatalogs()
+        )) {
+            Assertions.assertThrows(
+                    IllegalArgumentException.class,
+                    () -> extensionCatalogManager.removeExtension(catalog, extension)
+            );
+        }
+    }
+
+    @Test
+    void Check_Extension_Removal_When_Extension_Does_Not_Belong_To_Catalog() throws Exception {
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                TestExtensionCatalogManager.class.getClassLoader(),
+                "v1.2.3",
+                createDefaultCatalogs()
+        )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = new Extension(
+                    new ExtensionModel(
+                            "Unknown extension",
+                            "Description",
+                            "Some author",
+                            URI.create("https://github.com/qupath/qupath-macOS-extension"),
+                            false,
+                            List.of(new ReleaseModel(
+                                    "v0.1.0",
+                                    URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
+                                    null,
+                                    null,
+                                    null,
+                                    new VersionRangeModel("v1.0.0", null, null)
+                            ))
+                    ),
+                    null,
+                    false
+            );
+
+            Assertions.assertThrows(
+                    IllegalArgumentException.class,
+                    () -> extensionCatalogManager.removeExtension(catalog, extension)
+            );
+        }
+    }
+
+    @Test
+    void Check_Extension_Removal_With_Null_Catalog() throws Exception {
+        Catalog catalog = null;
         Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of(release)
+                getResourceCatalog().extensions().getFirst(),
+                null,
+                false
         );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
                 new SimpleObjectProperty<>(Files.createTempDirectory(null)),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
+            Assertions.assertThrows(
+                    NullPointerException.class,
+                    () -> extensionCatalogManager.removeExtension(catalog, extension)
+            );
+        }
+    }
+
+    @Test
+    void Check_Extension_Removal_With_Null_Extension() throws Exception {
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                TestExtensionCatalogManager.class.getClassLoader(),
+                "v1.2.3",
+                createDefaultCatalogs()
+        )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = null;
+
+            Assertions.assertThrows(
+                    NullPointerException.class,
+                    () -> extensionCatalogManager.removeExtension(catalog, extension)
+            );
+        }
+    }
+
+    @Test
+    void Check_Extension_Removed() throws Exception {
+        try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
+                new SimpleObjectProperty<>(Files.createTempDirectory(null)),
+                TestExtensionCatalogManager.class.getClassLoader(),
+                "v1.2.3",
+                createDefaultCatalogs()
+        )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
             extensionCatalogManager.installOrUpdateExtension(
                     catalog,
                     extension,
-                    installationInformation,
+                    extension.getReleases().getFirst(),
+                    false,
                     progress -> {},
-                    (step, resource) -> {}
+                    (step, res) -> {}
             );
 
             extensionCatalogManager.removeExtension(catalog, extension);
 
-            Assertions.assertNull(extensionCatalogManager.getInstalledExtension(catalog, extension).get().orElse(null));
+            Assertions.assertTrue(extension.getInstalledRelease().getValue().isEmpty());
         }
     }
 
     @Test
     void Check_Extension_Removal_When_Not_Installed() throws Exception {
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        Release release = new Release(
-                "v0.1.2",
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
-                null,
-                List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
-                null,
-                new VersionRange("v0.0.0", null, null)
-        );
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of(release)
-        );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
                 new SimpleObjectProperty<>(Files.createTempDirectory(null)),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+
             extensionCatalogManager.removeExtension(catalog, extension);
 
-            Assertions.assertNull(extensionCatalogManager.getInstalledExtension(catalog, extension).get().orElse(null));
+            Assertions.assertTrue(extension.getInstalledRelease().getValue().isEmpty());
         }
     }
 
     @Test
     void Check_Installed_Jars_After_Extension_Removal() throws Exception {
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        Release release = new Release(
-                "v0.1.2",
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
-                null,
-                List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
-                null,
-                new VersionRange("v0.0.0", null, null)
-        );
         List<String> expectedJarNames = List.of();
-        InstalledExtension installationInformation = new InstalledExtension(release.name(), true);
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of(release)
-        );
         try (ExtensionCatalogManager extensionCatalogManager = new ExtensionCatalogManager(
                 new SimpleObjectProperty<>(Files.createTempDirectory(null)),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
+            boolean optionalDependencies = false;
+            Consumer<Float> onProgress = progress -> {};
+            BiConsumer<ExtensionCatalogManager.InstallationStep, String> onStatusChanged = (step, res) -> {};
             extensionCatalogManager.installOrUpdateExtension(
                     catalog,
                     extension,
-                    installationInformation,
-                    progress -> {},
-                    (step, resource) -> {}
+                    release,
+                    optionalDependencies,
+                    onProgress,
+                    onStatusChanged
             );
 
             extensionCatalogManager.removeExtension(catalog, extension);
 
-            Thread.sleep(CHANGE_WAITING_TIME_CATALOG_MS);     // wait for list to update
             TestUtils.assertCollectionsEqualsWithoutOrder(
                     expectedJarNames,
                     extensionCatalogManager.getCatalogManagedInstalledJars().stream()
@@ -1244,7 +1406,7 @@ public class TestExtensionCatalogManager {
                 new SimpleObjectProperty<>(extensionDirectory),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
             List<Path> jars = extensionCatalogManager.getManuallyInstalledJars();
 
@@ -1259,7 +1421,7 @@ public class TestExtensionCatalogManager {
                 new SimpleObjectProperty<>(extensionDirectory),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
             List<Path> expectedJars = List.of(
                     Files.createFile(extensionDirectory.resolve("lib1.jar")),
@@ -1268,8 +1430,11 @@ public class TestExtensionCatalogManager {
 
             List<Path> jars = extensionCatalogManager.getManuallyInstalledJars();
 
-            Thread.sleep(CHANGE_WAITING_TIME_MANUAL_MS);     // wait for list to update
-            TestUtils.assertCollectionsEqualsWithoutOrder(expectedJars, jars);
+            TestUtils.assertCollectionsEqualsWithoutOrder(
+                    expectedJars,
+                    jars,
+                    JAR_LOADED_TIMEOUT_MS       // wait for list to update
+            );
         }
     }
 
@@ -1285,7 +1450,7 @@ public class TestExtensionCatalogManager {
                 new SimpleObjectProperty<>(extensionDirectory),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
             List<Path> jars = extensionCatalogManager.getManuallyInstalledJars();
 
@@ -1294,31 +1459,7 @@ public class TestExtensionCatalogManager {
     }
 
     @Test
-    void Check_Manually_Installed_Jars_When_Extension_Installed_With_Index() throws Exception {
-        SavedCatalog catalog = new SavedCatalog(
-                "name",
-                "description",
-                URI.create("http://test"),
-                URI.create("http://test"),
-                true
-        );
-        Release release = new Release(
-                "v0.1.2",
-                URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
-                null,
-                List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
-                null,
-                new VersionRange("v0.0.0", null, null)
-        );
-        InstalledExtension installationInformation = new InstalledExtension(release.name(), true);
-        Extension extension = new Extension(
-                "name",
-                "description",
-                "author",
-                URI.create("https://github.com"),
-                false,
-                List.of(release)
-        );
+    void Check_Manually_Installed_Jars_When_Extension_Installed_With_Catalog() throws Exception {
         Path extensionDirectory = Files.createTempDirectory(null);
         List<Path> expectedJars = List.of(
                 Files.createFile(extensionDirectory.resolve("lib1.jar")),
@@ -1328,14 +1469,18 @@ public class TestExtensionCatalogManager {
                 new SimpleObjectProperty<>(extensionDirectory),
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
+            Catalog catalog = extensionCatalogManager.getCatalogs().getFirst();
+            Extension extension = catalog.getExtensions().get().getFirst();
+            Release release = extension.getReleases().getFirst();
             extensionCatalogManager.installOrUpdateExtension(
                     catalog,
                     extension,
-                    installationInformation,
+                    release,
+                    false,
                     progress -> {},
-                    (step, resource) -> {}
+                    (step, res) -> {}
             );
 
             List<Path> jars = extensionCatalogManager.getManuallyInstalledJars();
@@ -1354,7 +1499,7 @@ public class TestExtensionCatalogManager {
                 extensionDirectory,
                 TestExtensionCatalogManager.class.getClassLoader(),
                 "v1.2.3",
-                createSampleRegistry()
+                createDefaultCatalogs()
         )) {
             extensionDirectory.set(Files.createTempDirectory(null));
 
@@ -1362,13 +1507,44 @@ public class TestExtensionCatalogManager {
         }
     }
 
-    private static Registry createSampleRegistry() {
-        return new Registry(List.of(new SavedCatalog(
+    private static List<DefaultCatalog> createDefaultCatalogs() {
+        return List.of(new DefaultCatalog(
+                getResourceCatalog().name(),
+                getResourceCatalog().description(),
+                server.getURI(CATALOG_NAME),
+                server.getURI(CATALOG_NAME)
+        ));
+    }
+
+    private static CatalogModel getResourceCatalog() {
+        return new CatalogModel(
                 "Some catalog",
                 "Some description",
-                server.getURI(CATALOG_NAME),
-                server.getURI(CATALOG_NAME),
-                true
-        )));
+                List.of(new ExtensionModel(
+                        "Some extension",
+                        "Some extension description",
+                        "Some author",
+                        URI.create("https://github.com/qupath/qupath-macOS-extension"),
+                        false,
+                        List.of(
+                                new ReleaseModel(
+                                        "v0.1.0",
+                                        URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
+                                        List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
+                                        List.of(URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar")),
+                                        null,
+                                        new VersionRangeModel("v1.0.0", null, null)
+                                ),
+                                new ReleaseModel(
+                                        "v1.0.0",
+                                        URI.create("https://github.com/qupath/qupath-macOS-extension/releases/download/v0.0.1/qupath-extension-macos.jar"),
+                                        null,
+                                        null,
+                                        null,
+                                        new VersionRangeModel("v2.0.0", null, null)
+                                )
+                        )
+                ))
+        );
     }
 }

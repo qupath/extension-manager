@@ -3,6 +3,7 @@ package qupath.ext.extensionmanager;
 import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.SimpleFileServer;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.InetSocketAddress;
@@ -13,8 +14,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * A web server that serves static files.
- * It must be {@link #close() closed} once no longer used.
+ * A web server that serves static files. It must be {@link #close() closed} once no longer used.
  */
 public class SimpleServer implements AutoCloseable {
 
@@ -35,7 +35,6 @@ public class SimpleServer implements AutoCloseable {
      *
      * @param files the files to serve
      * @throws IOException if the files cannot be copied
-     * @throws SecurityException if the user doesn't have enough rights to create a temporary directory
      * @throws java.nio.file.InvalidPathException if a path to a file cannot be created
      * @throws java.io.UncheckedIOException if an I/O error occurs
      */
@@ -62,8 +61,8 @@ public class SimpleServer implements AutoCloseable {
 
     /**
      * Get the link from where this server serves the file with the provided name.
-     * The link is not guaranteed to work if the provided file is not served by this
-     * server.
+     * <p>
+     * The link is not guaranteed to work if the provided file is not served by this server.
      *
      * @param fileName the name of the file that should be served from the given URI
      * @return the URI pointing to the provided file
