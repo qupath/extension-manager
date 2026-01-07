@@ -43,6 +43,15 @@ public class Catalog {
     }
 
     /**
+     * Create a non-deletable catalog from a default catalog.
+     *
+     * @param defaultCatalog the list of attributes the catalog should have
+     */
+    public Catalog(DefaultCatalog defaultCatalog) {
+        this(defaultCatalog.name(), defaultCatalog.description(), defaultCatalog.uri(), defaultCatalog.rawUri());
+    }
+
+    /**
      * Create a catalog from a {@link CatalogModel}. This will directly populate the extensions.
      *
      * @param catalogModel information on the catalog
@@ -122,8 +131,9 @@ public class Catalog {
      * Depending on which constructor was used to create this catalog, this function may act differently:
      * <ul>
      *     <li>
-     *         If {@link #Catalog(String, String, URI, URI)} was used, this function will call {@link CatalogModelFetcher#getCatalog(URI)}
-     *         to determine the extensions, which might take some time. No extension is considered to be installed by default.
+     *         If {@link #Catalog(String, String, URI, URI)} or {@link #Catalog(DefaultCatalog)} was used, this function
+     *         will call {@link CatalogModelFetcher#getCatalog(URI)} to determine the extensions, which might take some
+     *         time. No extension is considered to be installed by default.
      *     </li>
      *     <li>
      *         If {@link #Catalog(CatalogModel, URI, URI, boolean)} was used, extensions are already determined but none

@@ -4,7 +4,7 @@ import javafx.application.Application;
 import javafx.beans.property.SimpleObjectProperty;
 import javafx.stage.Stage;
 import qupath.ext.extensionmanager.core.ExtensionCatalogManager;
-import qupath.ext.extensionmanager.core.catalog.Catalog;
+import qupath.ext.extensionmanager.core.catalog.DefaultCatalog;
 import qupath.ext.extensionmanager.gui.ExtensionManager;
 
 import java.io.IOException;
@@ -36,7 +36,7 @@ public class ExtensionManagerApp extends Application {
                 new SimpleObjectProperty<>(createExtensionDirectory()),
                 ExtensionManagerApp.class.getClassLoader(),
                 "v0.6.0",
-                List.of(new Catalog(
+                List.of(new DefaultCatalog(
                         "QuPath catalog",
                         "Extensions maintained by the QuPath team",
                         URI.create("https://github.com/qupath/qupath-catalog"),

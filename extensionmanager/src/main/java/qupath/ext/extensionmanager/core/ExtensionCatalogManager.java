@@ -7,6 +7,7 @@ import javafx.collections.ObservableList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import qupath.ext.extensionmanager.core.catalog.Catalog;
+import qupath.ext.extensionmanager.core.catalog.DefaultCatalog;
 import qupath.ext.extensionmanager.core.catalog.Extension;
 import qupath.ext.extensionmanager.core.catalog.Release;
 import qupath.ext.extensionmanager.core.registry.Registry;
@@ -99,15 +100,16 @@ public class ExtensionCatalogManager implements AutoCloseable{
             ObservableValue<Path> extensionsDirectoryPath,
             ClassLoader parentClassLoader,
             String version,
-            List<Catalog> defaultCatalogs
+            List<DefaultCatalog> defaultCatalogs
     ) {
         this.extensionFolderManager = new ExtensionFolderManager(extensionsDirectoryPath);
         this.extensionClassLoader = new ExtensionClassLoader(parentClassLoader);
         this.version = new Version(version);
 
-        resetCatalogsAndJars(defaultCatalogs);
+        List<DefaultCatalog> copyOfDefaultCatalogs = List.copyOf(defaultCatalogs);  // make sure the list is not modified later
+        resetCatalogsAndJars(copyOfDefaultCatalogs);
         extensionFolderManager.getCatalogsDirectoryPath().addListener((p, o, n) ->
-                resetCatalogsAndJars(defaultCatalogs)
+                resetCatalogsAndJars(copyOfDefaultCatalogs)
         );
 
         loadJars();
@@ -486,7 +488,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
         return extensionFolderManager.getManuallyInstalledJars();
     }
 
-    private void resetCatalogsAndJars(List<Catalog> defaultCatalogs) {
+    private synchronized void resetCatalogsAndJars(List<DefaultCatalog> defaultCatalogs) {
         List<RegistryCatalog> catalogs;
         try {
             catalogs = extensionFolderManager.getSavedRegistry().catalogs();
@@ -498,7 +500,7 @@ public class ExtensionCatalogManager implements AutoCloseable{
             logger.debug("Cannot retrieve saved registry. Using default catalogs {}", defaultCatalogs, e);
 
             catalogs = List.of();
-            this.catalogs.setAll(defaultCatalogs);
+            this.catalogs.setAll(defaultCatalogs.stream().map(Catalog::new).toList());
         }
 
         catalogManagedInstalledJars.clear();
