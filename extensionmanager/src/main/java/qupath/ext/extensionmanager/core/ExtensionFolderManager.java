@@ -1,6 +1,7 @@
 package qupath.ext.extensionmanager.core;
 
 import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 import com.google.gson.stream.JsonReader;
 import javafx.beans.value.ObservableValue;
 import javafx.collections.ObservableList;
@@ -68,7 +69,7 @@ class ExtensionFolderManager implements AutoCloseable {
     private static final String CATALOGS_FOLDER = "catalogs";
     private static final String REGISTRY_NAME = "registry.json";
     private static final Predicate<Path> isJar = path -> path.toString().toLowerCase().endsWith(".jar");
-    private static final Gson gson = new Gson();
+    private static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
     private final ObservableValue<Path> extensionsDirectoryPath;
     private final ObservableValue<Path> catalogsDirectoryPath;
     private final FilesWatcher manuallyInstalledExtensionsWatcher;
