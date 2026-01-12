@@ -13,6 +13,7 @@ import qupath.ext.extensionmanager.core.catalog.Release;
 import qupath.ext.extensionmanager.core.registry.Registry;
 import qupath.ext.extensionmanager.core.catalog.UpdateAvailable;
 import qupath.ext.extensionmanager.core.registry.RegistryCatalog;
+import qupath.ext.extensionmanager.core.registry.RegistryExtension;
 import qupath.ext.extensionmanager.core.tools.FileDownloader;
 import qupath.ext.extensionmanager.core.tools.FileTools;
 import qupath.ext.extensionmanager.core.tools.ZipExtractor;
@@ -504,17 +505,25 @@ public class ExtensionCatalogManager implements AutoCloseable{
         }
 
         catalogManagedInstalledJars.clear();
-        List<Path> releasePaths = catalogs.stream()
-                .flatMap(catalog -> catalog.extensions().stream()
-                        .map(extension -> extensionFolderManager.getExtensionDirectoryPath(
-                                catalog.name(),
-                                extension.name(),
-                                extension.installedVersion())
-                        )
-                )
-                .toList();
-        for (Path releasePath: releasePaths) {
-            updateCatalogManagedInstalledJarsOfDirectory(releasePath, Operation.ADD);
+        for (RegistryCatalog catalog: catalogs) {
+            for (RegistryExtension extension: catalog.extensions()) {
+                Path releasePath = extensionFolderManager.getExtensionDirectoryPath(
+                        catalog.name(),
+                        extension.name(),
+                        extension.installedVersion()
+                );
+
+                List<Path> addedJars = updateCatalogManagedInstalledJarsOfDirectory(releasePath, Operation.ADD);
+
+                if (addedJars.isEmpty()) {
+                    logger.warn(
+                            "{} is supposed to be installed with version {}, but no jar was detected in {}. The extension should probably be reinstalled",
+                            extension.name(),
+                            extension.installedVersion(),
+                            releasePath
+                    );
+                }
+            }
         }
     }
 
@@ -536,26 +545,31 @@ public class ExtensionCatalogManager implements AutoCloseable{
         });
     }
 
-    private void updateCatalogManagedInstalledJarsOfDirectory(Path directory, Operation operation) {
-        if (directory != null && directory.toFile().exists()) {
-            try (Stream<Path> files = Files.walk(directory)) {
-                List<Path> jars = files.filter(path -> path.toString().endsWith(".jar")).toList();
+    private List<Path> updateCatalogManagedInstalledJarsOfDirectory(Path directory, Operation operation) {
+        if (!directory.toFile().exists()) {
+            return List.of();
+        }
 
-                switch (operation) {
-                    case ADD -> catalogManagedInstalledJars.addAll(jars);
-                    case REMOVE -> catalogManagedInstalledJars.removeAll(jars);
-                }
-            } catch (IOException e) {
-                logger.debug(
-                        "Error while finding jars located in {}. None will be {}",
-                        directory,
-                        switch (operation) {
-                            case ADD -> "added";
-                            case REMOVE -> "removed";
-                        },
-                        e
-                );
+        try (Stream<Path> files = Files.walk(directory)) {
+            List<Path> jars = files.filter(path -> path.toString().endsWith(".jar")).toList();
+
+            switch (operation) {
+                case ADD -> catalogManagedInstalledJars.addAll(jars);
+                case REMOVE -> catalogManagedInstalledJars.removeAll(jars);
             }
+
+            return jars;
+        } catch (IOException e) {
+            logger.debug(
+                    "Error while finding jars located in {}. None will be {}",
+                    directory,
+                    switch (operation) {
+                        case ADD -> "added";
+                        case REMOVE -> "removed";
+                    },
+                    e
+            );
+            return List.of();
         }
     }
 
